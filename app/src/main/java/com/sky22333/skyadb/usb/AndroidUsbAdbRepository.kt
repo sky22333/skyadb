@@ -33,7 +33,7 @@ class AndroidUsbAdbRepository(
             object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
                     if (intent.action != UsbManager.ACTION_USB_DEVICE_DETACHED) return
-                    val detachedDevice = intent.extras?.get(UsbManager.EXTRA_DEVICE) as? UsbDevice ?: return
+                    val detachedDevice = intent.usbDeviceExtra() ?: return
                     if (detachedDevice.deviceName == activeDeviceId) {
                         activeDeviceId = null
                         adbRepository.disconnect()
@@ -115,7 +115,7 @@ class AndroidUsbAdbRepository(
                 object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         if (intent.action != UsbPermissionAction) return
-                        val grantedDevice = intent.extras?.get(UsbManager.EXTRA_DEVICE) as? UsbDevice
+                        val grantedDevice = intent.usbDeviceExtra()
                         if (grantedDevice?.deviceName != device.deviceName) return
                         val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                         runCatching { appContext.unregisterReceiver(this) }
@@ -161,5 +161,14 @@ class AndroidUsbAdbRepository(
 
     private companion object {
         const val UsbPermissionAction = "com.sky22333.skyadb.USB_ADB_PERMISSION"
+    }
+}
+
+private fun Intent.usbDeviceExtra(): UsbDevice? {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        getParcelableExtra(UsbManager.EXTRA_DEVICE)
     }
 }

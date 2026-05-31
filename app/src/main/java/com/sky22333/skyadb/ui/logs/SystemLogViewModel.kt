@@ -3,6 +3,8 @@ package com.sky22333.skyadb.ui.logs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.diagnostics.DiagnosticLogger
+import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -89,6 +91,12 @@ class SystemLogViewModel(
                             status = OperationStatus.Success("已读取 ${lines.size} 行日志"),
                         )
                     } else {
+                        DiagnosticLogger.record(
+                            module = DiagnosticModule.Logs,
+                            operation = "读取系统日志",
+                            message = "读取日志失败",
+                            suggestion = result.data.errorOutput.ifBlank { "请确认目标设备允许读取 logcat。" },
+                        )
                         state.value.copy(
                             loading = false,
                             status = OperationStatus.Failed(

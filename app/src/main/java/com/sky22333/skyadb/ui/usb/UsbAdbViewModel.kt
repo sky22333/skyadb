@@ -3,6 +3,8 @@ package com.sky22333.skyadb.ui.usb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.diagnostics.DiagnosticLogger
+import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.usb.AndroidUsbAdbRepository
 import com.sky22333.skyadb.usb.UsbAdbConnectResult
@@ -68,6 +70,14 @@ class UsbAdbViewModel(
                     )
                 }
                 is UsbAdbConnectResult.Failed -> {
+                    DiagnosticLogger.record(
+                        module = DiagnosticModule.UsbAdb,
+                        operation = "连接设备",
+                        target = deviceId,
+                        message = result.message,
+                        suggestion = result.suggestion,
+                        cause = result.cause,
+                    )
                     state.value = state.value.copy(
                         connecting = false,
                         connected = false,

@@ -32,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sky22333.skyadb.ui.apps.AppsScreen
 import com.sky22333.skyadb.ui.device.DeviceScreen
+import com.sky22333.skyadb.ui.diagnostics.DiagnosticLogScreen
 import com.sky22333.skyadb.ui.discovery.DeviceDiscoveryScreen
 import com.sky22333.skyadb.ui.download.OnlineDownloadScreen
 import com.sky22333.skyadb.ui.files.FileTransferScreen
@@ -155,7 +156,12 @@ fun AdbManagerApp() {
                     onFastbootClick = { navController.navigate(AppDestination.Fastboot.route) },
                 )
             }
-            composable(AppDestination.Settings.route) { SettingsScreen(bottomPadding = bottomPadding) }
+            composable(AppDestination.Settings.route) {
+                SettingsScreen(
+                    bottomPadding = bottomPadding,
+                    onDiagnosticsClick = { navController.navigate(DiagnosticsRoute) },
+                )
+            }
             composable(AppDestination.Pairing.route) {
                 val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
                 val pairingHostState = savedStateHandle
@@ -234,6 +240,9 @@ fun AdbManagerApp() {
             composable(LogsRoute) {
                 SystemLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
+            composable(DiagnosticsRoute) {
+                DiagnosticLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+            }
             composable(AppDestination.Fastboot.route) {
                 FastbootScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
@@ -274,3 +283,4 @@ private const val PairingHostKey = "pairing_host"
 private const val PairingPortKey = "pairing_port"
 private const val RemoteRoute = "remote"
 private const val LogsRoute = "logs"
+private const val DiagnosticsRoute = "diagnostics"

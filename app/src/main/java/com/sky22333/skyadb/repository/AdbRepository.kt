@@ -3,6 +3,8 @@ package com.sky22333.skyadb.repository
 import com.sky22333.skyadb.adb.KadbManager
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.data.RecentDeviceStore
+import com.sky22333.skyadb.diagnostics.DiagnosticModule
+import com.sky22333.skyadb.diagnostics.alsoLog
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AppInfo
@@ -112,7 +114,7 @@ class DefaultAdbRepository(
                 recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
             }
         }
-        return result
+        return result.logFailure(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
     }
 
     override suspend fun connectUsb(dadb: Dadb, endpoint: String, name: String): AdbOperationResult<String> {
@@ -140,11 +142,12 @@ class DefaultAdbRepository(
                 recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
             }
         }
-        return result
+        return result.logFailure(DiagnosticModule.UsbAdb, "连接设备", endpoint)
     }
 
     override suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit> {
         return kadbManager.pair(host, port, pairingCode)
+            .logFailure(DiagnosticModule.WifiAdb, "无线配对", "$host:$port")
     }
 
     override suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo> {
@@ -155,63 +158,77 @@ class DefaultAdbRepository(
             deviceInfoState.value = DeviceInfo()
             markConnectedDevices(ConnectionState.Offline)
         }
-        return result
+        return result.logFailure(DiagnosticModule.WifiAdb, "刷新设备信息")
     }
 
     override suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult> {
         return kadbManager.shell(command)
+            .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
 
     override suspend fun install(apkFile: File): AdbOperationResult<Unit> {
         return kadbManager.install(apkFile)
+            .logFailure(DiagnosticModule.Install, "安装 APK", apkFile.name)
     }
 
     override suspend fun listApps(): AdbOperationResult<List<AppInfo>> {
         return kadbManager.listApps()
+            .logFailure(DiagnosticModule.Apps, "读取应用列表")
     }
 
     override suspend fun launchApp(packageName: String): AdbOperationResult<Unit> {
         return kadbManager.launchApp(packageName)
+            .logFailure(DiagnosticModule.Apps, "启动应用", packageName)
     }
 
     override suspend fun forceStopApp(packageName: String): AdbOperationResult<Unit> {
         return kadbManager.forceStopApp(packageName)
+            .logFailure(DiagnosticModule.Apps, "停止应用", packageName)
     }
 
     override suspend fun setAppEnabled(packageName: String, enabled: Boolean): AdbOperationResult<Unit> {
         return kadbManager.setAppEnabled(packageName, enabled)
+            .logFailure(DiagnosticModule.Apps, if (enabled) "启用应用" else "冻结应用", packageName)
     }
 
     override suspend fun exportAppApk(packageName: String, localFile: File): AdbOperationResult<File> {
         return kadbManager.exportAppApk(packageName, localFile)
+            .logFailure(DiagnosticModule.Apps, "导出 APK", packageName)
     }
 
     override suspend fun uninstall(packageName: String): AdbOperationResult<Unit> {
         return kadbManager.uninstall(packageName)
+            .logFailure(DiagnosticModule.Apps, "卸载应用", packageName)
     }
 
     override suspend fun listFiles(remotePath: String): AdbOperationResult<List<RemoteFileEntry>> {
         return kadbManager.listFiles(remotePath)
+            .logFailure(DiagnosticModule.Files, "读取目录", remotePath)
     }
 
     override suspend fun makeDirectory(remotePath: String): AdbOperationResult<Unit> {
         return kadbManager.makeDirectory(remotePath)
+            .logFailure(DiagnosticModule.Files, "新建文件夹", remotePath)
     }
 
     override suspend fun deleteFile(remotePath: String, isDirectory: Boolean): AdbOperationResult<Unit> {
         return kadbManager.deleteFile(remotePath, isDirectory)
+            .logFailure(DiagnosticModule.Files, if (isDirectory) "删除目录" else "删除文件", remotePath)
     }
 
     override suspend fun push(localFile: File, remotePath: String): AdbOperationResult<Unit> {
         return kadbManager.push(localFile, remotePath)
+            .logFailure(DiagnosticModule.Files, "推送文件", remotePath)
     }
 
     override suspend fun pull(remotePath: String, localFile: File): AdbOperationResult<Unit> {
         return kadbManager.pull(remotePath, localFile)
+            .logFailure(DiagnosticModule.Files, "拉取文件", remotePath)
     }
 
     override suspend fun captureScreenshot(localFile: File): AdbOperationResult<File> {
         return kadbManager.captureScreenshot(localFile)
+            .logFailure(DiagnosticModule.Screenshot, "截图预览")
     }
 
     override fun disconnect() {
@@ -247,4 +264,15 @@ class DefaultAdbRepository(
     private companion object {
         const val MaxRecentDevices = 8
     }
+}
+
+private fun <T> AdbOperationResult<T>.logFailure(
+    module: DiagnosticModule,
+    operation: String,
+    target: String? = null,
+): AdbOperationResult<T> {
+    if (this is AdbOperationResult.Failure) {
+        alsoLog(module, operation, target)
+    }
+    return this
 }

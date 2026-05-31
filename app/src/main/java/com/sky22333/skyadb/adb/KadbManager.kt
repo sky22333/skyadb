@@ -1,6 +1,8 @@
 package com.sky22333.skyadb.adb
 
 import com.flyfishxu.kadb.Kadb
+import com.sky22333.skyadb.diagnostics.DiagnosticModule
+import com.sky22333.skyadb.diagnostics.alsoLog
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.DeviceInfo
@@ -27,23 +29,18 @@ class KadbManager {
             val probe = kadb.shell("echo kadb_ready")
             if (probe.exitCode != 0) {
                 return@withContext AdbOperationResult.Failure(
-                    message = "连接失败",
-                    suggestion = "设备已响应但命令执行失败，请确认目标设备已允许无线调试授权。",
-                )
+                    message = "ADB 已响应但授权未完成",
+                    suggestion = "已连接到 $host:$port，但测试命令执行失败。请在电视或目标设备上确认 sky adb 的调试授权弹窗后重试。",
+                ).alsoLog(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
             }
             activeClient?.close()
             activeClient = KadbClient(kadb)
             activeEndpoint = "$host:$port"
             AdbOperationResult.Success(activeEndpoint.orEmpty())
         }.getOrElse { error ->
-            AdbOperationResult.Failure(
-                message = "无法连接到设备",
-                suggestion = "请确认设备与本机处于同一网络、ADB 端口正确，并已允许调试授权。",
-                cause = error,
-            )
+            classifyConnectFailure(error, host, port)
         }
     }
-
     suspend fun connectUsb(dadb: Dadb, endpoint: String): AdbOperationResult<String> = withContext(Dispatchers.IO) {
         runCatching {
             val probe = dadb.shell("echo usb_adb_ready")
@@ -52,7 +49,7 @@ class KadbManager {
                 return@withContext AdbOperationResult.Failure(
                     message = "USB ADB 连接失败",
                     suggestion = "目标设备已响应但命令执行失败，请确认已在目标设备上允许 USB 调试授权。",
-                )
+                ).alsoLog(DiagnosticModule.UsbAdb, "连接设备", endpoint)
             }
             activeClient?.close()
             activeClient = DadbClient(dadb)
@@ -64,7 +61,7 @@ class KadbManager {
                 message = "无法连接 USB ADB 设备",
                 suggestion = "请确认 USB 线支持数据传输、目标设备已开启 USB 调试，并在授权弹窗中允许此电脑调试。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.UsbAdb, "连接设备", endpoint)
         }
     }
 
@@ -82,7 +79,7 @@ class KadbManager {
                 message = "无线调试配对失败",
                 suggestion = "请确认配对码未过期，配对 IP 和配对端口来自目标设备的配对窗口。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.WifiAdb, "无线配对", "$host:$port")
         }
     }
 
@@ -90,7 +87,7 @@ class KadbManager {
         val adbClient = activeClient ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先在首页连接设备，再执行 Shell 命令。",
-        )
+        ).alsoLog(DiagnosticModule.Shell, "执行 Shell", command.take(80))
 
         runCatching {
             val response = adbClient.shell(command)
@@ -107,7 +104,7 @@ class KadbManager {
                 message = "命令执行失败",
                 suggestion = "请检查命令是否正确，或确认设备仍保持连接。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.Shell, "执行 Shell", command.take(80))
         }
     }
 
@@ -115,7 +112,7 @@ class KadbManager {
         val adbClient = activeClient ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先连接设备，再查看设备详情。",
-        )
+        ).alsoLog(DiagnosticModule.WifiAdb, "读取设备信息")
 
         runCatching {
             val brand = adbClient.shell("getprop ro.product.brand").output.trim().ifBlank { "未知" }
@@ -142,7 +139,7 @@ class KadbManager {
                 message = "读取设备信息失败",
                 suggestion = "请确认设备仍在线，并允许执行 ADB 命令。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.WifiAdb, "读取设备信息", activeEndpoint)
         }
     }
 
@@ -150,7 +147,7 @@ class KadbManager {
         val adbClient = activeClient ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先连接设备，再安装 APK。",
-        )
+        ).alsoLog(DiagnosticModule.Install, "安装 APK", apkFile.name)
 
         runCatching {
             adbClient.install(apkFile)
@@ -160,7 +157,7 @@ class KadbManager {
                 message = "APK 安装失败",
                 suggestion = "请确认 APK 文件完整、设备存储空间充足，并允许安装该应用。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.Install, "安装 APK", apkFile.name)
         }
     }
 
@@ -168,7 +165,7 @@ class KadbManager {
         val adbClient = activeClient ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先连接设备，再卸载应用。",
-        )
+        ).alsoLog(DiagnosticModule.Apps, "卸载应用", packageName)
 
         runCatching {
             adbClient.uninstall(packageName)
@@ -178,7 +175,7 @@ class KadbManager {
                 message = "应用卸载失败",
                 suggestion = "请确认包名正确，且该应用允许被当前用户卸载。",
                 cause = error,
-            )
+            ).alsoLog(DiagnosticModule.Apps, "卸载应用", packageName)
         }
     }
 
@@ -477,6 +474,63 @@ class KadbManager {
               fi
             done
         """.trimIndent()
+    }
+
+    private fun classifyConnectFailure(error: Throwable, host: String, port: Int): AdbOperationResult.Failure {
+        val text = buildString {
+            var current: Throwable? = error
+            while (current != null) {
+                append(current::class.java.name)
+                append(' ')
+                append(current.message.orEmpty())
+                append(' ')
+                current = current.cause
+            }
+        }.lowercase()
+
+        return (when {
+            listOf("auth", "authenticate", "unauthorized", "public key", "adbkey", "signature").any(text::contains) ->
+                AdbOperationResult.Failure(
+                    message = "ADB 授权未完成",
+                    suggestion = "已找到 $host:$port，但目标设备没有信任 sky adb 的调试密钥。请在电视或目标设备上确认“允许 USB 调试/网络调试”的授权弹窗，必要时撤销调试授权后重新连接。",
+                    cause = error,
+                )
+
+            listOf("timed out", "timeout", "time out").any(text::contains) ->
+                AdbOperationResult.Failure(
+                    message = "连接超时",
+                    suggestion = "已尝试连接 $host:$port，但目标设备未及时响应。请确认 ADB TCP 端口仍开启，电视没有休眠，并且手机和电视在同一网络。",
+                    cause = error,
+                )
+
+            listOf("connection refused", "refused", "econnrefused").any(text::contains) ->
+                AdbOperationResult.Failure(
+                    message = "ADB 端口拒绝连接",
+                    suggestion = "$host:$port 可达但没有可用的 adbd 在监听。请在目标设备上重新开启网络 ADB，或确认端口不是扫描误判。",
+                    cause = error,
+                )
+
+            listOf("no route", "unreachable", "enetunreach", "ehostunreach", "network is unreachable").any(text::contains) ->
+                AdbOperationResult.Failure(
+                    message = "网络不可达",
+                    suggestion = "手机无法到达 $host。请确认手机和目标设备在同一局域网，且路由器没有开启 AP 隔离或访客网络隔离。",
+                    cause = error,
+                )
+
+            listOf("reset", "broken pipe", "closed", "eof", "unexpected end").any(text::contains) ->
+                AdbOperationResult.Failure(
+                    message = "ADB 连接被目标设备断开",
+                    suggestion = "目标设备主动关闭了连接。常见原因是未确认 ADB 授权、adbd 重启、电视系统限制网络调试；请在目标设备上确认授权后重试。",
+                    cause = error,
+                )
+
+            else ->
+                AdbOperationResult.Failure(
+                    message = "无法连接到 ADB 设备",
+                    suggestion = "已尝试连接 $host:$port。请确认网络 ADB 已开启、端口正确，并在目标设备上允许 sky adb 的调试授权。",
+                    cause = error,
+                )
+        }).alsoLog(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
     }
 
     private fun shellQuote(value: String): String {

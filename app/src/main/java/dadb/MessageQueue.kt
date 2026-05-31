@@ -28,7 +28,7 @@ internal abstract class MessageQueue<V> {
     private val queueLock = ReentrantLock()
     private val queueCond = queueLock.newCondition()
     private val queues = ConcurrentHashMap<Int, ConcurrentHashMap<Int, Queue<V>>>()
-    private val openStreams = ConcurrentHashMap<Int, Boolean>().keySet(true)
+    private val openStreams = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
     fun take(localId: Int, command: Int): V {
         while (true) {
@@ -88,7 +88,10 @@ internal abstract class MessageQueue<V> {
         val streamQueues = queues[localId] ?: return
 
         val command = getCommand(message)
-        val commandQueue = streamQueues.computeIfAbsent(command) { ConcurrentLinkedQueue() }
+        val commandQueue = streamQueues[command] ?: run {
+            val newQueue = ConcurrentLinkedQueue<V>()
+            streamQueues.putIfAbsent(command, newQueue) ?: newQueue
+        }
 
         commandQueue.add(message)
     }

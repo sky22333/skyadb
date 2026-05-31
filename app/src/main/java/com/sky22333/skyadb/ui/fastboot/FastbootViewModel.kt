@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.diagnostics.DiagnosticLogger
+import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.fastboot.FastbootCommandPolicy
 import com.sky22333.skyadb.fastboot.FastbootOperationResult
 import com.sky22333.skyadb.fastboot.FastbootRepository
@@ -73,7 +75,7 @@ class FastbootViewModel(
                     refreshDevices()
                     state.value = state.value.copy(running = false, status = OperationStatus.Success("USB 授权完成"))
                 }
-                is FastbootOperationResult.Failure -> fail(result)
+                is FastbootOperationResult.Failure -> fail(result, "请求 USB 授权", deviceId)
             }
         }
     }
@@ -90,7 +92,7 @@ class FastbootViewModel(
                         status = OperationStatus.Success("Fastboot 已连接"),
                     )
                 }
-                is FastbootOperationResult.Failure -> fail(result)
+                is FastbootOperationResult.Failure -> fail(result, "连接设备", deviceId)
             }
         }
     }
@@ -170,9 +172,17 @@ class FastbootViewModel(
                             status = OperationStatus.Success("Fastboot 命令执行完成"),
                         )
                     }
-                    is FastbootOperationResult.Failure -> fail(result)
+                    is FastbootOperationResult.Failure -> fail(result, "执行命令", command.take(80))
                 }
             } catch (error: Throwable) {
+                DiagnosticLogger.record(
+                    module = DiagnosticModule.Fastboot,
+                    operation = "执行命令",
+                    target = command.take(80),
+                    message = "Fastboot 命令执行失败",
+                    suggestion = error.message ?: "请确认镜像文件可读取，并保持 USB 连接。",
+                    cause = error,
+                )
                 state.value = state.value.copy(
                     running = false,
                     status = OperationStatus.Failed(
@@ -186,7 +196,15 @@ class FastbootViewModel(
         }
     }
 
-    private fun fail(result: FastbootOperationResult.Failure) {
+    private fun fail(result: FastbootOperationResult.Failure, operation: String, target: String? = null) {
+        DiagnosticLogger.record(
+            module = DiagnosticModule.Fastboot,
+            operation = operation,
+            target = target,
+            message = result.message,
+            suggestion = result.suggestion,
+            cause = result.cause,
+        )
         state.value = state.value.copy(
             running = false,
             status = OperationStatus.Failed(result.message, result.suggestion),
