@@ -21,8 +21,8 @@ android {
         applicationId = "com.sky22333.skyadb"
         minSdk = 23
         targetSdk = 36
-        versionCode = ciVersionCode ?: 10000
-        versionName = ciVersionName ?: "1.0.0"
+        versionCode = ciVersionCode ?: 11000
+        versionName = ciVersionName ?: "1.1.0"
     }
 
     signingConfigs {

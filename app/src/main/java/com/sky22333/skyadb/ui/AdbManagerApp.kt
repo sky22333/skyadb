@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -34,6 +35,7 @@ import com.sky22333.skyadb.ui.device.DeviceScreen
 import com.sky22333.skyadb.ui.discovery.DeviceDiscoveryScreen
 import com.sky22333.skyadb.ui.download.OnlineDownloadScreen
 import com.sky22333.skyadb.ui.files.FileTransferScreen
+import com.sky22333.skyadb.ui.fastboot.FastbootScreen
 import com.sky22333.skyadb.ui.home.HomeScreen
 import com.sky22333.skyadb.ui.install.InstallApkScreen
 import com.sky22333.skyadb.ui.localapps.LocalAppsScreen
@@ -148,6 +150,7 @@ fun AdbManagerApp() {
                     onShellClick = { navController.navigate(AppDestination.Shell.route) },
                     onRemoteClick = { navController.navigate(RemoteRoute) },
                     onLogsClick = { navController.navigate(LogsRoute) },
+                    onFastbootClick = { navController.navigate(AppDestination.Fastboot.route) },
                 )
             }
             composable(AppDestination.Settings.route) { SettingsScreen(bottomPadding = bottomPadding) }
@@ -217,6 +220,9 @@ fun AdbManagerApp() {
             composable(LogsRoute) {
                 SystemLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
+            composable(AppDestination.Fastboot.route) {
+                FastbootScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+            }
         }
     }
 }
@@ -244,6 +250,7 @@ private sealed class AppDestination(
     data object Install : AppDestination("install", "安装", Icons.Outlined.PhoneAndroid)
     data object Files : AppDestination("files", "文件", Icons.Outlined.PhoneAndroid)
     data object Screenshot : AppDestination("screenshot", "截图", Icons.Outlined.PhoneAndroid)
+    data object Fastboot : AppDestination("fastboot", "Fastboot", Icons.Outlined.Usb)
 }
 
 private const val DiscoveryHostKey = "discovery_host"

@@ -9,6 +9,7 @@ import com.sky22333.skyadb.discovery.AdbMdnsDiscovery
 import com.sky22333.skyadb.discovery.LanAdbScanner
 import com.sky22333.skyadb.discovery.NetworkInfoProvider
 import com.sky22333.skyadb.download.NetworkDownloadManager
+import com.sky22333.skyadb.fastboot.AndroidFastbootRepository
 import com.sky22333.skyadb.files.LocalFileManager
 import com.sky22333.skyadb.localapps.LocalAppExporter
 import com.sky22333.skyadb.repository.DefaultAdbRepository
@@ -36,6 +37,9 @@ object AppServices {
     val lanAdbScanner: LanAdbScanner by lazy { LanAdbScanner() }
     val adbMdnsDiscovery: AdbMdnsDiscovery by lazy {
         AndroidAdbMdnsDiscovery(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })
+    }
+    val fastbootRepository: AndroidFastbootRepository by lazy {
+        AndroidFastbootRepository(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })
     }
     val adbRepository: DefaultAdbRepository by lazy {
         DefaultAdbRepository(kadbManager, recentDeviceStore, settingsStore)

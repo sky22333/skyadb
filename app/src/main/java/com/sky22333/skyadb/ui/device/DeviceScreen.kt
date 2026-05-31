@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,6 +62,7 @@ fun DeviceScreen(
     onShellClick: () -> Unit = {},
     onRemoteClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
+    onFastbootClick: () -> Unit = {},
     viewModel: DeviceViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,6 +79,7 @@ fun DeviceScreen(
         onShellClick = onShellClick,
         onRemoteClick = onRemoteClick,
         onLogsClick = onLogsClick,
+        onFastbootClick = onFastbootClick,
         onRefreshClick = viewModel::refreshDeviceInfo,
         onToggleInfoClick = viewModel::toggleInfoExpanded,
     )
@@ -96,6 +99,7 @@ private fun DeviceContent(
     onShellClick: () -> Unit,
     onRemoteClick: () -> Unit,
     onLogsClick: () -> Unit,
+    onFastbootClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onToggleInfoClick: () -> Unit,
 ) {
@@ -180,6 +184,7 @@ private fun DeviceContent(
                     onShellClick = onShellClick,
                     onRemoteClick = onRemoteClick,
                     onLogsClick = onLogsClick,
+                    onFastbootClick = onFastbootClick,
                 )
             }
 
@@ -288,6 +293,7 @@ private fun QuickActionGrid(
     onShellClick: () -> Unit,
     onRemoteClick: () -> Unit,
     onLogsClick: () -> Unit,
+    onFastbootClick: () -> Unit,
 ) {
     val actions = listOf(
         QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick),
@@ -298,6 +304,7 @@ private fun QuickActionGrid(
         QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
         QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick),
         QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick),
+        QuickActionSpec("Fastboot", Icons.Outlined.Usb, onFastbootClick),
         QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick),
     )
 
@@ -344,6 +351,7 @@ private fun DeviceContentDisconnectedPreview() {
             onShellClick = {},
             onRemoteClick = {},
             onLogsClick = {},
+            onFastbootClick = {},
             onRefreshClick = {},
             onToggleInfoClick = {},
         )
@@ -377,6 +385,7 @@ private fun DeviceContentConnectedPreview() {
             onShellClick = {},
             onRemoteClick = {},
             onLogsClick = {},
+            onFastbootClick = {},
             onRefreshClick = {},
             onToggleInfoClick = {},
         )
