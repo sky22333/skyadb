@@ -51,6 +51,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        optIn.add("kotlin.ExperimentalUnsignedTypes")
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
@@ -68,6 +74,7 @@ dependencies {
     implementation(libs.kadb)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    implementation(libs.okio)
     implementation(libs.timber)
 
     testImplementation(libs.junit)

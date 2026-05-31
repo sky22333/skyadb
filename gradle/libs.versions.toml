@@ -8,6 +8,7 @@ navigation = "2.9.8"
 datastore = "1.2.1"
 coroutines = "1.10.2"
 okhttp = "5.3.2"
+okio = "3.17.0"
 timber = "5.0.1"
 kadb = "2.1.1"
 junit = "4.13.2"
@@ -29,6 +30,7 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 kadb = { module = "com.flyfishxu:kadb", version.ref = "kadb" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 junit = { module = "junit:junit", version.ref = "junit" }
 

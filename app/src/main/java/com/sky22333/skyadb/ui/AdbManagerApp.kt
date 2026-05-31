@@ -45,6 +45,7 @@ import com.sky22333.skyadb.ui.remote.RemoteControlScreen
 import com.sky22333.skyadb.ui.screenshot.ScreenshotScreen
 import com.sky22333.skyadb.ui.settings.SettingsScreen
 import com.sky22333.skyadb.ui.shell.ShellScreen
+import com.sky22333.skyadb.ui.usb.UsbAdbScreen
 
 @Composable
 fun AdbManagerApp() {
@@ -130,6 +131,7 @@ fun AdbManagerApp() {
                     bottomPadding = bottomPadding,
                     onPairingClick = { navController.navigate(AppDestination.Pairing.route) },
                     onDiscoveryClick = { navController.navigate(AppDestination.Discovery.route) },
+                    onUsbClick = { navController.navigate(AppDestination.UsbAdb.route) },
                     discoveredHost = discoveredHost,
                     discoveredPort = discoveredPort,
                     onDiscoveredEndpointConsumed = {
@@ -193,6 +195,18 @@ fun AdbManagerApp() {
                     },
                 )
             }
+            composable(AppDestination.UsbAdb.route) {
+                UsbAdbScreen(
+                    bottomPadding = bottomPadding,
+                    onBackClick = { navController.popBackStack() },
+                    onConnected = {
+                        navController.navigate(AppDestination.Device.route) {
+                            popUpTo(AppDestination.Home.route)
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
             composable(AppDestination.Shell.route) {
                 ShellScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
@@ -243,6 +257,7 @@ private sealed class AppDestination(
     data object Settings : AppDestination("settings", "设置", Icons.Outlined.Settings)
     data object Pairing : AppDestination("pairing", "配对", Icons.Outlined.PhoneAndroid)
     data object Discovery : AppDestination("discovery", "扫描", Icons.Outlined.Devices)
+    data object UsbAdb : AppDestination("usb_adb", "USB ADB", Icons.Outlined.Usb)
     data object Shell : AppDestination("shell", "Shell", Icons.Outlined.PhoneAndroid)
     data object Apps : AppDestination("apps", "应用", Icons.Outlined.PhoneAndroid)
     data object LocalApps : AppDestination("local_apps", "本机应用", Icons.Outlined.PhoneAndroid)

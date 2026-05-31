@@ -11,6 +11,7 @@ import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.ShellCommandResult
+import dadb.Dadb
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ interface AdbRepository {
     val recentDevices: Flow<List<AdbDevice>>
     val selectedDeviceInfo: Flow<DeviceInfo>
     suspend fun connect(host: String, port: Int): AdbOperationResult<String>
+    suspend fun connectUsb(dadb: Dadb, endpoint: String, name: String): AdbOperationResult<String>
     suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit>
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
     suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult>
@@ -105,6 +107,34 @@ class DefaultAdbRepository(
                     .filter { it != "未知" }
                     .joinToString(" ")
                     .ifBlank { "Android 设备" }
+                val namedDevice = connectedDevice.copy(name = deviceName)
+                recentDeviceState.value = upsertRecentDevice(namedDevice)
+                recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
+            }
+        }
+        return result
+    }
+
+    override suspend fun connectUsb(dadb: Dadb, endpoint: String, name: String): AdbOperationResult<String> {
+        val result = kadbManager.connectUsb(dadb, endpoint)
+        if (result is AdbOperationResult.Success) {
+            val connectedDevice = AdbDevice(
+                id = endpoint,
+                name = name.ifBlank { "USB ADB 设备" },
+                host = "USB",
+                port = 0,
+                type = DeviceType.Unknown,
+                connectionState = ConnectionState.Connected,
+                lastConnectedText = "刚刚连接",
+            )
+            recentDeviceState.value = upsertRecentDevice(connectedDevice)
+            recentDeviceStore.upsert(connectedDevice.copy(connectionState = ConnectionState.Disconnected))
+            val infoResult = refreshDeviceInfo()
+            if (infoResult is AdbOperationResult.Success) {
+                val deviceName = listOf(infoResult.data.brand, infoResult.data.model)
+                    .filter { it != "未知" && it != "鏈煡" }
+                    .joinToString(" ")
+                    .ifBlank { connectedDevice.name }
                 val namedDevice = connectedDevice.copy(name = deviceName)
                 recentDeviceState.value = upsertRecentDevice(namedDevice)
                 recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))

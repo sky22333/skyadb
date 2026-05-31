@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.AddLink
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
@@ -60,6 +61,7 @@ fun HomeScreen(
     bottomPadding: Dp = 0.dp,
     onPairingClick: () -> Unit = {},
     onDiscoveryClick: () -> Unit = {},
+    onUsbClick: () -> Unit = {},
     discoveredHost: String = "",
     discoveredPort: String = "",
     onDiscoveredEndpointConsumed: () -> Unit = {},
@@ -112,6 +114,7 @@ fun HomeScreen(
                     onConnectClick = viewModel::onConnectClicked,
                     onPairingClick = onPairingClick,
                     onDiscoveryClick = onDiscoveryClick,
+                    onUsbClick = onUsbClick,
                 )
             }
 
@@ -166,6 +169,7 @@ private fun ManualConnectCard(
     onConnectClick: () -> Unit,
     onPairingClick: () -> Unit,
     onDiscoveryClick: () -> Unit,
+    onUsbClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -239,6 +243,14 @@ private fun ManualConnectCard(
                 Icon(imageVector = Icons.Outlined.Search, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(text = "发现局域网设备")
+            }
+            OutlinedButton(
+                onClick = onUsbClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(imageVector = Icons.Outlined.Usb, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "USB ADB")
             }
         }
     }
@@ -317,7 +329,11 @@ private fun RecentDeviceCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${device.host}:${device.port} · ${device.type.label}",
+                        text = if (device.port > 0) {
+                            "${device.host}:${device.port} · ${device.type.label}"
+                        } else {
+                            "${device.host} · ${device.type.label}"
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -350,6 +366,7 @@ private fun ManualConnectCardEmptyPreview() {
             onConnectClick = {},
             onPairingClick = {},
             onDiscoveryClick = {},
+            onUsbClick = {},
         )
     }
 }
@@ -373,6 +390,7 @@ private fun ManualConnectCardErrorPreview() {
             onConnectClick = {},
             onPairingClick = {},
             onDiscoveryClick = {},
+            onUsbClick = {},
         )
     }
 }
