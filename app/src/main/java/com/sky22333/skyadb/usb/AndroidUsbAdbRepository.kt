@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.sky22333.skyadb.repository.AdbRepository
 import dadb.AdbKeyPair
 import dadb.Dadb
@@ -38,14 +39,15 @@ class AndroidUsbAdbRepository(
                         activeDeviceId = null
                         adbRepository.disconnect()
                     }
-                }
             }
-        val filter = IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            appContext.registerReceiver(receiver, filter)
         }
+        val filter = IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        ContextCompat.registerReceiver(
+            appContext,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     fun listDevices(): List<UsbAdbDevice> {
@@ -123,14 +125,15 @@ class AndroidUsbAdbRepository(
                             continuation.resume(granted)
                         }
                     }
-                }
+            }
 
             val filter = IntentFilter(UsbPermissionAction)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                appContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                appContext.registerReceiver(receiver, filter)
-            }
+            ContextCompat.registerReceiver(
+                appContext,
+                receiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
             continuation.invokeOnCancellation {
                 runCatching { appContext.unregisterReceiver(receiver) }
             }

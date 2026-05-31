@@ -7,7 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.os.Build
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -130,12 +130,12 @@ class AndroidFastbootRepository(
             }
         }
         val filter = IntentFilter(UsbPermissionAction)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            appContext.registerReceiver(receiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            appContext,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         continuation.invokeOnCancellation {
             runCatching { appContext.unregisterReceiver(receiver) }
         }
