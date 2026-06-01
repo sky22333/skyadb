@@ -13,13 +13,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * 复刻 Kadb CertUtils 的「生成 → PKCS#8 PEM → 重新解析 → 派生公钥」身份流程。
- * 连接与无线配对（Android 6~8）共用这条 private-key-first 路径，其前提是：
- * 重新解析出的私钥必须是 RSAPrivateCrtKey，否则派生公钥失败并抛
- * "Only RSA private keys with CRT parameters are supported"。
- * 旧版平台 Conscrypt 会返回非 CRT 私钥触发该错误，置顶新版 Conscrypt 后修复。
- */
+/** Kadb 身份流程要求 PKCS#8 解析结果为 RSAPrivateCrtKey。 */
 class AdbIdentityCryptoTest {
     @Test
     fun pkcs8RoundTrip_yieldsCrtKey_soIdentityAndPairingSucceed() {
@@ -28,10 +22,7 @@ class AdbIdentityCryptoTest {
         }.generateKeyPair()
 
         val parsed = parsePrivateKeyFromPem(encodePrivateKeyPem(keyPair.private.encoded))
-        assertTrue(
-            "PKCS#8 解析必须返回 RSAPrivateCrtKey，否则连接/配对会失败",
-            parsed is RSAPrivateCrtKey,
-        )
+        assertTrue("PKCS#8 解析结果必须是 RSAPrivateCrtKey", parsed is RSAPrivateCrtKey)
 
         val crt = parsed as RSAPrivateCrtKey
         val derivedPublic = KeyFactory.getInstance("RSA")
@@ -46,7 +37,7 @@ class AdbIdentityCryptoTest {
         val plain = KeyFactory.getInstance("RSA")
             .generatePrivate(RSAPrivateKeySpec(crt.modulus, crt.privateExponent))
 
-        assertFalse("非 CRT 私钥即旧版 Conscrypt 的返回类型", plain is RSAPrivateCrtKey)
+        assertFalse("非 CRT 私钥", plain is RSAPrivateCrtKey)
     }
 
     private fun encodePrivateKeyPem(encoded: ByteArray): String {
