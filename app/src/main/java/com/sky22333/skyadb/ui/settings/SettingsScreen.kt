@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteSweep
@@ -45,6 +46,7 @@ import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 @Composable
 fun SettingsScreen(
     bottomPadding: Dp = 0.dp,
+    onDiagnosticsClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -58,6 +60,7 @@ fun SettingsScreen(
         onScanRangesChanged = viewModel::onScanRangesChanged,
         onThemeModeSelected = viewModel::onThemeModeSelected,
         onClearRecentDevicesClicked = viewModel::onClearRecentDevicesClicked,
+        onDiagnosticsClick = onDiagnosticsClick,
     )
 }
 
@@ -72,6 +75,7 @@ private fun SettingsContent(
     onScanRangesChanged: (String) -> Unit,
     onThemeModeSelected: (ThemeMode) -> Unit,
     onClearRecentDevicesClicked: () -> Unit,
+    onDiagnosticsClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -183,6 +187,15 @@ private fun SettingsContent(
             item {
                 SettingGroupCard {
                     SettingBlock(
+                        icon = Icons.Outlined.BugReport,
+                        title = "诊断日志",
+                        description = "查看连接和功能错误",
+                    ) {
+                        Button(onClick = onDiagnosticsClick) {
+                            Text("查看日志")
+                        }
+                    }
+                    SettingBlock(
                         icon = Icons.Outlined.CleaningServices,
                         title = "清理最近设备",
                         description = "移除连接历史",
@@ -247,6 +260,7 @@ private fun SettingsContentPreview() {
             onScanRangesChanged = {},
             onThemeModeSelected = {},
             onClearRecentDevicesClicked = {},
+            onDiagnosticsClick = {},
         )
     }
 }

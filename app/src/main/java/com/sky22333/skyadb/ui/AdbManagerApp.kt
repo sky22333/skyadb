@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -31,9 +32,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sky22333.skyadb.ui.apps.AppsScreen
 import com.sky22333.skyadb.ui.device.DeviceScreen
+import com.sky22333.skyadb.ui.diagnostics.DiagnosticLogScreen
 import com.sky22333.skyadb.ui.discovery.DeviceDiscoveryScreen
 import com.sky22333.skyadb.ui.download.OnlineDownloadScreen
 import com.sky22333.skyadb.ui.files.FileTransferScreen
+import com.sky22333.skyadb.ui.fastboot.FastbootScreen
 import com.sky22333.skyadb.ui.home.HomeScreen
 import com.sky22333.skyadb.ui.install.InstallApkScreen
 import com.sky22333.skyadb.ui.localapps.LocalAppsScreen
@@ -43,6 +46,7 @@ import com.sky22333.skyadb.ui.remote.RemoteControlScreen
 import com.sky22333.skyadb.ui.screenshot.ScreenshotScreen
 import com.sky22333.skyadb.ui.settings.SettingsScreen
 import com.sky22333.skyadb.ui.shell.ShellScreen
+import com.sky22333.skyadb.ui.usb.UsbAdbScreen
 
 @Composable
 fun AdbManagerApp() {
@@ -128,6 +132,7 @@ fun AdbManagerApp() {
                     bottomPadding = bottomPadding,
                     onPairingClick = { navController.navigate(AppDestination.Pairing.route) },
                     onDiscoveryClick = { navController.navigate(AppDestination.Discovery.route) },
+                    onUsbClick = { navController.navigate(AppDestination.UsbAdb.route) },
                     discoveredHost = discoveredHost,
                     discoveredPort = discoveredPort,
                     onDiscoveredEndpointConsumed = {
@@ -148,9 +153,15 @@ fun AdbManagerApp() {
                     onShellClick = { navController.navigate(AppDestination.Shell.route) },
                     onRemoteClick = { navController.navigate(RemoteRoute) },
                     onLogsClick = { navController.navigate(LogsRoute) },
+                    onFastbootClick = { navController.navigate(AppDestination.Fastboot.route) },
                 )
             }
-            composable(AppDestination.Settings.route) { SettingsScreen(bottomPadding = bottomPadding) }
+            composable(AppDestination.Settings.route) {
+                SettingsScreen(
+                    bottomPadding = bottomPadding,
+                    onDiagnosticsClick = { navController.navigate(DiagnosticsRoute) },
+                )
+            }
             composable(AppDestination.Pairing.route) {
                 val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
                 val pairingHostState = savedStateHandle
@@ -190,6 +201,18 @@ fun AdbManagerApp() {
                     },
                 )
             }
+            composable(AppDestination.UsbAdb.route) {
+                UsbAdbScreen(
+                    bottomPadding = bottomPadding,
+                    onBackClick = { navController.popBackStack() },
+                    onConnected = {
+                        navController.navigate(AppDestination.Device.route) {
+                            popUpTo(AppDestination.Home.route)
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
             composable(AppDestination.Shell.route) {
                 ShellScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
@@ -217,6 +240,12 @@ fun AdbManagerApp() {
             composable(LogsRoute) {
                 SystemLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
             }
+            composable(DiagnosticsRoute) {
+                DiagnosticLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+            }
+            composable(AppDestination.Fastboot.route) {
+                FastbootScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+            }
         }
     }
 }
@@ -237,6 +266,7 @@ private sealed class AppDestination(
     data object Settings : AppDestination("settings", "设置", Icons.Outlined.Settings)
     data object Pairing : AppDestination("pairing", "配对", Icons.Outlined.PhoneAndroid)
     data object Discovery : AppDestination("discovery", "扫描", Icons.Outlined.Devices)
+    data object UsbAdb : AppDestination("usb_adb", "USB ADB", Icons.Outlined.Usb)
     data object Shell : AppDestination("shell", "Shell", Icons.Outlined.PhoneAndroid)
     data object Apps : AppDestination("apps", "应用", Icons.Outlined.PhoneAndroid)
     data object LocalApps : AppDestination("local_apps", "本机应用", Icons.Outlined.PhoneAndroid)
@@ -244,6 +274,7 @@ private sealed class AppDestination(
     data object Install : AppDestination("install", "安装", Icons.Outlined.PhoneAndroid)
     data object Files : AppDestination("files", "文件", Icons.Outlined.PhoneAndroid)
     data object Screenshot : AppDestination("screenshot", "截图", Icons.Outlined.PhoneAndroid)
+    data object Fastboot : AppDestination("fastboot", "Fastboot", Icons.Outlined.Usb)
 }
 
 private const val DiscoveryHostKey = "discovery_host"
@@ -252,3 +283,4 @@ private const val PairingHostKey = "pairing_host"
 private const val PairingPortKey = "pairing_port"
 private const val RemoteRoute = "remote"
 private const val LogsRoute = "logs"
+private const val DiagnosticsRoute = "diagnostics"

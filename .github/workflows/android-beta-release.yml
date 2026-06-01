@@ -6,7 +6,7 @@ on:
       tag:
         description: "基础版本标签，流水线会自动追加 -beta 后缀。"
         required: true
-        default: "v1.0.0"
+        default: "v1.1.0"
 
 permissions:
   contents: write

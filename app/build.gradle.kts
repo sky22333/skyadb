@@ -21,8 +21,8 @@ android {
         applicationId = "com.sky22333.skyadb"
         minSdk = 23
         targetSdk = 36
-        versionCode = ciVersionCode ?: 10000
-        versionName = ciVersionName ?: "1.0.0"
+        versionCode = ciVersionCode ?: 11000
+        versionName = ciVersionName ?: "1.1.0"
     }
 
     signingConfigs {
@@ -51,6 +51,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        optIn.add("kotlin.ExperimentalUnsignedTypes")
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
@@ -61,6 +67,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
