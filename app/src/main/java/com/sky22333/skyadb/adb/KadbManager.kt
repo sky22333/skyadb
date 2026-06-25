@@ -1,5 +1,7 @@
 package com.sky22333.skyadb.adb
 
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import com.flyfishxu.kadb.Kadb
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
@@ -7,13 +9,27 @@ import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.RemoteFileListParser
 import com.sky22333.skyadb.model.ShellCommandResult
+import com.sky22333.skyadb.usb.AndroidUsbInterface
+import com.sky22333.skyadb.usb.UsbAdbBridge
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 
+enum class AdbSessionKind {
+    None,
+    Wifi,
+    UsbAdb,
+    UsbFastboot,
+}
+
 class KadbManager {
+    private val bridgeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var activeKadb: Kadb? = null
     private var activeEndpoint: String? = null
+    private var usbBridge: UsbAdbBridge? = null
+    private var sessionKind: AdbSessionKind = AdbSessionKind.None
     private var lastConnectTimeoutMillis = 10_000
     private var lastSocketTimeoutMillis = 30_000
 
@@ -25,6 +41,27 @@ class KadbManager {
     ): AdbOperationResult<String> = withContext(Dispatchers.IO) {
         lastConnectTimeoutMillis = connectTimeoutMillis
         lastSocketTimeoutMillis = socketTimeoutMillis
+        disconnectAdbOnly()
+        openKadbSession(
+            host = host,
+            port = port,
+            connectTimeoutMillis = connectTimeoutMillis,
+            socketTimeoutMillis = socketTimeoutMillis,
+            sessionKind = AdbSessionKind.Wifi,
+            endpoint = "$host:$port",
+        )
+    }
+
+    private suspend fun openKadbSession(
+        host: String,
+        port: Int,
+        connectTimeoutMillis: Int,
+        socketTimeoutMillis: Int,
+        sessionKind: AdbSessionKind,
+        endpoint: String,
+    ): AdbOperationResult<String> = withContext(Dispatchers.IO) {
+        activeKadb?.close()
+        activeKadb = null
         runCatching {
             val kadb = Kadb.create(host, port, connectTimeoutMillis, socketTimeoutMillis)
             val probe = kadb.shell("echo kadb_ready")
@@ -35,8 +72,9 @@ class KadbManager {
                 )
             }
             activeKadb = kadb
-            activeEndpoint = "$host:$port"
-            AdbOperationResult.Success(activeEndpoint.orEmpty())
+            activeEndpoint = endpoint
+            this@KadbManager.sessionKind = sessionKind
+            AdbOperationResult.Success(endpoint)
         }.getOrElse { error ->
             if (AdbIdentityManager.isRsaCrtError(error)) {
                 AdbIdentityManager.repairIdentity()
@@ -49,6 +87,54 @@ class KadbManager {
             AdbOperationResult.Failure(
                 message = "无法连接到设备",
                 suggestion = "请确认设备与本机处于同一网络、ADB 端口正确，并已允许调试授权。",
+                cause = error,
+            )
+        }
+    }
+
+    suspend fun connectUsb(
+        usbManager: UsbManager,
+        device: UsbDevice,
+        connectTimeoutMillis: Int = 10_000,
+        socketTimeoutMillis: Int = 30_000,
+    ): AdbOperationResult<String> = withContext(Dispatchers.IO) {
+        disconnectAdbOnly()
+        val adbInterface = AndroidUsbInterface.findAdbInterface(device)
+            ?: return@withContext AdbOperationResult.Failure(
+                message = "未找到 ADB 接口",
+                suggestion = "请确认目标设备已开启 USB 调试，且当前不是 Fastboot 模式。",
+            )
+        val connection = usbManager.openDevice(device)
+            ?: return@withContext AdbOperationResult.Failure(
+                message = "无法打开 USB 设备",
+                suggestion = "请重新插拔 OTG 线，并在系统弹窗中允许 USB 访问。",
+            )
+
+        runCatching {
+            val bridge = UsbAdbBridge(connection, adbInterface, socketTimeoutMillis)
+            usbBridge = bridge
+            bridge.start(bridgeScope)
+            when (
+                val result = openKadbSession(
+                    host = "127.0.0.1",
+                    port = bridge.localPort,
+                    connectTimeoutMillis = connectTimeoutMillis,
+                    socketTimeoutMillis = socketTimeoutMillis,
+                    sessionKind = AdbSessionKind.UsbAdb,
+                    endpoint = "usb-otg:${device.deviceName}",
+                )
+            ) {
+                is AdbOperationResult.Success -> result
+                is AdbOperationResult.Failure -> {
+                    disconnect()
+                    result
+                }
+            }
+        }.getOrElse { error ->
+            disconnect()
+            AdbOperationResult.Failure(
+                message = "USB OTG 连接失败",
+                suggestion = "请确认目标设备已允许 USB 调试授权，并重新插拔 OTG 线。",
                 cause = error,
             )
         }
@@ -395,7 +481,36 @@ class KadbManager {
     fun disconnect() {
         activeKadb?.close()
         activeKadb = null
+        usbBridge?.close()
+        usbBridge = null
         activeEndpoint = null
+        sessionKind = AdbSessionKind.None
+    }
+
+    private fun disconnectAdbOnly() {
+        activeKadb?.close()
+        activeKadb = null
+        usbBridge?.close()
+        usbBridge = null
+        activeEndpoint = null
+        if (sessionKind == AdbSessionKind.Wifi || sessionKind == AdbSessionKind.UsbAdb) {
+            sessionKind = AdbSessionKind.None
+        }
+    }
+
+    fun sessionKind(): AdbSessionKind = sessionKind
+
+    fun markUsbFastbootSession(deviceName: String) {
+        disconnectAdbOnly()
+        activeEndpoint = "fastboot:$deviceName"
+        sessionKind = AdbSessionKind.UsbFastboot
+    }
+
+    fun clearUsbFastbootSession() {
+        if (sessionKind == AdbSessionKind.UsbFastboot) {
+            activeEndpoint = null
+            sessionKind = AdbSessionKind.None
+        }
     }
 
     fun currentEndpoint(): String? = activeEndpoint
@@ -404,6 +519,12 @@ class KadbManager {
      * 镜像使用两条专用连接：video 独占视频流，control 负责启动 server 与控制通道。
      */
     suspend fun beginMirrorSession(): AdbOperationResult<MirrorConnections> = withContext(Dispatchers.IO) {
+        if (sessionKind == AdbSessionKind.UsbAdb) {
+            return@withContext AdbOperationResult.Failure(
+                message = "USB OTG 暂不支持屏幕镜像",
+                suggestion = "屏幕镜像需要两条并行 ADB 连接，当前 USB OTG 仅支持单通道。请改用 Wi-Fi ADB 连接后再试。",
+            )
+        }
         val endpoint = parseEndpoint(activeEndpoint.orEmpty())
             ?: return@withContext AdbOperationResult.Failure(
                 message = "未连接设备",

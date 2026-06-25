@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceType
 import java.io.IOException
@@ -71,12 +72,13 @@ class RecentDeviceStore(context: Context) {
             device.type.name,
             device.connectionState.name,
             escape(device.lastConnectedText),
+            device.linkKind.name,
         ).joinToString("|")
     }
 
     private fun decodeDevice(value: String): AdbDevice? {
         val parts = value.split("|")
-        if (parts.size != 7) return null
+        if (parts.size !in 7..8) return null
         val port = parts[3].toIntOrNull() ?: return null
         return AdbDevice(
             id = unescape(parts[0]),
@@ -86,6 +88,9 @@ class RecentDeviceStore(context: Context) {
             type = DeviceType.entries.firstOrNull { it.name == parts[4] } ?: DeviceType.Unknown,
             connectionState = ConnectionState.Disconnected,
             lastConnectedText = unescape(parts[6]),
+            linkKind = parts.getOrNull(7)?.let { name ->
+                AdbLinkKind.entries.firstOrNull { it.name == name }
+            } ?: AdbLinkKind.Wifi,
         )
     }
 

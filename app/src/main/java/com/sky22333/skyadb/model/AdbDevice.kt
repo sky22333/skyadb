@@ -1,5 +1,10 @@
 package com.sky22333.skyadb.model
 
+enum class AdbLinkKind(val label: String) {
+    Wifi("Wi-Fi"),
+    UsbOtg("USB OTG"),
+}
+
 data class AdbDevice(
     val id: String,
     val name: String,
@@ -8,6 +13,7 @@ data class AdbDevice(
     val type: DeviceType,
     val connectionState: ConnectionState,
     val lastConnectedText: String,
+    val linkKind: AdbLinkKind = AdbLinkKind.Wifi,
 )
 
 enum class DeviceType(val label: String) {

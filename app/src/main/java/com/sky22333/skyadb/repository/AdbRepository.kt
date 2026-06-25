@@ -1,18 +1,23 @@
 package com.sky22333.skyadb.repository
 
+import com.sky22333.skyadb.adb.AdbSessionKind
+import com.sky22333.skyadb.adb.FastbootOtgManager
 import com.sky22333.skyadb.adb.KadbManager
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.data.RecentDeviceStore
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.diagnostics.alsoLog
-import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbLinkKind
+import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.ShellCommandResult
+import com.sky22333.skyadb.usb.UsbOtgHost
+import com.sky22333.skyadb.usb.UsbOtgMode
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +32,8 @@ interface AdbRepository {
     val recentDevices: Flow<List<AdbDevice>>
     val selectedDeviceInfo: Flow<DeviceInfo>
     suspend fun connect(host: String, port: Int): AdbOperationResult<String>
+    suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String>
+    suspend fun runFastbootCommand(command: String): AdbOperationResult<String>
     suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit>
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
     suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult>
@@ -44,19 +51,19 @@ interface AdbRepository {
     suspend fun pull(remotePath: String, localFile: File): AdbOperationResult<Unit>
     suspend fun captureScreenshot(localFile: File): AdbOperationResult<File>
     fun disconnect()
+    fun sessionKind(): AdbSessionKind
 }
 
 class DefaultAdbRepository(
     private val kadbManager: KadbManager,
+    private val fastbootOtgManager: FastbootOtgManager,
+    private val usbOtgHost: UsbOtgHost,
     private val recentDeviceStore: RecentDeviceStore,
     private val settingsStore: AppSettingsStore,
 ) : AdbRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val recentDeviceState = MutableStateFlow(
-        emptyList<AdbDevice>(),
-    )
-
+    private val recentDeviceState = MutableStateFlow(emptyList<AdbDevice>())
     private val deviceInfoState = MutableStateFlow(DeviceInfo())
 
     override val recentDevices: Flow<List<AdbDevice>> = recentDeviceState.asStateFlow()
@@ -81,6 +88,7 @@ class DefaultAdbRepository(
     }
 
     override suspend fun connect(host: String, port: Int): AdbOperationResult<String> {
+        disconnect()
         val settings = settingsStore.settings.first()
         val result = kadbManager.connect(
             host = host,
@@ -89,30 +97,102 @@ class DefaultAdbRepository(
             socketTimeoutMillis = settings.commandTimeoutSeconds * 1_000,
         )
         if (result is AdbOperationResult.Success) {
-            val connectedDevice = AdbDevice(
-                id = "$host:$port",
-                name = "Android 设备",
-                host = host,
-                port = port,
-                type = DeviceType.Unknown,
-                connectionState = ConnectionState.Connected,
-                lastConnectedText = "刚刚连接",
+            persistConnectedDevice(
+                AdbDevice(
+                    id = "$host:$port",
+                    name = "Android 设备",
+                    host = host,
+                    port = port,
+                    type = DeviceType.Unknown,
+                    connectionState = ConnectionState.Connected,
+                    lastConnectedText = "刚刚连接",
+                    linkKind = AdbLinkKind.Wifi,
+                ),
             )
-            recentDeviceState.value = upsertRecentDevice(connectedDevice)
-            recentDeviceStore.upsert(connectedDevice.copy(connectionState = ConnectionState.Disconnected))
-
-            val infoResult = refreshDeviceInfo()
-            if (infoResult is AdbOperationResult.Success) {
-                val deviceName = listOf(infoResult.data.brand, infoResult.data.model)
-                    .filter { it != "未知" }
-                    .joinToString(" ")
-                    .ifBlank { "Android 设备" }
-                val namedDevice = connectedDevice.copy(name = deviceName)
-                recentDeviceState.value = upsertRecentDevice(namedDevice)
-                recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
-            }
         }
         return result.logFailure(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
+    }
+
+    override suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String> {
+        val device = usbOtgHost.getDevice(deviceName)
+            ?: return AdbOperationResult.Failure(
+                message = "USB 设备已断开",
+                suggestion = "请重新插拔 OTG 线，并在首页刷新 USB 设备列表。",
+            )
+        if (!usbOtgHost.hasPermission(device)) {
+            return AdbOperationResult.Failure(
+                message = "尚未获得 USB 权限",
+                suggestion = "请在系统弹窗中允许 sky adb 访问该 USB 设备。",
+            )
+        }
+
+        disconnect()
+        val settings = settingsStore.settings.first()
+        val mode = usbOtgHost.attachments.value.firstOrNull { it.deviceName == deviceName }?.mode
+            ?: return AdbOperationResult.Failure(
+                message = "无法识别 USB 设备模式",
+                suggestion = "请确认目标设备处于 ADB 或 Fastboot 模式。",
+            )
+
+        val result = when (mode) {
+            UsbOtgMode.Adb -> kadbManager.connectUsb(
+                usbManager = usbOtgHost.usbManager(),
+                device = device,
+                connectTimeoutMillis = settings.connectionTimeoutSeconds * 1_000,
+                socketTimeoutMillis = settings.commandTimeoutSeconds * 1_000,
+            )
+            UsbOtgMode.Fastboot -> fastbootOtgManager.connect(
+                usbManager = usbOtgHost.usbManager(),
+                device = device,
+            )
+        }
+
+        if (result is AdbOperationResult.Success) {
+            when (mode) {
+                UsbOtgMode.Adb -> {
+                    persistConnectedDevice(
+                        AdbDevice(
+                            id = "usb-otg:$deviceName",
+                            name = "USB 设备",
+                            host = "usb-otg",
+                            port = 0,
+                            type = DeviceType.Unknown,
+                            connectionState = ConnectionState.Connected,
+                            lastConnectedText = "刚刚连接",
+                            linkKind = AdbLinkKind.UsbOtg,
+                        ),
+                    )
+                }
+                UsbOtgMode.Fastboot -> {
+                    kadbManager.markUsbFastbootSession(deviceName)
+                    persistConnectedDevice(
+                        AdbDevice(
+                            id = "fastboot:$deviceName",
+                            name = "Fastboot 设备",
+                            host = "fastboot",
+                            port = 0,
+                            type = DeviceType.Unknown,
+                            connectionState = ConnectionState.Connected,
+                            lastConnectedText = "Fastboot 已连接",
+                            linkKind = AdbLinkKind.UsbOtg,
+                        ),
+                    )
+                }
+            }
+        }
+
+        return result.logFailure(DiagnosticModule.UsbOtg, "USB OTG 连接", deviceName)
+    }
+
+    override suspend fun runFastbootCommand(command: String): AdbOperationResult<String> {
+        if (kadbManager.sessionKind() != AdbSessionKind.UsbFastboot) {
+            return AdbOperationResult.Failure(
+                message = "当前不是 Fastboot 连接",
+                suggestion = "请先在首页通过 USB OTG 连接处于 Fastboot 模式的设备。",
+            )
+        }
+        return fastbootOtgManager.sendCommand(command)
+            .logFailure(DiagnosticModule.Fastboot, "Fastboot 命令", command.take(80))
     }
 
     override suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit> {
@@ -121,6 +201,12 @@ class DefaultAdbRepository(
     }
 
     override suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo> {
+        if (kadbManager.sessionKind() == AdbSessionKind.UsbFastboot) {
+            return AdbOperationResult.Failure(
+                message = "Fastboot 模式无法读取设备详情",
+                suggestion = "请先重启到系统并通过 USB ADB 连接，或执行 Fastboot 命令获取变量。",
+            )
+        }
         val result = kadbManager.fetchDeviceInfo()
         if (result is AdbOperationResult.Success) {
             deviceInfoState.value = result.data
@@ -132,6 +218,12 @@ class DefaultAdbRepository(
     }
 
     override suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult> {
+        if (kadbManager.sessionKind() == AdbSessionKind.UsbFastboot) {
+            return AdbOperationResult.Failure(
+                message = "Fastboot 模式不支持 Shell",
+                suggestion = "当前设备处于 Fastboot 模式，请使用 getvar、reboot 等 Fastboot 命令。",
+            )
+        }
         return kadbManager.shell(command)
             .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
@@ -203,6 +295,8 @@ class DefaultAdbRepository(
 
     override fun disconnect() {
         kadbManager.disconnect()
+        fastbootOtgManager.disconnect()
+        kadbManager.clearUsbFastbootSession()
         val next = recentDeviceState.value.map {
             it.copy(connectionState = ConnectionState.Disconnected)
         }
@@ -210,6 +304,37 @@ class DefaultAdbRepository(
         deviceInfoState.value = DeviceInfo()
         scope.launch {
             recentDeviceStore.saveDevices(next)
+        }
+    }
+
+    override fun sessionKind(): AdbSessionKind = kadbManager.sessionKind()
+
+    private suspend fun persistConnectedDevice(connectedDevice: AdbDevice) {
+        recentDeviceState.value = upsertRecentDevice(connectedDevice)
+        recentDeviceStore.upsert(connectedDevice.copy(connectionState = ConnectionState.Disconnected))
+
+        if (connectedDevice.linkKind == AdbLinkKind.Wifi) {
+            val infoResult = refreshDeviceInfo()
+            if (infoResult is AdbOperationResult.Success) {
+                val deviceName = listOf(infoResult.data.brand, infoResult.data.model)
+                    .filter { it != "未知" }
+                    .joinToString(" ")
+                    .ifBlank { "Android 设备" }
+                val namedDevice = connectedDevice.copy(name = deviceName)
+                recentDeviceState.value = upsertRecentDevice(namedDevice)
+                recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
+            }
+        } else if (connectedDevice.host == "usb-otg") {
+            val infoResult = refreshDeviceInfo()
+            if (infoResult is AdbOperationResult.Success) {
+                val deviceName = listOf(infoResult.data.brand, infoResult.data.model)
+                    .filter { it != "未知" }
+                    .joinToString(" ")
+                    .ifBlank { "USB 设备" }
+                val namedDevice = connectedDevice.copy(name = deviceName)
+                recentDeviceState.value = upsertRecentDevice(namedDevice)
+                recentDeviceStore.upsert(namedDevice.copy(connectionState = ConnectionState.Disconnected))
+            }
         }
     }
 

@@ -3,11 +3,15 @@ package com.sky22333.skyadb.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
+import com.sky22333.skyadb.usb.UsbOtgAttachment
+import com.sky22333.skyadb.usb.UsbOtgMode
+import com.sky22333.skyadb.usb.UsbPermissionEvent
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,11 +22,13 @@ data class HomeUiState(
     val ip: String = "",
     val port: String = "5555",
     val recentDevices: List<AdbDevice> = emptyList(),
+    val usbAttachments: List<UsbOtgAttachment> = emptyList(),
     val connectionStateText: String = "未连接设备",
     val ipError: String? = null,
     val portError: String? = null,
     val connectEnabled: Boolean = false,
     val operationStatus: OperationStatus = OperationStatus.Idle,
+    val connectingUsbDeviceName: String? = null,
 )
 
 class HomeViewModel(
@@ -46,6 +52,32 @@ class HomeViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            AppServices.usbOtgHost.attachments.collect { attachments ->
+                state.value = state.value.copy(usbAttachments = attachments)
+            }
+        }
+        viewModelScope.launch {
+            AppServices.usbOtgActions.events.collect { event ->
+                when (event) {
+                    is UsbPermissionEvent.Granted -> connectUsbOtg(event.deviceName)
+                    is UsbPermissionEvent.Detached -> {
+                        if (adbRepository.sessionKind() != AdbSessionKind.None) {
+                            adbRepository.disconnect()
+                        }
+                        state.value = state.value.copy(
+                            connectionStateText = "USB 设备已断开",
+                            connectingUsbDeviceName = null,
+                        )
+                    }
+                }
+            }
+        }
+        refreshUsbDevices()
+    }
+
+    fun refreshUsbDevices() {
+        AppServices.usbOtgActions.refresh()
     }
 
     fun onIpChanged(value: String) {
@@ -113,6 +145,58 @@ class HomeViewModel(
                         connectEnabled = true,
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
                         connectionStateText = "连接失败",
+                    )
+                }
+            }
+        }
+    }
+
+    fun onUsbConnectClicked(deviceName: String) {
+        val attachment = state.value.usbAttachments.firstOrNull { it.deviceName == deviceName } ?: return
+        if (!attachment.hasPermission) {
+            state.value = state.value.copy(
+                connectingUsbDeviceName = deviceName,
+                operationStatus = OperationStatus.Running("等待 USB 授权…"),
+            )
+            AppServices.usbOtgActions.askPermission(deviceName)
+            return
+        }
+        connectUsbOtg(deviceName)
+    }
+
+    private fun connectUsbOtg(deviceName: String) {
+        val attachment = state.value.usbAttachments.firstOrNull { it.deviceName == deviceName }
+        val modeLabel = when (attachment?.mode) {
+            UsbOtgMode.Adb -> "ADB"
+            UsbOtgMode.Fastboot -> "Fastboot"
+            null -> "USB"
+        }
+        state.value = state.value.copy(
+            connectingUsbDeviceName = deviceName,
+            connectEnabled = false,
+            operationStatus = OperationStatus.Running("正在通过 USB OTG 连接 $modeLabel 设备…"),
+            connectionStateText = "正在连接 USB 设备",
+        )
+        viewModelScope.launch {
+            when (val result = adbRepository.connectUsbOtg(deviceName)) {
+                is AdbOperationResult.Success -> {
+                    state.value = state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = true,
+                        operationStatus = OperationStatus.Success("USB 连接成功：${result.data}"),
+                        connectionStateText = if (attachment?.mode == UsbOtgMode.Fastboot) {
+                            "已连接 Fastboot 设备"
+                        } else {
+                            "已连接 USB 设备"
+                        },
+                    )
+                }
+                is AdbOperationResult.Failure -> {
+                    state.value = state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = true,
+                        operationStatus = OperationStatus.Failed(result.message, result.suggestion),
+                        connectionStateText = "USB 连接失败",
                     )
                 }
             }

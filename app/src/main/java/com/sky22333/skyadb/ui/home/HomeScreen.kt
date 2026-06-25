@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddLink
+import androidx.compose.material.icons.outlined.Cable
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.OperationStatus
@@ -53,6 +56,8 @@ import com.sky22333.skyadb.ui.components.EmptyState
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AppDimens
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
+import com.sky22333.skyadb.usb.UsbOtgAttachment
+import com.sky22333.skyadb.usb.UsbOtgMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,6 +121,15 @@ fun HomeScreen(
             }
 
             item {
+                UsbOtgConnectCard(
+                    attachments = uiState.usbAttachments,
+                    connectingDeviceName = uiState.connectingUsbDeviceName,
+                    onRefreshClick = viewModel::refreshUsbDevices,
+                    onConnectClick = viewModel::onUsbConnectClicked,
+                )
+            }
+
+            item {
                 SectionHeader(
                     title = "最近设备",
                     description = "成功连接过的设备会保存在这里，方便下次快速重连",
@@ -148,6 +162,112 @@ fun HomeScreen(
                         onClick = { viewModel.onRecentDeviceSelected(device) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsbOtgConnectCard(
+    attachments: List<UsbOtgAttachment>,
+    connectingDeviceName: String?,
+    onRefreshClick: () -> Unit,
+    onConnectClick: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppDimens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SectionHeader(
+                title = "USB OTG",
+                description = "通过 OTG 线连接另一台 Android 设备（ADB 或 Fastboot）",
+                trailing = {
+                    IconButton(
+                        onClick = onRefreshClick,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = "刷新 USB 设备",
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
+            )
+
+            if (attachments.isEmpty()) {
+                EmptyState(
+                    title = "未检测到 USB 设备",
+                    message = "请用 OTG 线连接目标设备，并确认已开启 USB 调试或处于 Fastboot 模式。",
+                )
+            } else {
+                attachments.forEach { attachment ->
+                    UsbOtgDeviceRow(
+                        attachment = attachment,
+                        connecting = attachment.deviceName == connectingDeviceName,
+                        onConnectClick = { onConnectClick(attachment.deviceName) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsbOtgDeviceRow(
+    attachment: UsbOtgAttachment,
+    connecting: Boolean,
+    onConnectClick: () -> Unit,
+) {
+    val modeLabel = when (attachment.mode) {
+        UsbOtgMode.Adb -> "ADB"
+        UsbOtgMode.Fastboot -> "Fastboot"
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Usb,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "VID ${attachment.vendorId.toString(16)} · PID ${attachment.productId.toString(16)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "$modeLabel · ${if (attachment.hasPermission) "已授权" else "待授权"}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            OutlinedButton(
+                onClick = onConnectClick,
+                enabled = !connecting,
+            ) {
+                Icon(imageVector = Icons.Outlined.Cable, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = if (connecting) "连接中…" else "连接")
             }
         }
     }
@@ -317,7 +437,15 @@ private fun RecentDeviceCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${device.host}:${device.port} · ${device.type.label}",
+                        text = buildString {
+                            append(
+                                when (device.linkKind) {
+                                    AdbLinkKind.Wifi -> "${device.host}:${device.port}"
+                                    AdbLinkKind.UsbOtg -> device.linkKind.label
+                                },
+                            )
+                            append(" · ${device.type.label}")
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )

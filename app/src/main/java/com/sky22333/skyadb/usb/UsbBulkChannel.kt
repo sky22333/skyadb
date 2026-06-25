@@ -1,0 +1,80 @@
+package com.sky22333.skyadb.usb
+
+import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
+import android.hardware.usb.UsbInterface
+import java.io.Closeable
+import java.io.EOFException
+import java.io.IOException
+
+class UsbBulkChannel(
+    private val connection: UsbDeviceConnection,
+    private val usbInterface: UsbInterface,
+    val ioTimeoutMs: Int,
+) : Closeable {
+    val endpointIn: UsbEndpoint
+    val endpointOut: UsbEndpoint
+
+    init {
+        if (!connection.claimInterface(usbInterface, true)) {
+            throw IOException("无法占用 USB 接口")
+        }
+        var input: UsbEndpoint? = null
+        var output: UsbEndpoint? = null
+        for (index in 0 until usbInterface.endpointCount) {
+            val endpoint = usbInterface.getEndpoint(index)
+            if (endpoint.type != UsbConstants.USB_ENDPOINT_XFER_BULK) continue
+            if (endpoint.direction == UsbConstants.USB_DIR_IN) {
+                input = endpoint
+            } else {
+                output = endpoint
+            }
+        }
+        if (input == null || output == null) {
+            connection.releaseInterface(usbInterface)
+            throw IOException("未找到 USB Bulk 端点")
+        }
+        endpointIn = input
+        endpointOut = output
+    }
+
+    fun readChunk(buffer: ByteArray): Int {
+        val transferred = connection.bulkTransfer(
+            endpointIn,
+            buffer,
+            buffer.size,
+            ioTimeoutMs,
+        )
+        if (transferred < 0) {
+            throw EOFException("USB 读取失败：$transferred")
+        }
+        return transferred
+    }
+
+    fun writeChunk(source: ByteArray, offset: Int, length: Int) {
+        var written = 0
+        while (written < length) {
+            val chunk = minOf(length - written, MaxChunkBytes)
+            val transferred = connection.bulkTransfer(
+                endpointOut,
+                source,
+                offset + written,
+                chunk,
+                ioTimeoutMs,
+            )
+            if (transferred <= 0) {
+                throw IOException("USB 写入失败：$transferred")
+            }
+            written += transferred
+        }
+    }
+
+    override fun close() {
+        runCatching { connection.releaseInterface(usbInterface) }
+    }
+
+    private companion object {
+        const val MaxChunkBytes = 16 * 1024
+    }
+}

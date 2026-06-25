@@ -15,6 +15,8 @@ data class DiagnosticLog(
 enum class DiagnosticModule(val label: String) {
     App("应用"),
     WifiAdb("Wi-Fi ADB"),
+    UsbOtg("USB OTG"),
+    Fastboot("Fastboot"),
     Pairing("无线配对"),
     Discovery("设备发现"),
     Files("文件"),
