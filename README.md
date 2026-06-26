@@ -60,5 +60,6 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 - [scrcpy](https://github.com/Genymobile/scrcpy)
 
 
-## Star 趋势
-[![Star 趋势](https://starchart.cc/sky22333/skyadb.svg?variant=adaptive)](https://starchart.cc/sky22333/skyadb)
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=sky22333/skyadb&type=date&legend=top-left)](https://www.star-history.com/?repos=sky22333%2Fskyadb&type=date&legend=top-left)
