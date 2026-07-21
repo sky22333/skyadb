@@ -1,10 +1,10 @@
 package com.sky22333.skyadb.ui
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -20,6 +20,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sky22333.skyadb.ui.apps.AppsScreen
@@ -46,13 +46,18 @@ import com.sky22333.skyadb.ui.pairing.PairingScreen
 import com.sky22333.skyadb.ui.remote.RemoteControlScreen
 import com.sky22333.skyadb.ui.screenshot.ScreenshotScreen
 import com.sky22333.skyadb.ui.settings.SettingsScreen
+import com.sky22333.skyadb.ui.shared.LocalSharedTransitionScope
+import com.sky22333.skyadb.ui.shared.SharedToolKeys
+import com.sky22333.skyadb.ui.shared.appComposable
 import com.sky22333.skyadb.ui.shell.ShellScreen
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AdbManagerApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val bottomRoutes = remember { bottomDestinations.map { it.route }.toSet() }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -100,143 +105,147 @@ fun AdbManagerApp() {
     ) { padding ->
         val bottomPadding = padding.calculateBottomPadding()
 
-        NavHost(
-            navController = navController,
-            startDestination = AppDestination.Home.route,
-            modifier = Modifier.fillMaxSize(),
-            enterTransition = {
-                fadeIn(animationSpec = tween(150)) +
-                    slideInHorizontally(animationSpec = tween(150), initialOffsetX = { it / 14 })
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(120)) +
-                    slideOutHorizontally(animationSpec = tween(120), targetOffsetX = { -it / 24 })
-            },
-            popEnterTransition = {
-                fadeIn(animationSpec = tween(150)) +
-                    slideInHorizontally(animationSpec = tween(150), initialOffsetX = { -it / 14 })
-            },
-            popExitTransition = {
-                fadeOut(animationSpec = tween(120)) +
-                    slideOutHorizontally(animationSpec = tween(120), targetOffsetX = { it / 24 })
-            },
-        ) {
-            composable(AppDestination.Home.route) {
-                val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
-                val discoveredHostState = savedStateHandle
-                    ?.getStateFlow(DiscoveryHostKey, "")
-                    ?.collectAsState()
-                    ?: remember { mutableStateOf("") }
-                val discoveredPortState = savedStateHandle
-                    ?.getStateFlow(DiscoveryPortKey, "")
-                    ?.collectAsState()
-                    ?: remember { mutableStateOf("") }
-                val discoveredHost by discoveredHostState
-                val discoveredPort by discoveredPortState
-                HomeScreen(
-                    bottomPadding = bottomPadding,
-                    onPairingClick = { navController.navigate(AppDestination.Pairing.route) },
-                    onDiscoveryClick = { navController.navigate(AppDestination.Discovery.route) },
-                    discoveredHost = discoveredHost,
-                    discoveredPort = discoveredPort,
-                    onDiscoveredEndpointConsumed = {
-                        savedStateHandle?.remove<String>(DiscoveryHostKey)
-                        savedStateHandle?.remove<String>(DiscoveryPortKey)
+        SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                NavHost(
+                    navController = navController,
+                    startDestination = AppDestination.Home.route,
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = {
+                        val tabSwitch = initialState.destination.route in bottomRoutes &&
+                            targetState.destination.route in bottomRoutes
+                        fadeIn(animationSpec = tween(if (tabSwitch) 120 else 180))
                     },
-                )
-            }
-            composable(AppDestination.Device.route) {
-                DeviceScreen(
-                    bottomPadding = bottomPadding,
-                    onAppsClick = { navController.navigate(AppDestination.Apps.route) },
-                    onLocalAppsClick = { navController.navigate(AppDestination.LocalApps.route) },
-                    onInstallClick = { navController.navigate(AppDestination.Install.route) },
-                    onDownloadClick = { navController.navigate(AppDestination.Download.route) },
-                    onFilesClick = { navController.navigate(AppDestination.Files.route) },
-                    onScreenshotClick = { navController.navigate(AppDestination.Screenshot.route) },
-                    onShellClick = { navController.navigate(AppDestination.Shell.route) },
-                    onRemoteClick = { navController.navigate(RemoteRoute) },
-                    onMirrorClick = { navController.navigate(MirrorRoute) },
-                    onLogsClick = { navController.navigate(LogsRoute) },
-                )
-            }
-            composable(AppDestination.Settings.route) {
-                SettingsScreen(
-                    bottomPadding = bottomPadding,
-                    onDiagnosticsClick = { navController.navigate(DiagnosticsRoute) },
-                )
-            }
-            composable(AppDestination.Pairing.route) {
-                val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
-                val pairingHostState = savedStateHandle
-                    ?.getStateFlow(PairingHostKey, "")
-                    ?.collectAsState()
-                    ?: remember { mutableStateOf("") }
-                val pairingPortState = savedStateHandle
-                    ?.getStateFlow(PairingPortKey, "")
-                    ?.collectAsState()
-                    ?: remember { mutableStateOf("") }
-                val pairingHost by pairingHostState
-                val pairingPort by pairingPortState
-                PairingScreen(
-                    bottomPadding = bottomPadding,
-                    onBackClick = { navController.popBackStack() },
-                    discoveredHost = pairingHost,
-                    discoveredPort = pairingPort,
-                    onDiscoveredEndpointConsumed = {
-                        savedStateHandle?.remove<String>(PairingHostKey)
-                        savedStateHandle?.remove<String>(PairingPortKey)
+                    exitTransition = {
+                        val tabSwitch = initialState.destination.route in bottomRoutes &&
+                            targetState.destination.route in bottomRoutes
+                        fadeOut(animationSpec = tween(if (tabSwitch) 100 else 140))
                     },
-                )
-            }
-            composable(AppDestination.Discovery.route) {
-                DeviceDiscoveryScreen(
-                    bottomPadding = bottomPadding,
-                    onBackClick = { navController.popBackStack() },
-                    onUseEndpoint = { host, port ->
-                        navController.previousBackStackEntry?.savedStateHandle?.set(DiscoveryHostKey, host)
-                        navController.previousBackStackEntry?.savedStateHandle?.set(DiscoveryPortKey, port.toString())
-                        navController.popBackStack()
+                    popEnterTransition = {
+                        fadeIn(animationSpec = tween(180))
                     },
-                    onPairEndpoint = { host, port ->
-                        navController.navigate(AppDestination.Pairing.route)
-                        navController.currentBackStackEntry?.savedStateHandle?.set(PairingHostKey, host)
-                        navController.currentBackStackEntry?.savedStateHandle?.set(PairingPortKey, port.toString())
+                    popExitTransition = {
+                        fadeOut(animationSpec = tween(140))
                     },
-                )
-            }
-            composable(AppDestination.Shell.route) {
-                ShellScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.Apps.route) {
-                AppsScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.LocalApps.route) {
-                LocalAppsScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.Download.route) {
-                OnlineDownloadScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.Install.route) {
-                InstallApkScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.Files.route) {
-                FileTransferScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(AppDestination.Screenshot.route) {
-                ScreenshotScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(RemoteRoute) {
-                RemoteControlScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(MirrorRoute) {
-                MirrorScreen(onBackClick = { navController.popBackStack() })
-            }
-            composable(LogsRoute) {
-                SystemLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
-            }
-            composable(DiagnosticsRoute) {
-                DiagnosticLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                ) {
+                    appComposable(AppDestination.Home.route) {
+                        val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+                        val discoveredHostState = savedStateHandle
+                            ?.getStateFlow(DiscoveryHostKey, "")
+                            ?.collectAsState()
+                            ?: remember { mutableStateOf("") }
+                        val discoveredPortState = savedStateHandle
+                            ?.getStateFlow(DiscoveryPortKey, "")
+                            ?.collectAsState()
+                            ?: remember { mutableStateOf("") }
+                        val discoveredHost by discoveredHostState
+                        val discoveredPort by discoveredPortState
+                        HomeScreen(
+                            bottomPadding = bottomPadding,
+                            onPairingClick = { navController.navigate(AppDestination.Pairing.route) },
+                            onDiscoveryClick = { navController.navigate(AppDestination.Discovery.route) },
+                            discoveredHost = discoveredHost,
+                            discoveredPort = discoveredPort,
+                            onDiscoveredEndpointConsumed = {
+                                savedStateHandle?.remove<String>(DiscoveryHostKey)
+                                savedStateHandle?.remove<String>(DiscoveryPortKey)
+                            },
+                        )
+                    }
+                    appComposable(AppDestination.Device.route) {
+                        DeviceScreen(
+                            bottomPadding = bottomPadding,
+                            onAppsClick = { navController.navigate(AppDestination.Apps.route) },
+                            onLocalAppsClick = { navController.navigate(AppDestination.LocalApps.route) },
+                            onInstallClick = { navController.navigate(AppDestination.Install.route) },
+                            onDownloadClick = { navController.navigate(AppDestination.Download.route) },
+                            onFilesClick = { navController.navigate(AppDestination.Files.route) },
+                            onScreenshotClick = { navController.navigate(AppDestination.Screenshot.route) },
+                            onShellClick = { navController.navigate(AppDestination.Shell.route) },
+                            onRemoteClick = { navController.navigate(RemoteRoute) },
+                            onMirrorClick = { navController.navigate(MirrorRoute) },
+                            onLogsClick = { navController.navigate(LogsRoute) },
+                        )
+                    }
+                    appComposable(AppDestination.Settings.route) {
+                        SettingsScreen(
+                            bottomPadding = bottomPadding,
+                            onDiagnosticsClick = { navController.navigate(DiagnosticsRoute) },
+                        )
+                    }
+                    appComposable(AppDestination.Pairing.route) {
+                        val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+                        val pairingHostState = savedStateHandle
+                            ?.getStateFlow(PairingHostKey, "")
+                            ?.collectAsState()
+                            ?: remember { mutableStateOf("") }
+                        val pairingPortState = savedStateHandle
+                            ?.getStateFlow(PairingPortKey, "")
+                            ?.collectAsState()
+                            ?: remember { mutableStateOf("") }
+                        val pairingHost by pairingHostState
+                        val pairingPort by pairingPortState
+                        PairingScreen(
+                            bottomPadding = bottomPadding,
+                            onBackClick = { navController.popBackStack() },
+                            discoveredHost = pairingHost,
+                            discoveredPort = pairingPort,
+                            onDiscoveredEndpointConsumed = {
+                                savedStateHandle?.remove<String>(PairingHostKey)
+                                savedStateHandle?.remove<String>(PairingPortKey)
+                            },
+                        )
+                    }
+                    appComposable(AppDestination.Discovery.route) {
+                        DeviceDiscoveryScreen(
+                            bottomPadding = bottomPadding,
+                            onBackClick = { navController.popBackStack() },
+                            onUseEndpoint = { host, port ->
+                                navController.previousBackStackEntry?.savedStateHandle?.set(DiscoveryHostKey, host)
+                                navController.previousBackStackEntry?.savedStateHandle?.set(DiscoveryPortKey, port.toString())
+                                navController.popBackStack()
+                            },
+                            onPairEndpoint = { host, port ->
+                                navController.navigate(AppDestination.Pairing.route)
+                                navController.currentBackStackEntry?.savedStateHandle?.set(PairingHostKey, host)
+                                navController.currentBackStackEntry?.savedStateHandle?.set(PairingPortKey, port.toString())
+                            },
+                        )
+                    }
+                    appComposable(AppDestination.Shell.route, SharedToolKeys.Shell) {
+                        ShellScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Apps.route, SharedToolKeys.Apps) {
+                        AppsScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.LocalApps.route, SharedToolKeys.LocalApps) {
+                        LocalAppsScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Download.route, SharedToolKeys.Download) {
+                        OnlineDownloadScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Install.route, SharedToolKeys.Install) {
+                        InstallApkScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Files.route, SharedToolKeys.Files) {
+                        FileTransferScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(AppDestination.Screenshot.route, SharedToolKeys.Screenshot) {
+                        ScreenshotScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(RemoteRoute, SharedToolKeys.Remote) {
+                        RemoteControlScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(MirrorRoute) {
+                        MirrorScreen(onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(LogsRoute, SharedToolKeys.Logs) {
+                        SystemLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                    appComposable(DiagnosticsRoute) {
+                        DiagnosticLogScreen(bottomPadding = bottomPadding, onBackClick = { navController.popBackStack() })
+                    }
+                }
             }
         }
     }

@@ -46,6 +46,7 @@ import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.AppStatusBadge
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.components.ToolActionCard
+import com.sky22333.skyadb.ui.shared.SharedToolKeys
 import com.sky22333.skyadb.ui.theme.AppDimens
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 
@@ -299,19 +300,19 @@ private fun QuickActionGrid(
 ) {
     val actions = when (sessionKind) {
         AdbSessionKind.UsbFastboot -> listOf(
-            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
+            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
         )
         AdbSessionKind.None, AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> listOf(
-            QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick),
-            QuickActionSpec("本机应用", Icons.Outlined.Apps, onLocalAppsClick),
-            QuickActionSpec("安装 APK", Icons.Outlined.Android, onInstallClick),
-            QuickActionSpec("在线下载", Icons.Outlined.Download, onDownloadClick),
-            QuickActionSpec("文件管理", Icons.Outlined.FolderOpen, onFilesClick),
-            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
+            QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick, SharedToolKeys.Apps),
+            QuickActionSpec("本机应用", Icons.Outlined.Apps, onLocalAppsClick, SharedToolKeys.LocalApps),
+            QuickActionSpec("安装 APK", Icons.Outlined.Android, onInstallClick, SharedToolKeys.Install),
+            QuickActionSpec("在线下载", Icons.Outlined.Download, onDownloadClick, SharedToolKeys.Download),
+            QuickActionSpec("文件管理", Icons.Outlined.FolderOpen, onFilesClick, SharedToolKeys.Files),
+            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
             QuickActionSpec("屏幕镜像", Icons.Outlined.Android, onMirrorClick),
-            QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick),
-            QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick),
-            QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick),
+            QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick, SharedToolKeys.Remote),
+            QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick, SharedToolKeys.Logs),
+            QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick, SharedToolKeys.Screenshot),
         )
     }
 
@@ -327,6 +328,7 @@ private fun QuickActionGrid(
                         icon = action.icon,
                         onClick = action.onClick,
                         modifier = Modifier.weight(1f),
+                        sharedContentKey = action.sharedContentKey,
                     )
                 }
                 if (rowActions.size == 1) {
@@ -341,6 +343,7 @@ private data class QuickActionSpec(
     val label: String,
     val icon: ImageVector,
     val onClick: () -> Unit,
+    val sharedContentKey: String? = null,
 )
 
 @Preview(name = "设备详情 - 未连接", showBackground = true, widthDp = 390)

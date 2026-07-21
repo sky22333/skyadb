@@ -1,6 +1,5 @@
 package com.sky22333.skyadb.ui.localapps
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.localapps.LocalAppIcons
 import com.sky22333.skyadb.localapps.LocalInstalledApp
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
@@ -187,7 +188,7 @@ private fun LocalAppCard(
                 shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
-                LocalAppIcon(app = app)
+                LocalAppIcon(packageName = app.packageName)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -231,10 +232,11 @@ private fun LocalAppCard(
 private val ActionWidth = 96.dp
 
 @Composable
-private fun LocalAppIcon(app: LocalInstalledApp) {
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = app.iconPath) {
+private fun LocalAppIcon(packageName: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
         value = withContext(Dispatchers.IO) {
-            BitmapFactory.decodeFile(app.iconPath)?.asImageBitmap()
+            LocalAppIcons.load(context, packageName)?.asImageBitmap()
         }
     }
     val icon = bitmap

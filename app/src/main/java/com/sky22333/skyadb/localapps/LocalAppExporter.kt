@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.util.LruCache
 import java.io.File
 import java.io.FileInputStream
 import java.util.Locale
@@ -35,7 +36,6 @@ class LocalAppExporter(
                     versionName = versionName(appInfo.packageName),
                     isSingleApk = splitCount == 0 && sourceFile.extension.equals("apk", ignoreCase = true),
                     apkSizeBytes = sourceFile.takeIf { it.isFile && it.canRead() }?.length() ?: 0L,
-                    iconPath = iconPath(appInfo),
                 )
             }
             .sortedWith(compareBy<LocalInstalledApp> { !it.installable }.thenBy { it.label.lowercase(Locale.ROOT) })
@@ -95,32 +95,6 @@ class LocalAppExporter(
         }.getOrNull().orEmpty()
     }
 
-    private fun iconPath(appInfo: ApplicationInfo): String {
-        val target = File(context.cacheDir, "local-app-icons/${appInfo.packageName}.png")
-        if (!target.isFile) {
-            appInfo.loadIcon(packageManager).toBitmap().saveAsPng(target)
-        }
-        return target.absolutePath
-    }
-
-    private fun Drawable.toBitmap(): Bitmap {
-        if (this is BitmapDrawable && bitmap != null) {
-            return Bitmap.createScaledBitmap(bitmap, IconSize, IconSize, true)
-        }
-        return Bitmap.createBitmap(IconSize, IconSize, Bitmap.Config.ARGB_8888).also { bitmap ->
-            val canvas = Canvas(bitmap)
-            setBounds(0, 0, canvas.width, canvas.height)
-            draw(canvas)
-        }
-    }
-
-    private fun Bitmap.saveAsPng(file: File) {
-        file.parentFile?.mkdirs()
-        file.outputStream().use { output ->
-            compress(Bitmap.CompressFormat.PNG, 100, output)
-        }
-    }
-
     private fun ApplicationInfo.isUserApp(): Boolean {
         val systemFlags = ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
         return flags and systemFlags == 0 && packageName != context.packageName
@@ -131,8 +105,35 @@ class LocalAppExporter(
             ?.filter { it.isFile && it.extension.equals("apk", ignoreCase = true) }
             ?.forEach { file -> runCatching { file.delete() } }
     }
+}
 
-    private companion object {
-        const val IconSize = 96
+/** 可见项懒加载 + 内存缓存；不做磁盘 PNG 中转。 */
+object LocalAppIcons {
+    private const val IconSize = 96
+    private val cache = LruCache<String, Bitmap>(48)
+
+    fun load(context: Context, packageName: String): Bitmap? {
+        synchronized(cache) {
+            cache.get(packageName)?.let { return it }
+        }
+        val appContext = context.applicationContext
+        val bitmap = runCatching {
+            appContext.packageManager.getApplicationIcon(packageName).toScaledBitmap(IconSize)
+        }.getOrNull() ?: return null
+        synchronized(cache) {
+            cache.put(packageName, bitmap)
+        }
+        return bitmap
+    }
+
+    private fun Drawable.toScaledBitmap(size: Int): Bitmap {
+        if (this is BitmapDrawable && bitmap != null) {
+            return Bitmap.createScaledBitmap(bitmap, size, size, true)
+        }
+        return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { out ->
+            val canvas = Canvas(out)
+            setBounds(0, 0, canvas.width, canvas.height)
+            draw(canvas)
+        }
     }
 }
