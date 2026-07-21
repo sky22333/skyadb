@@ -3,6 +3,7 @@ package com.sky22333.skyadb.ui.device
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
 data class DeviceUiState(
     val deviceName: String = "未选择设备",
     val connectionState: ConnectionState = ConnectionState.Disconnected,
+    val sessionKind: AdbSessionKind = AdbSessionKind.None,
     val info: DeviceInfo = DeviceInfo(),
     val refreshing: Boolean = false,
     val refreshStatus: OperationStatus = OperationStatus.Idle,
@@ -42,11 +44,13 @@ class DeviceViewModel(
                     state.value = state.value.copy(
                         deviceName = connected.name,
                         connectionState = connected.connectionState,
+                        sessionKind = adbRepository.sessionKind(),
                     )
                 } else {
                     state.value = state.value.copy(
                         deviceName = "未选择设备",
                         connectionState = ConnectionState.Disconnected,
+                        sessionKind = AdbSessionKind.None,
                         info = DeviceInfo(),
                         refreshing = false,
                         refreshStatus = OperationStatus.Idle,

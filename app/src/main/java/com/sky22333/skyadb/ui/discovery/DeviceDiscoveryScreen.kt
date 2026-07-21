@@ -348,14 +348,6 @@ private fun ScanResultCard(
     }
 }
 
-private fun scanRangeSummary(networks: List<LocalNetwork>): String {
-    return when {
-        networks.isEmpty() -> "未检测到局域网"
-        networks.size == 1 -> networks.first().subnetLabel
-        else -> "${networks.size} 个候选网段"
-    }
-}
-
 private fun scanRangeDescription(uiState: DeviceDiscoveryUiState): String {
     if (uiState.networks.isEmpty()) return "请先连接 WiFi 或局域网"
     val ranges = uiState.networks.joinToString("、") { "${it.subnetLabel}（${it.sourceLabel}）" }

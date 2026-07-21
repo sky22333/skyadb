@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddLink
 import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Usb
@@ -82,6 +83,16 @@ fun HomeScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(text = "设备连接") },
+            actions = {
+                if (uiState.canDisconnect) {
+                    IconButton(onClick = viewModel::onDisconnectClicked) {
+                        Icon(
+                            imageVector = Icons.Outlined.LinkOff,
+                            contentDescription = "断开连接",
+                        )
+                    }
+                }
+            },
         )
 
         LazyColumn(

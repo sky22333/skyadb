@@ -12,10 +12,12 @@ import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.repository.AdbRepository
 import com.sky22333.skyadb.validation.DevicePathValidator
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val DefaultFileManagerPath = "/sdcard/Download"
 
@@ -127,6 +129,7 @@ class FileTransferViewModel(
             when (val result = adbRepository.pull(entry.path, tempFile)) {
                 is AdbOperationResult.Success -> savePulledFile(context, destinationUri, tempFile)
                 is AdbOperationResult.Failure -> {
+                    tempFile.delete()
                     state.value = state.value.copy(
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
                     )
@@ -229,25 +232,21 @@ class FileTransferViewModel(
         }
     }
 
-    private fun savePulledFile(context: Context, destinationUri: Uri, tempFile: File) {
+    private suspend fun savePulledFile(context: Context, destinationUri: Uri, tempFile: File) {
         try {
-            runCatching {
+            withContext(Dispatchers.IO) {
                 context.contentResolver.openOutputStream(destinationUri).use { output ->
                     requireNotNull(output) { "无法打开保存位置" }
                     tempFile.inputStream().use { input -> input.copyTo(output) }
                 }
-            }.fold(
-                onSuccess = {
-                    state.value = state.value.copy(operationStatus = OperationStatus.Success("文件已保存到选择的位置"))
-                },
-                onFailure = { error ->
-                    state.value = state.value.copy(
-                        operationStatus = OperationStatus.Failed(
-                            text = "保存文件失败",
-                            suggestion = error.message ?: "请确认保存位置可写。",
-                        ),
-                    )
-                },
+            }
+            state.value = state.value.copy(operationStatus = OperationStatus.Success("文件已保存到选择的位置"))
+        } catch (error: Throwable) {
+            state.value = state.value.copy(
+                operationStatus = OperationStatus.Failed(
+                    text = "保存文件失败",
+                    suggestion = error.message ?: "请确认保存位置可写。",
+                ),
             )
         } finally {
             tempFile.delete()

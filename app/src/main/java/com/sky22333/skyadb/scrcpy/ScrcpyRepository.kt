@@ -25,6 +25,10 @@ class ScrcpyRepository(
     private var session: ScrcpySession? = null
     private var mirrorConnections: MirrorConnections? = null
 
+    fun requestStop() {
+        cleanupScope.launch { stop() }
+    }
+
     suspend fun start(
         surface: Surface,
         qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,

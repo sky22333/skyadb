@@ -50,8 +50,9 @@ interface AdbRepository {
     suspend fun push(localFile: File, remotePath: String): AdbOperationResult<Unit>
     suspend fun pull(remotePath: String, localFile: File): AdbOperationResult<Unit>
     suspend fun captureScreenshot(localFile: File): AdbOperationResult<File>
-    fun disconnect()
+    suspend fun disconnect()
     fun sessionKind(): AdbSessionKind
+    fun isActiveUsbDevice(deviceName: String): Boolean
 }
 
 class DefaultAdbRepository(
@@ -293,7 +294,7 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Screenshot, "截图")
     }
 
-    override fun disconnect() {
+    override suspend fun disconnect() {
         kadbManager.disconnect()
         fastbootOtgManager.disconnect()
         kadbManager.clearUsbFastbootSession()
@@ -309,6 +310,10 @@ class DefaultAdbRepository(
 
     override fun sessionKind(): AdbSessionKind = kadbManager.sessionKind()
 
+    override fun isActiveUsbDevice(deviceName: String): Boolean {
+        return kadbManager.isActiveUsbDevice(deviceName) ||
+            fastbootOtgManager.currentDeviceName() == deviceName
+    }
     private suspend fun persistConnectedDevice(connectedDevice: AdbDevice) {
         recentDeviceState.value = upsertRecentDevice(connectedDevice)
         recentDeviceStore.upsert(connectedDevice.copy(connectionState = ConnectionState.Disconnected))

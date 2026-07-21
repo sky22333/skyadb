@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.OperationStatus
@@ -174,6 +175,7 @@ private fun DeviceContent(
             item { SectionHeader(title = "快捷操作") }
             item {
                 QuickActionGrid(
+                    sessionKind = uiState.sessionKind,
                     onAppsClick = onAppsClick,
                     onLocalAppsClick = onLocalAppsClick,
                     onInstallClick = onInstallClick,
@@ -283,6 +285,7 @@ private fun InfoGrid(items: List<Pair<String, String>>) {
 
 @Composable
 private fun QuickActionGrid(
+    sessionKind: AdbSessionKind,
     onAppsClick: () -> Unit,
     onLocalAppsClick: () -> Unit,
     onInstallClick: () -> Unit,
@@ -294,18 +297,23 @@ private fun QuickActionGrid(
     onMirrorClick: () -> Unit,
     onLogsClick: () -> Unit,
 ) {
-    val actions = listOf(
-        QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick),
-        QuickActionSpec("本机应用", Icons.Outlined.Apps, onLocalAppsClick),
-        QuickActionSpec("安装 APK", Icons.Outlined.Android, onInstallClick),
-        QuickActionSpec("在线下载", Icons.Outlined.Download, onDownloadClick),
-        QuickActionSpec("文件管理", Icons.Outlined.FolderOpen, onFilesClick),
-        QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
-        QuickActionSpec("屏幕镜像", Icons.Outlined.Android, onMirrorClick),
-        QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick),
-        QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick),
-        QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick),
-    )
+    val actions = when (sessionKind) {
+        AdbSessionKind.UsbFastboot -> listOf(
+            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
+        )
+        AdbSessionKind.None, AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> listOf(
+            QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick),
+            QuickActionSpec("本机应用", Icons.Outlined.Apps, onLocalAppsClick),
+            QuickActionSpec("安装 APK", Icons.Outlined.Android, onInstallClick),
+            QuickActionSpec("在线下载", Icons.Outlined.Download, onDownloadClick),
+            QuickActionSpec("文件管理", Icons.Outlined.FolderOpen, onFilesClick),
+            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick),
+            QuickActionSpec("屏幕镜像", Icons.Outlined.Android, onMirrorClick),
+            QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick),
+            QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick),
+            QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick),
+        )
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         actions.chunked(2).forEach { rowActions ->
@@ -365,6 +373,7 @@ private fun DeviceContentConnectedPreview() {
             uiState = DeviceUiState(
                 deviceName = "客厅电视",
                 connectionState = ConnectionState.Connected,
+                sessionKind = AdbSessionKind.Wifi,
                 info = DeviceInfo(
                     brand = "Google",
                     model = "Android TV",

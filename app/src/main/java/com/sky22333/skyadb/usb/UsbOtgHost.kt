@@ -35,8 +35,6 @@ class UsbOtgHost(context: Context) {
         usbManager.requestPermission(device, permissionIntent)
     }
 
-    fun openDevice(device: UsbDevice) = usbManager.openDevice(device)
-
     fun usbManager(): UsbManager = usbManager
 
     private fun toAttachment(device: UsbDevice): UsbOtgAttachment? {

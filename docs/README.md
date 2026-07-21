@@ -40,7 +40,7 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 - Kotlin Coroutines / Flow
 - DataStore Preferences
 - Kadb 2.1.3
-- kadb-mdns 2.1.3
+- kadb 2.1.3（mDNS 使用平台 NsdManager）
 - scrcpy-server 4.0
 - OkHttp 5.3.2
 - Timber
@@ -84,7 +84,7 @@ skyadb/
 │       │   │   └── DiagnosticResultExtensions.kt # 统一结果失败日志扩展
 │       │   ├── discovery/
 │       │   │   ├── AdbMdnsDiscovery.kt   # mDNS UI 模型与接口（中文文案）
-│       │   │   ├── AndroidAdbMdnsDiscovery.kt # 适配上游 kadb-mdns，仅在发现页前台运行
+│       │   │   ├── AndroidAdbMdnsDiscovery.kt # 平台 NsdManager，仅在发现页前台运行
 │       │   │   ├── AdbProtocolProbe.kt    # ADB 协议轻握手确认
 │       │   │   ├── AdbScanModels.kt       # 扫描结果、进度、状态模型
 │       │   │   ├── LanAdbScanner.kt       # 并发局域网扫描、进度节流、协程取消
@@ -166,7 +166,7 @@ skyadb/
 - Repository 层：面向 UI 提供稳定的 ADB 操作接口，隐藏 Kadb 细节。
 - KadbManager：集中封装真实 ADB 能力，避免页面层直接拼接和调用底层 API。
 - DataStore：保存设置和最近设备，所有读取以 Flow 形式向上游暴露。
-- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 基于上游 `kadb-mdns`（NsdManager）仅在发现页前台运行，TCP 扫描支持并发限制、超时、取消和进度节流。
+- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 基于平台 `NsdManager` 仅在发现页前台运行，TCP 扫描支持并发限制、超时、取消和进度节流。
 - Download：下载逻辑独立于页面，支持取消、缓存目录、进度节流和文件名推断。
 - Diagnostics：错误日志仅保存在进程内，用于定位连接、ADB 操作和功能异常，不做永久存储。
 - Scrcpy：屏幕镜像逻辑独立于页面，使用单独 KADB 流式连接、官方 server、MediaCodec 硬解码和控制协议封装。

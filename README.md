@@ -48,7 +48,7 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 - Kotlin
 - Jetpack Compose
 - Material 3
-- Kadb 2.1.3 / kadb-mdns
+- Kadb 2.1.3
 - scrcpy-server
 - Coroutines / Flow
 - DataStore
@@ -59,8 +59,3 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 
 - [Kadb](https://github.com/flyfishxu/Kadb)
 - [scrcpy](https://github.com/Genymobile/scrcpy)
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/chart?repos=sky22333/skyadb&type=date&legend=top-left)](https://www.star-history.com/?repos=sky22333%2Fskyadb&type=date&legend=top-left)

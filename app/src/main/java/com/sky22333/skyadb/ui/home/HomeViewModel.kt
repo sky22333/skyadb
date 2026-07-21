@@ -7,6 +7,7 @@ import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AdbOperationResult
+import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import com.sky22333.skyadb.usb.UsbOtgAttachment
@@ -26,6 +27,7 @@ data class HomeUiState(
     val ipError: String? = null,
     val portError: String? = null,
     val connectEnabled: Boolean = false,
+    val canDisconnect: Boolean = false,
     val operationStatus: OperationStatus = OperationStatus.Idle,
     val connectingUsbDeviceName: String? = null,
 )
@@ -40,7 +42,11 @@ class HomeViewModel(
     init {
         viewModelScope.launch {
             adbRepository.recentDevices.collect { devices ->
-                state.value = state.value.copy(recentDevices = devices)
+                state.value = state.value.copy(
+                    recentDevices = devices,
+                    canDisconnect = devices.any { it.connectionState == ConnectionState.Connected } ||
+                        adbRepository.sessionKind() != AdbSessionKind.None,
+                )
             }
         }
         viewModelScope.launch {
@@ -70,15 +76,7 @@ class HomeViewModel(
                             ),
                         )
                     }
-                    is UsbPermissionEvent.Detached -> {
-                        if (adbRepository.sessionKind() != AdbSessionKind.None) {
-                            adbRepository.disconnect()
-                        }
-                        state.value = state.value.copy(
-                            connectingUsbDeviceName = null,
-                            operationStatus = OperationStatus.Success("USB 设备已断开"),
-                        )
-                    }
+                    is UsbPermissionEvent.Detached -> onUsbDeviceDetached(event.deviceName)
                 }
             }
         }
@@ -114,6 +112,17 @@ class HomeViewModel(
         )
     }
 
+    fun onDisconnectClicked() {
+        viewModelScope.launch {
+            adbRepository.disconnect()
+            state.value = state.value.copy(
+                canDisconnect = false,
+                connectingUsbDeviceName = null,
+                operationStatus = OperationStatus.Success("已断开连接"),
+            )
+        }
+    }
+
     fun onConnectClicked() {
         val current = state.value
         val validation = validateForm(current.ip, current.port)
@@ -142,6 +151,7 @@ class HomeViewModel(
                 is AdbOperationResult.Success -> {
                     state.value = state.value.copy(
                         connectEnabled = true,
+                        canDisconnect = true,
                         operationStatus = OperationStatus.Success("设备连接成功：${result.data}"),
                     )
                 }
@@ -168,6 +178,26 @@ class HomeViewModel(
         connectUsbOtg(deviceName)
     }
 
+    /**
+     * 官方 USB Host 文档：Detached 仅应清理与该 [UsbDevice] 的通信。
+     * 根因：此前对任意拔出都 disconnect，会误杀 Wi‑Fi ADB 会话。
+     */
+    private suspend fun onUsbDeviceDetached(deviceName: String) {
+        val connecting = state.value.connectingUsbDeviceName == deviceName
+        if (adbRepository.isActiveUsbDevice(deviceName)) {
+            adbRepository.disconnect()
+            state.value = state.value.copy(
+                connectingUsbDeviceName = null,
+                canDisconnect = false,
+                operationStatus = OperationStatus.Success("USB 设备已断开"),
+            )
+            return
+        }
+        if (connecting) {
+            state.value = state.value.copy(connectingUsbDeviceName = null)
+        }
+    }
+
     private fun connectUsbOtg(deviceName: String) {
         val attachment = state.value.usbAttachments.firstOrNull { it.deviceName == deviceName }
         val modeLabel = when (attachment?.mode) {
@@ -186,6 +216,7 @@ class HomeViewModel(
                     state.value = state.value.copy(
                         connectingUsbDeviceName = null,
                         connectEnabled = true,
+                        canDisconnect = true,
                         operationStatus = OperationStatus.Success("USB 连接成功：${result.data}"),
                     )
                 }

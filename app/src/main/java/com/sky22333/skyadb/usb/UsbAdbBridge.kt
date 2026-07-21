@@ -9,13 +9,20 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** USB ADB bulk ↔ 本机 TCP，供 Kadb 接入。 */
+/**
+ * USB ADB bulk ↔ 本机 TCP，供 Kadb 接入。
+ *
+ * 阻塞读通过关闭 Socket / ServerSocket 解除（Socket InputStream 通常不可被 Thread.interrupt 打断），
+ * 符合 Kotlin 对阻塞 IO 的官方建议：关闭资源以强制退出阻塞调用。
+ */
 class UsbAdbBridge(
     private val connection: UsbDeviceConnection,
     adbInterface: UsbInterface,
@@ -24,6 +31,7 @@ class UsbAdbBridge(
     private val channel = UsbBulkChannel(connection, adbInterface, ioTimeoutMs)
     private val server = ServerSocket()
     private val running = AtomicBoolean(true)
+    private val activeClient = AtomicReference<Socket?>(null)
     private var acceptJob: Job? = null
 
     val localPort: Int
@@ -44,20 +52,34 @@ class UsbAdbBridge(
         acceptJob = scope.launch(Dispatchers.IO) {
             while (isActive && running.get()) {
                 val client = runCatching { server.accept() }.getOrNull() ?: break
+                if (!running.get()) {
+                    runCatching { client.close() }
+                    break
+                }
                 client.tcpNoDelay = true
-                runCatching { relay(client) }
-                runCatching { client.close() }
+                activeClient.set(client)
+                try {
+                    relay(client)
+                } finally {
+                    activeClient.compareAndSet(client, null)
+                    runCatching { client.close() }
+                }
             }
         }
     }
 
-    private fun relay(client: Socket) {
+    private suspend fun relay(client: Socket) = coroutineScope {
         val input = client.getInputStream()
         val output = client.getOutputStream()
-        val toUsb = Thread { runCatching { pumpTcpToUsb(input) } }
-        val fromUsb = Thread { runCatching { pumpUsbToTcp(output) } }
-        toUsb.start()
-        fromUsb.start()
+        val toUsb = launch(Dispatchers.IO) {
+            runCatching { pumpTcpToUsb(input) }
+        }
+        val fromUsb = launch(Dispatchers.IO) {
+            runCatching { pumpUsbToTcp(output) }
+        }
+        // 任一侧结束时关闭 socket，解除另一侧阻塞读/写
+        toUsb.invokeOnCompletion { runCatching { client.close() } }
+        fromUsb.invokeOnCompletion { runCatching { client.close() } }
         toUsb.join()
         fromUsb.join()
     }
@@ -83,8 +105,10 @@ class UsbAdbBridge(
 
     override fun close() {
         if (!running.compareAndSet(true, false)) return
-        acceptJob?.cancel()
+        // 先关客户端与监听口，解除 accept()/InputStream.read() 阻塞
+        runCatching { activeClient.getAndSet(null)?.close() }
         runCatching { server.close() }
+        acceptJob?.cancel()
         runCatching { channel.close() }
         runCatching { connection.close() }
     }

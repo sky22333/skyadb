@@ -35,6 +35,7 @@ class MirrorViewModel(
     private val state = MutableStateFlow(MirrorUiState())
     val uiState: StateFlow<MirrorUiState> = state.asStateFlow()
 
+    /** 触摸/按键发送；与 stop 解耦，避免 onCleared 取消正在释放的会话。 */
     private val controlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var started = false
 
@@ -112,23 +113,19 @@ class MirrorViewModel(
     }
 
     fun detachSurface() {
-        started = false
+        stop()
     }
 
     fun stop() {
         started = false
         state.value = MirrorUiState()
-        controlScope.launch {
-            repository.stop()
-        }
+        repository.requestStop()
     }
 
     override fun onCleared() {
         started = false
         controlScope.cancel()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            repository.stop()
-        }
+        repository.requestStop()
         super.onCleared()
     }
 }
