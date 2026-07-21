@@ -12,6 +12,7 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 
 - 无线调试配对：输入配对 IP、配对端口、配对码后调用 Kadb Pairing。
 - 手动连接设备：输入目标设备 IP 和 ADB 端口。
+- USB OTG：识别 ADB / Fastboot 接口，授权后连接；Fastboot 命令可在 Shell 页执行。
 - 最近设备：连接成功后保存设备记录，支持点击回填 IP 和端口。
 - 设备详情：读取品牌、型号、Android 版本、SDK、ABI、分辨率、电池信息。
 - 应用管理：读取目标设备应用列表，支持用户应用、系统应用分类，支持搜索、启动、停止、卸载。
@@ -38,7 +39,8 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 - Lifecycle ViewModel + StateFlow
 - Kotlin Coroutines / Flow
 - DataStore Preferences
-- Kadb 2.1.1
+- Kadb 2.1.3
+- kadb 2.1.3（mDNS 使用平台 NsdManager）
 - scrcpy-server 4.0
 - OkHttp 5.3.2
 - Timber
@@ -46,7 +48,7 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 
 ## 运行范围
 
-- 运行 sky adb 的设备：最低 Android 6.0，API 23。
+- 运行 sky adb 的设备：最低 Android 7.0，API 24。
 - 编译目标：compileSdk 37，targetSdk 37。
 - Android 17 局域网：targetSdk 37 需声明并运行时申请 `ACCESS_LOCAL_NETWORK`，用于 mDNS 发现、网段扫描和 WiFi ADB 连接。
 - 被连接设备：以目标设备是否支持 ADB over TCP / Wireless Debugging 为准。Android 11+ 推荐使用无线调试配对；传统 WiFi ADB 设备通常使用 `5555` 端口。
@@ -69,6 +71,8 @@ skyadb/
 │       │   ├── AppServices.kt             # 当前实际使用的轻量服务容器
 │       │   ├── MainActivity.kt            # Compose Activity 入口
 │       │   ├── adb/
+│       │   │   ├── AdbIdentityManager.kt  # KadbCert 持久化身份配置
+│       │   │   ├── FastbootOtgManager.kt  # USB OTG Fastboot
 │       │   │   └── KadbManager.kt         # Kadb 真实能力封装：连接、配对、Shell、安装、传输、截图
 │       │   ├── data/
 │       │   │   ├── AppSettingsStore.kt    # DataStore 设置：端口、超时、网段、镜像画质、主题
@@ -79,8 +83,8 @@ skyadb/
 │       │   │   ├── DiagnosticLogger.kt    # 进程内错误日志收集，限制最大条数
 │       │   │   └── DiagnosticResultExtensions.kt # 统一结果失败日志扩展
 │       │   ├── discovery/
-│       │   │   ├── AdbMdnsDiscovery.kt   # ADB mDNS 自动发现模型和接口
-│       │   │   ├── AndroidAdbMdnsDiscovery.kt # Android NsdManager 实现，仅在发现页前台运行
+│       │   │   ├── AdbMdnsDiscovery.kt   # mDNS UI 模型与接口（中文文案）
+│       │   │   ├── AndroidAdbMdnsDiscovery.kt # 平台 NsdManager，仅在发现页前台运行
 │       │   │   ├── AdbProtocolProbe.kt    # ADB 协议轻握手确认
 │       │   │   ├── AdbScanModels.kt       # 扫描结果、进度、状态模型
 │       │   │   ├── LanAdbScanner.kt       # 并发局域网扫描、进度节流、协程取消
@@ -162,7 +166,7 @@ skyadb/
 - Repository 层：面向 UI 提供稳定的 ADB 操作接口，隐藏 Kadb 细节。
 - KadbManager：集中封装真实 ADB 能力，避免页面层直接拼接和调用底层 API。
 - DataStore：保存设置和最近设备，所有读取以 Flow 形式向上游暴露。
-- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 基于 Android `NsdManager` 仅在发现页前台运行，TCP 扫描支持并发限制、超时、取消和进度节流。
+- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 基于平台 `NsdManager` 仅在发现页前台运行，TCP 扫描支持并发限制、超时、取消和进度节流。
 - Download：下载逻辑独立于页面，支持取消、缓存目录、进度节流和文件名推断。
 - Diagnostics：错误日志仅保存在进程内，用于定位连接、ADB 操作和功能异常，不做永久存储。
 - Scrcpy：屏幕镜像逻辑独立于页面，使用单独 KADB 流式连接、官方 server、MediaCodec 硬解码和控制协议封装。

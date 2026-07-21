@@ -75,16 +75,7 @@ private fun ShellContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(text = "Shell 命令")
-                    Text(
-                        text = "在已连接设备上执行 ADB shell",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = { Text("Shell 命令") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
@@ -130,12 +121,13 @@ private fun ShellCommandCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "命令输入", description = "例如 getprop ro.product.model")
+            SectionHeader(title = "命令输入")
             OutlinedTextField(
                 value = uiState.command,
                 onValueChange = onCommandChanged,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Shell 命令") },
+                placeholder = { Text("例如 getprop ro.product.model") },
                 minLines = 1,
                 maxLines = 4,
             )
@@ -164,9 +156,9 @@ private fun ShellOutputCard(output: String) {
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "输出结果", description = "长输出可横向滚动查看")
+            SectionHeader(title = "输出结果")
             if (output.isBlank()) {
-                EmptyState(title = "暂无输出", message = "执行命令后，结果会显示在这里。")
+                EmptyState(title = "暂无输出")
             } else {
                 Text(
                     text = output,
@@ -201,9 +193,9 @@ private fun ShellHistoryCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "历史命令", description = "点击历史命令可快速填入")
+            SectionHeader(title = "历史命令")
             if (history.isEmpty()) {
-                EmptyState(title = "暂无历史命令", message = "执行过的命令会保留在当前会话中。")
+                EmptyState(title = "暂无历史命令")
             } else {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),

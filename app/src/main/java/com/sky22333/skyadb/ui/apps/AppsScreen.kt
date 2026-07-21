@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,9 +26,10 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.StopCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -170,13 +169,6 @@ private fun AppsContent(
                     onFilterChanged = onFilterChanged,
                 )
             }
-            item {
-                PendingActionCard(
-                    pendingAction = uiState.pendingAction,
-                    onCancelClick = onCancelPendingAction,
-                    onConfirmClick = onConfirmPendingAction,
-                )
-            }
             item { AppsStatusMessage(status = uiState.operationStatus) }
             item {
                 SectionHeader(
@@ -206,6 +198,12 @@ private fun AppsContent(
             }
         }
     }
+
+    PendingActionDialog(
+        pendingAction = uiState.pendingAction,
+        onDismiss = onCancelPendingAction,
+        onConfirm = onConfirmPendingAction,
+    )
 }
 
 @Composable
@@ -237,10 +235,10 @@ private fun AppFilterRow(
 }
 
 @Composable
-private fun PendingActionCard(
+private fun PendingActionDialog(
     pendingAction: AppPendingAction?,
-    onCancelClick: () -> Unit,
-    onConfirmClick: () -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
 ) {
     if (pendingAction == null) return
 
@@ -256,40 +254,18 @@ private fun PendingActionCard(
             else -> "冻结后 ${pendingAction.packageName} 将无法启动。"
         }
     }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-    ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                text = title,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onCancelClick) {
-                    Icon(imageVector = Icons.Outlined.Close, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("取消")
-                }
-                TextButton(onClick = onConfirmClick) {
-                    Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("确认")
-                }
-            }
-        }
+    val confirmLabel = when (pendingAction) {
+        is AppPendingAction.Uninstall -> "卸载"
+        is AppPendingAction.SetEnabled -> if (pendingAction.enabled) "启用" else "冻结"
     }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
 }
 
 @Composable

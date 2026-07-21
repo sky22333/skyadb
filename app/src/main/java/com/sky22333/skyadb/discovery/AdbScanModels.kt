@@ -3,9 +3,31 @@ package com.sky22333.skyadb.discovery
 data class LocalNetwork(
     val deviceIp: String,
     val subnetLabel: String,
-    val hosts: List<String>,
     val sourceLabel: String = "当前网络",
-)
+    val hostCount: Int,
+    private val networkInt: Int,
+    private val broadcastInt: Int,
+    private val prefixLength: Int,
+    private val excludedHost: String?,
+) {
+    fun expandHosts(): List<String> {
+        val hosts = when (prefixLength) {
+            32 -> listOf(deviceIp)
+            31 -> listOf(networkInt.toIpv4String(), broadcastInt.toIpv4String())
+            else -> ((networkInt + 1)..(broadcastInt - 1)).map { it.toIpv4String() }
+        }
+        return if (excludedHost == null) hosts else hosts.filterNot { it == excludedHost }
+    }
+}
+
+internal fun Int.toIpv4String(): String {
+    return listOf(
+        this ushr 24 and 0xff,
+        this ushr 16 and 0xff,
+        this ushr 8 and 0xff,
+        this and 0xff,
+    ).joinToString(".")
+}
 
 data class AdbScanResult(
     val host: String,

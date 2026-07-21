@@ -23,7 +23,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.OperationStatus
+import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -154,7 +154,7 @@ private fun InstallStatusMessage(status: OperationStatus) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                OperationProgressIndicator(progress = status.progress)
                 Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

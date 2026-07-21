@@ -2,6 +2,7 @@ package com.sky22333.skyadb
 
 import android.content.Context
 import com.sky22333.skyadb.adb.KadbManager
+import com.sky22333.skyadb.adb.FastbootOtgManager
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.data.RecentDeviceStore
 import com.sky22333.skyadb.discovery.AndroidAdbMdnsDiscovery
@@ -13,11 +14,20 @@ import com.sky22333.skyadb.files.LocalFileManager
 import com.sky22333.skyadb.localapps.LocalAppExporter
 import com.sky22333.skyadb.repository.DefaultAdbRepository
 import com.sky22333.skyadb.scrcpy.ScrcpyRepository
+import com.sky22333.skyadb.usb.UsbOtgHost
+import com.sky22333.skyadb.usb.UsbOtgActions
 
 object AppServices {
     private var appContext: Context? = null
 
     val kadbManager: KadbManager by lazy { KadbManager() }
+    val fastbootOtgManager: FastbootOtgManager by lazy { FastbootOtgManager() }
+    val usbOtgHost: UsbOtgHost by lazy {
+        UsbOtgHost(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })
+    }
+    val usbOtgActions: UsbOtgActions by lazy {
+        UsbOtgActions(usbOtgHost)
+    }
     val downloadManager: NetworkDownloadManager by lazy { NetworkDownloadManager(appContext) }
     val localFileManager: LocalFileManager by lazy {
         LocalFileManager(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })
@@ -39,7 +49,7 @@ object AppServices {
         AndroidAdbMdnsDiscovery(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })
     }
     val adbRepository: DefaultAdbRepository by lazy {
-        DefaultAdbRepository(kadbManager, recentDeviceStore, settingsStore)
+        DefaultAdbRepository(kadbManager, fastbootOtgManager, usbOtgHost, recentDeviceStore, settingsStore)
     }
     val scrcpyRepository: ScrcpyRepository by lazy {
         ScrcpyRepository(requireNotNull(appContext) { "AppServices 尚未初始化 Context" }, kadbManager)

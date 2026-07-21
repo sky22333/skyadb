@@ -34,7 +34,7 @@ import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -48,6 +48,8 @@ import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ScreenshotScreen(
@@ -81,8 +83,10 @@ private fun ScreenshotContent(
     onSaveClick: () -> Unit,
     onClearClick: () -> Unit,
 ) {
-    val preview = remember(uiState.latestLocalPath) {
-        decodePreviewImage(uiState.latestLocalPath)
+    val preview by produceState<ImageBitmap?>(initialValue = null, key1 = uiState.latestLocalPath) {
+        value = withContext(Dispatchers.IO) {
+            decodePreviewImage(uiState.latestLocalPath)
+        }
     }
 
     Column(

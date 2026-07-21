@@ -1,12 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">sky adb</string>
-    <string name="home_title">设备</string>
-    <string name="device_title">详情</string>
-    <string name="settings_title">设置</string>
-    <string name="connect">连接</string>
-    <string name="pair">配对</string>
-    <string name="disconnect">断开</string>
-    <string name="retry">重试</string>
-    <string name="unknown">未知</string>
 </resources>

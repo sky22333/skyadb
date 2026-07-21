@@ -131,7 +131,7 @@ fun MirrorScreen(
             MirrorControls(
                 modifier = Modifier.align(Alignment.BottomCenter),
                 inputText = inputText,
-                onInputTextChange = { inputText = it.take(300) },
+                onInputTextChange = { inputText = it.take(2000) },
                 onSendText = {
                     viewModel.sendText(inputText)
                     inputText = ""

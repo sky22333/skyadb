@@ -7,21 +7,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddLink
+import androidx.compose.material.icons.outlined.Cable
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,29 +32,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.AppStatusBadge
+import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import com.sky22333.skyadb.ui.components.EmptyState
 import com.sky22333.skyadb.ui.components.SectionHeader
-import com.sky22333.skyadb.ui.theme.AppDimens
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
+import com.sky22333.skyadb.ui.theme.AppDimens
+import com.sky22333.skyadb.usb.UsbOtgAttachment
+import com.sky22333.skyadb.usb.UsbOtgMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,14 +82,15 @@ fun HomeScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(text = "设备连接")
-                    Text(
-                        text = uiState.connectionStateText,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+            title = { Text(text = "设备连接") },
+            actions = {
+                if (uiState.canDisconnect) {
+                    IconButton(onClick = viewModel::onDisconnectClicked) {
+                        Icon(
+                            imageVector = Icons.Outlined.LinkOff,
+                            contentDescription = "断开连接",
+                        )
+                    }
                 }
             },
         )
@@ -116,38 +122,121 @@ fun HomeScreen(
             }
 
             item {
-                SectionHeader(
-                    title = "最近设备",
-                    description = "成功连接过的设备会保存在这里，方便下次快速重连",
-                    trailing = {
-                        IconButton(
-                            onClick = {},
-                            modifier = Modifier.size(36.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Refresh,
-                                contentDescription = "刷新最近设备",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    },
+                UsbOtgConnectCard(
+                    attachments = uiState.usbAttachments,
+                    connectingDeviceName = uiState.connectingUsbDeviceName,
+                    onRefreshClick = viewModel::refreshUsbDevices,
+                    onConnectClick = viewModel::onUsbConnectClicked,
                 )
             }
 
-            if (uiState.recentDevices.isEmpty()) {
-                item {
-                    EmptyState(
-                        title = "还没有历史设备",
-                        message = "先通过手动连接或无线调试配对添加一台设备。",
-                    )
-                }
+            item {
+                RecentDevicesCard(
+                    devices = uiState.recentDevices,
+                    onDeviceClick = viewModel::onRecentDeviceSelected,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsbOtgConnectCard(
+    attachments: List<UsbOtgAttachment>,
+    connectingDeviceName: String?,
+    onRefreshClick: () -> Unit,
+    onConnectClick: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppDimens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SectionHeader(
+                title = "USB OTG",
+                trailing = {
+                    IconButton(
+                        onClick = onRefreshClick,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = "刷新 USB 设备",
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                },
+            )
+
+            if (attachments.isEmpty()) {
+                EmptyState(title = "未检测到设备")
             } else {
-                items(uiState.recentDevices, key = { it.id }) { device ->
-                    RecentDeviceCard(
-                        device = device,
-                        onClick = { viewModel.onRecentDeviceSelected(device) },
+                attachments.forEach { attachment ->
+                    UsbOtgDeviceRow(
+                        attachment = attachment,
+                        connecting = attachment.deviceName == connectingDeviceName,
+                        onConnectClick = { onConnectClick(attachment.deviceName) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsbOtgDeviceRow(
+    attachment: UsbOtgAttachment,
+    connecting: Boolean,
+    onConnectClick: () -> Unit,
+) {
+    val modeLabel = when (attachment.mode) {
+        UsbOtgMode.Adb -> "ADB"
+        UsbOtgMode.Fastboot -> "Fastboot"
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Usb,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = modeLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = if (attachment.hasPermission) "已授权" else "待授权",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            OutlinedButton(
+                onClick = onConnectClick,
+                enabled = !connecting,
+            ) {
+                Icon(imageVector = Icons.Outlined.Cable, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = if (connecting) "连接中…" else "连接")
             }
         }
     }
@@ -178,10 +267,7 @@ private fun ManualConnectCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(
-                title = "手动连接",
-                description = "输入目标设备的 ADB 地址和端口",
-            )
+            SectionHeader(title = "手动连接")
 
             OutlinedTextField(
                 value = ip,
@@ -189,11 +275,9 @@ private fun ManualConnectCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("IP 地址") },
                 singleLine = true,
-                placeholder = { Text("例如 192.168.1.86") },
+                placeholder = { Text("192.168.1.86") },
                 isError = ipError != null,
-                supportingText = {
-                    Text(ipError ?: "请确认目标设备与本机处于同一局域网")
-                },
+                supportingText = ipError?.let { { Text(it) } },
             )
             OutlinedTextField(
                 value = port,
@@ -203,42 +287,49 @@ private fun ManualConnectCard(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = portError != null,
-                supportingText = {
-                    Text(portError ?: "默认 WiFi ADB 端口通常为 5555")
-                },
+                supportingText = portError?.let { { Text(it) } },
             )
 
             OperationStatusMessage(status = operationStatus)
 
+            Button(
+                onClick = onConnectClick,
+                enabled = connectEnabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(imageVector = Icons.Outlined.AddLink, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "连接")
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Button(
-                    onClick = onConnectClick,
-                    enabled = connectEnabled,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(imageVector = Icons.Outlined.AddLink, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "连接设备")
-                }
-                OutlinedButton(
+                TextButton(
                     onClick = onPairingClick,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(imageVector = Icons.Outlined.Key, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "无线配对")
+                    Icon(
+                        imageVector = Icons.Outlined.Key,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("无线配对")
                 }
-            }
-            OutlinedButton(
-                onClick = onDiscoveryClick,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(imageVector = Icons.Outlined.Search, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "发现局域网设备")
+                TextButton(
+                    onClick = onDiscoveryClick,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("发现设备")
+                }
             }
         }
     }
@@ -288,7 +379,39 @@ private fun OperationStatusMessage(status: OperationStatus) {
 }
 
 @Composable
-private fun RecentDeviceCard(
+private fun RecentDevicesCard(
+    devices: List<AdbDevice>,
+    onDeviceClick: (AdbDevice) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppDimens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SectionHeader(title = "最近设备")
+
+            if (devices.isEmpty()) {
+                EmptyState(title = "暂无历史设备")
+            } else {
+                devices.forEach { device ->
+                    RecentDeviceRow(
+                        device = device,
+                        onClick = { onDeviceClick(device) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentDeviceRow(
     device: AdbDevice,
     onClick: () -> Unit,
 ) {
@@ -300,36 +423,29 @@ private fun RecentDeviceCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = device.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "${device.host}:${device.port} · ${device.type.label}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                AppStatusBadge(state = device.connectionState)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = device.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = when (device.linkKind) {
+                        AdbLinkKind.Wifi -> "${device.host}:${device.port}"
+                        AdbLinkKind.UsbOtg -> device.linkKind.label
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
-
-            Text(
-                text = device.lastConnectedText,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            AppStatusBadge(state = device.connectionState)
         }
     }
 }
@@ -377,21 +493,23 @@ private fun ManualConnectCardErrorPreview() {
     }
 }
 
-@Preview(name = "最近设备卡片", showBackground = true, widthDp = 390)
+@Preview(name = "最近设备", showBackground = true, widthDp = 390)
 @Composable
-private fun RecentDeviceCardPreview() {
+private fun RecentDevicesCardPreview() {
     AdbManagerTheme(dynamicColor = false) {
-        RecentDeviceCard(
-            device = AdbDevice(
-                id = "preview-tv",
-                name = "客厅电视",
-                host = "192.168.1.86",
-                port = 5555,
-                type = DeviceType.Tv,
-                connectionState = ConnectionState.Connected,
-                lastConnectedText = "刚刚连接",
+        RecentDevicesCard(
+            devices = listOf(
+                AdbDevice(
+                    id = "preview-tv",
+                    name = "客厅电视",
+                    host = "192.168.1.86",
+                    port = 5555,
+                    type = DeviceType.Tv,
+                    connectionState = ConnectionState.Connected,
+                    lastConnectedText = "刚刚连接",
+                ),
             ),
-            onClick = {},
+            onDeviceClick = {},
         )
     }
 }

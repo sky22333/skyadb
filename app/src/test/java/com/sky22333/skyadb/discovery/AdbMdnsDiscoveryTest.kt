@@ -6,7 +6,7 @@ import org.junit.Test
 
 class AdbMdnsDiscoveryTest {
     @Test
-    fun serviceTypes_matchAdbMdnsRecords() {
+    fun serviceTypes_useOfficialAdbDnsSdNames() {
         assertEquals("_adb-tls-pairing._tcp.", AdbMdnsServiceType.Pairing.nsdType)
         assertEquals("_adb-tls-connect._tcp.", AdbMdnsServiceType.Connect.nsdType)
         assertEquals("_adb._tcp.", AdbMdnsServiceType.Legacy.nsdType)

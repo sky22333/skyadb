@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 class ScrcpySession private constructor(
     private val serverStream: AdbStream,
     private val controlStream: AdbStream,
+    private val audioDecoder: ScrcpyAudioDecoder?,
     val deviceInfo: ScrcpyDeviceInfo,
     val controlClient: ScrcpyControlClient,
     private val decoder: ScrcpyVideoDecoder,
@@ -32,11 +33,17 @@ class ScrcpySession private constructor(
             runCatching { decoder.start() }
                 .onFailure { error -> onError(error, serverLogTail(maxLines = 20)) }
         }
+        val audio = audioDecoder ?: return
+        scope.launch {
+            runCatching { audio.start() }
+            // 音频失败不影响画面（对齐官方 soft-fail）。
+        }
     }
 
     fun stop() {
         scope.cancel()
         decoder.stop()
+        audioDecoder?.stop()
         runCatching { controlStream.close() }
         runCatching { serverStream.close() }
     }
@@ -69,27 +76,40 @@ class ScrcpySession private constructor(
             connections: MirrorConnections,
             surface: Surface,
             options: ScrcpyOptions = ScrcpyOptions(),
+            audioEnabled: Boolean,
             onVideoSize: (Int, Int) -> Unit,
             onError: (Throwable, String) -> Unit,
         ): ScrcpySession = withContext(Dispatchers.IO) {
             val controlKadb = connections.control
             val videoKadb = connections.video
+            val audioKadb = connections.audio
+            require(!audioEnabled || audioKadb != null) { "启用音频时需要 audio 连接" }
+
             val serverManager = ScrcpyServerManager(context)
             val logs = ArrayDeque<String>()
             serverManager.pushServer(controlKadb)
             val scid = generateScid()
             val socketName = "scrcpy_${scid.toString(16).padStart(8, '0')}"
-            val serverStream = controlKadb.open("shell:${serverManager.buildStartCommand(scid, options)} 2>&1")
+            val serverStream = controlKadb.open(
+                "shell:${serverManager.buildStartCommand(scid, options, audioEnabled)} 2>&1",
+            )
 
             delay(200)
+            // 官方顺序：video → audio → control；dummy byte 仅第一路。
             val videoStream = openLocalAbstractWithRetry(videoKadb, socketName, expectDummyByte = true)
+            val audioStream = if (audioEnabled && audioKadb != null) {
+                openLocalAbstractWithRetry(audioKadb, socketName, expectDummyByte = false)
+            } else {
+                null
+            }
             val controlStream = openLocalAbstractWithRetry(controlKadb, socketName, expectDummyByte = false)
+
             val name = readDeviceName(videoStream)
-            val codecId = videoStream.source.readInt()
+            val videoCodecId = videoStream.source.readInt()
             val controlClient = ScrcpyControlClient(controlStream)
-            val decoder = ScrcpyVideoDecoder(
+            val videoDecoder = ScrcpyVideoDecoder(
                 stream = videoStream,
-                codecId = codecId,
+                codecId = videoCodecId,
                 surface = surface,
                 onVideoSize = { width, height ->
                     controlClient.updateVideoSize(width, height)
@@ -97,12 +117,23 @@ class ScrcpySession private constructor(
                 },
             )
 
+            val audioDecoder = audioStream?.let { stream ->
+                runCatching {
+                    val audioCodecId = stream.source.readInt()
+                    ScrcpyAudioDecoder(stream, audioCodecId)
+                }.getOrElse {
+                    runCatching { stream.close() }
+                    null
+                }
+            }
+
             ScrcpySession(
                 serverStream = serverStream,
                 controlStream = controlStream,
-                deviceInfo = ScrcpyDeviceInfo(name = name, codecId = codecId),
+                audioDecoder = audioDecoder,
+                deviceInfo = ScrcpyDeviceInfo(name = name, codecId = videoCodecId),
                 controlClient = controlClient,
-                decoder = decoder,
+                decoder = videoDecoder,
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                 logLines = logs,
                 onError = onError,

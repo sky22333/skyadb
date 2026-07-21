@@ -11,6 +11,7 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 ## 功能特性
 
 - 无线调试配对、连接、断开和最近设备记录
+- USB OTG 连接 ADB / Fastboot，并在 Shell 页执行对应命令
 - 局域网自动发现和网段扫描，快速发现 adb 设备
 - 查看设备基础信息、连接状态和截图
 - 应用列表、分类筛选、搜索、启动、停止和卸载
@@ -47,7 +48,7 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 - Kotlin
 - Jetpack Compose
 - Material 3
-- Kadb
+- Kadb 2.1.3
 - scrcpy-server
 - Coroutines / Flow
 - DataStore

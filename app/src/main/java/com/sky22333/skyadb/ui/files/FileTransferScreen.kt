@@ -19,16 +19,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -36,7 +37,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.ui.components.EmptyState
+import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -136,16 +138,7 @@ private fun FileManagerContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text("文件管理")
-                    Text(
-                        "浏览目标设备文件，上传或下载文件",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = { Text("文件管理") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
@@ -178,20 +171,15 @@ private fun FileManagerContent(
                     onNewFolderClick = onNewFolderClick,
                 )
             }
-            item { FileManagerStatus(status = uiState.operationStatus, loading = uiState.loading) }
+            item { FileManagerStatus(status = uiState.operationStatus) }
             item {
                 SectionHeader(
                     title = "文件列表",
-                    description = "${uiState.currentPath} · ${uiState.entries.size} 个项目",
+                    description = "${uiState.entries.size} 个项目",
                 )
             }
             if (!uiState.loading && uiState.entries.isEmpty()) {
-                item {
-                    EmptyState(
-                        title = "目录为空",
-                        message = "可以上传文件，或跳转到其他设备目录。",
-                    )
-                }
+                item { EmptyState(title = "目录为空") }
             } else {
                 items(uiState.entries, key = { it.path }) { entry ->
                     RemoteFileCard(
@@ -235,45 +223,67 @@ private fun PathCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "当前位置", description = "目录路径需要以 / 开头")
+            SectionHeader(title = "当前位置")
             OutlinedTextField(
                 value = uiState.pathInput,
                 onValueChange = onPathChanged,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("设备目录") },
+                placeholder = { Text("/sdcard/Download") },
                 singleLine = true,
                 isError = uiState.pathError != null,
-                supportingText = { Text(uiState.pathError ?: "例如 /sdcard/Download") },
+                supportingText = uiState.pathError?.let { { Text(it) } },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
+                PathActionButton(
+                    text = "上级",
+                    icon = Icons.Outlined.ArrowUpward,
                     onClick = onGoUpClick,
                     enabled = uiState.canGoUp && !uiState.loading,
                     modifier = Modifier.weight(1f),
-                ) {
-                    Text("上级")
-                }
-                Button(
+                )
+                PathActionButton(
+                    text = "跳转",
+                    icon = Icons.AutoMirrored.Outlined.ArrowForward,
                     onClick = onJumpClick,
                     enabled = !uiState.loading,
                     modifier = Modifier.weight(1f),
-                ) {
-                    Text("跳转")
-                }
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onUploadClick, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("上传")
-                }
-                OutlinedButton(onClick = onNewFolderClick, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("新建文件夹")
-                }
+                PathActionButton(
+                    text = "上传",
+                    icon = Icons.Outlined.Upload,
+                    onClick = onUploadClick,
+                    modifier = Modifier.weight(1f),
+                )
+                PathActionButton(
+                    text = "新建",
+                    icon = Icons.Outlined.CreateNewFolder,
+                    onClick = onNewFolderClick,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun PathActionButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text)
     }
 }
 
@@ -348,11 +358,11 @@ private fun RemoteFileCard(
 }
 
 @Composable
-private fun FileManagerStatus(status: OperationStatus, loading: Boolean) {
+private fun FileManagerStatus(status: OperationStatus) {
     when (status) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            OperationProgressIndicator(progress = status.progress)
             Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)

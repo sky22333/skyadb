@@ -2,23 +2,31 @@ package com.sky22333.skyadb.scrcpy
 
 import android.content.Context
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.Surface
 import com.sky22333.skyadb.adb.KadbManager
 import com.sky22333.skyadb.adb.MirrorConnections
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.model.AdbOperationResult
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ScrcpyRepository(
     private val context: Context,
     private val kadbManager: KadbManager,
 ) {
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val stopping = AtomicBoolean(false)
     private var session: ScrcpySession? = null
     private var mirrorConnections: MirrorConnections? = null
+
+    fun requestStop() {
+        cleanupScope.launch { stop() }
+    }
 
     suspend fun start(
         surface: Surface,
@@ -29,7 +37,8 @@ class ScrcpyRepository(
         stop()
         val options = qualityPreset.options
         val optionsText = options.diagnosticText()
-        val connections = when (val acquired = kadbManager.beginMirrorSession()) {
+        val audioEnabled = (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
+        val connections = when (val acquired = kadbManager.beginMirrorSession(audioEnabled)) {
             is AdbOperationResult.Failure -> return@withContext acquired
             is AdbOperationResult.Success -> acquired.data
         }
@@ -41,6 +50,7 @@ class ScrcpyRepository(
                 connections = connections,
                 surface = surface,
                 options = options,
+                audioEnabled = audioEnabled,
                 onVideoSize = onVideoSize,
                 onError = { error, serverLog ->
                     DiagnosticLogger.record(
@@ -51,7 +61,7 @@ class ScrcpyRepository(
                         suggestion = mirrorDiagnosticSuggestion(qualityPreset, optionsText, serverLog),
                         cause = error,
                     )
-                    runBlocking { stop() }
+                    cleanupScope.launch { stop() }
                     onStreamError(error)
                 },
             ).also { session = it }
@@ -76,9 +86,9 @@ class ScrcpyRepository(
         )
     }
 
-    fun sendTouch(event: MotionEvent, surfaceWidth: Int, surfaceHeight: Int) {
+    fun sendTouch(event: MirrorTouchEvent) {
         runCatching {
-            session?.controlClient?.sendTouch(event, surfaceWidth, surfaceHeight)
+            session?.controlClient?.sendTouch(event)
         }.onFailure { error ->
             DiagnosticLogger.record(
                 module = DiagnosticModule.Mirror,
@@ -122,20 +132,26 @@ class ScrcpyRepository(
     }
 
     suspend fun stop() {
-        runCatching { session?.stop() }
-            .onFailure { error ->
-                DiagnosticLogger.record(
-                    module = DiagnosticModule.Mirror,
-                    operation = "停止镜像",
-                    message = "释放屏幕镜像资源失败",
-                    suggestion = "如果再次启动异常，请重新连接设备。",
-                    cause = error,
-                )
-            }
-        session = null
-        val connections = mirrorConnections
-        mirrorConnections = null
-        kadbManager.endMirrorSession(connections)
+        if (!stopping.compareAndSet(false, true)) return
+        try {
+            val currentSession = session
+            session = null
+            runCatching { currentSession?.stop() }
+                .onFailure { error ->
+                    DiagnosticLogger.record(
+                        module = DiagnosticModule.Mirror,
+                        operation = "停止镜像",
+                        message = "释放屏幕镜像资源失败",
+                        suggestion = "如果再次启动异常，请重新连接设备。",
+                        cause = error,
+                    )
+                }
+            val connections = mirrorConnections
+            mirrorConnections = null
+            kadbManager.endMirrorSession(connections)
+        } finally {
+            stopping.set(false)
+        }
     }
 
     private fun mirrorDiagnosticSuggestion(
@@ -153,5 +169,6 @@ class ScrcpyRepository(
 
     private companion object {
         const val ServerLogDiagnosticMaxChars = 300
+        const val MinAudioSdkInt = 30
     }
 }

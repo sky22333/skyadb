@@ -4,6 +4,7 @@ import android.content.Context
 import java.io.File
 import java.net.URLDecoder
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -134,6 +135,7 @@ class NetworkDownloadManager(
                 )
             }
         }.getOrElse { error ->
+            if (error is CancellationException) throw error
             DownloadResult.Failure(
                 message = "下载失败",
                 suggestion = "请检查网络连接、下载链接和存储空间后重试。",

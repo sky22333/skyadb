@@ -9,10 +9,12 @@ import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ScreenshotUiState(
     val latestFileName: String? = null,
@@ -71,9 +73,11 @@ class ScreenshotViewModel(
         state.value = state.value.copy(operationStatus = OperationStatus.Running("正在保存截图"))
         viewModelScope.launch {
             runCatching {
-                context.contentResolver.openOutputStream(uri).use { output ->
-                    requireNotNull(output) { "无法打开保存位置" }
-                    file.inputStream().use { input -> input.copyTo(output) }
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri).use { output ->
+                        requireNotNull(output) { "无法打开保存位置" }
+                        file.inputStream().use { input -> input.copyTo(output) }
+                    }
                 }
             }.fold(
                 onSuccess = {

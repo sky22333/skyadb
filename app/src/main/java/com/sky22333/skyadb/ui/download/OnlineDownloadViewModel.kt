@@ -4,6 +4,7 @@ import java.io.File
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.download.DownloadResult
 import com.sky22333.skyadb.download.DownloadState
 import com.sky22333.skyadb.download.DownloadTask
@@ -148,7 +149,24 @@ class OnlineDownloadViewModel(
                         ),
                         operationStatus = OperationStatus.Running("下载完成，正在安装 APK"),
                     )
-                    when (val installResult = adbRepository.install(file)) {
+                    when (
+                        val installResult = adbRepository.install(file) { transferred, total ->
+                            val status = adbTransferRunning(
+                                transferringLabel = "正在传输 APK",
+                                finishingLabel = "正在安装 APK",
+                                transferred = transferred,
+                                total = total,
+                            )
+                            state.value = state.value.copy(
+                                task = state.value.task?.copy(
+                                    state = DownloadState.Installing,
+                                    progress = status.progress ?: 1f,
+                                    message = status.text,
+                                ),
+                                operationStatus = status,
+                            )
+                        }
+                    ) {
                         is AdbOperationResult.Success -> {
                             state.value = state.value.copy(
                                 actionEnabled = true,
@@ -178,7 +196,24 @@ class OnlineDownloadViewModel(
                         ),
                         operationStatus = OperationStatus.Running("下载完成，正在推送文件"),
                     )
-                    when (val pushResult = adbRepository.push(file, remotePath)) {
+                    when (
+                        val pushResult = adbRepository.push(file, remotePath) { transferred, total ->
+                            val status = adbTransferRunning(
+                                transferringLabel = "正在推送文件",
+                                finishingLabel = "正在完成推送",
+                                transferred = transferred,
+                                total = total,
+                            )
+                            state.value = state.value.copy(
+                                task = state.value.task?.copy(
+                                    state = DownloadState.Pushing,
+                                    progress = status.progress ?: 1f,
+                                    message = status.text,
+                                ),
+                                operationStatus = status,
+                            )
+                        }
+                    ) {
                         is AdbOperationResult.Success -> {
                             state.value = state.value.copy(
                                 actionEnabled = true,

@@ -3,11 +3,16 @@ package com.sky22333.skyadb.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
-import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbOperationResult
+import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
+import com.sky22333.skyadb.usb.UsbOtgAttachment
+import com.sky22333.skyadb.usb.UsbOtgMode
+import com.sky22333.skyadb.usb.UsbPermissionEvent
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,11 +23,13 @@ data class HomeUiState(
     val ip: String = "",
     val port: String = "5555",
     val recentDevices: List<AdbDevice> = emptyList(),
-    val connectionStateText: String = "未连接设备",
+    val usbAttachments: List<UsbOtgAttachment> = emptyList(),
     val ipError: String? = null,
     val portError: String? = null,
     val connectEnabled: Boolean = false,
+    val canDisconnect: Boolean = false,
     val operationStatus: OperationStatus = OperationStatus.Idle,
+    val connectingUsbDeviceName: String? = null,
 )
 
 class HomeViewModel(
@@ -35,7 +42,11 @@ class HomeViewModel(
     init {
         viewModelScope.launch {
             adbRepository.recentDevices.collect { devices ->
-                state.value = state.value.copy(recentDevices = devices)
+                state.value = state.value.copy(
+                    recentDevices = devices,
+                    canDisconnect = devices.any { it.connectionState == ConnectionState.Connected } ||
+                        adbRepository.sessionKind() != AdbSessionKind.None,
+                )
             }
         }
         viewModelScope.launch {
@@ -46,6 +57,34 @@ class HomeViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            AppServices.usbOtgHost.attachments.collect { attachments ->
+                state.value = state.value.copy(usbAttachments = attachments)
+            }
+        }
+        viewModelScope.launch {
+            AppServices.usbOtgActions.events.collect { event ->
+                when (event) {
+                    is UsbPermissionEvent.Granted -> connectUsbOtg(event.deviceName)
+                    is UsbPermissionEvent.Denied -> {
+                        state.value = state.value.copy(
+                            connectingUsbDeviceName = null,
+                            connectEnabled = true,
+                            operationStatus = OperationStatus.Failed(
+                                text = "USB 授权被拒绝",
+                                suggestion = "请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。",
+                            ),
+                        )
+                    }
+                    is UsbPermissionEvent.Detached -> onUsbDeviceDetached(event.deviceName)
+                }
+            }
+        }
+        refreshUsbDevices()
+    }
+
+    fun refreshUsbDevices() {
+        AppServices.usbOtgActions.refresh()
     }
 
     fun onIpChanged(value: String) {
@@ -69,9 +108,19 @@ class HomeViewModel(
             ipError = validation.ipError,
             portError = validation.portError,
             connectEnabled = validation.isValid,
-            operationStatus = OperationStatus.Success("已填入自动发现的连接地址，请确认后连接。"),
-            connectionStateText = "未连接设备",
+            operationStatus = OperationStatus.Success("已填入发现的地址，请确认后连接。"),
         )
+    }
+
+    fun onDisconnectClicked() {
+        viewModelScope.launch {
+            adbRepository.disconnect()
+            state.value = state.value.copy(
+                canDisconnect = false,
+                connectingUsbDeviceName = null,
+                operationStatus = OperationStatus.Success("已断开连接"),
+            )
+        }
     }
 
     fun onConnectClicked() {
@@ -86,7 +135,6 @@ class HomeViewModel(
                     text = "无法发起连接",
                     suggestion = "请先检查 IP 地址和端口是否正确。",
                 ),
-                connectionStateText = "连接信息不完整",
             )
             return
         }
@@ -96,7 +144,6 @@ class HomeViewModel(
             portError = validation.portError,
             connectEnabled = false,
             operationStatus = OperationStatus.Running("正在连接 ${current.ip}:${current.port}"),
-            connectionStateText = "正在连接设备",
         )
 
         viewModelScope.launch {
@@ -104,15 +151,80 @@ class HomeViewModel(
                 is AdbOperationResult.Success -> {
                     state.value = state.value.copy(
                         connectEnabled = true,
+                        canDisconnect = true,
                         operationStatus = OperationStatus.Success("设备连接成功：${result.data}"),
-                        connectionStateText = "已连接设备",
                     )
                 }
                 is AdbOperationResult.Failure -> {
                     state.value = state.value.copy(
                         connectEnabled = true,
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
-                        connectionStateText = "连接失败",
+                    )
+                }
+            }
+        }
+    }
+
+    fun onUsbConnectClicked(deviceName: String) {
+        val attachment = state.value.usbAttachments.firstOrNull { it.deviceName == deviceName } ?: return
+        if (!attachment.hasPermission) {
+            state.value = state.value.copy(
+                connectingUsbDeviceName = deviceName,
+                operationStatus = OperationStatus.Running("等待 USB 授权…"),
+            )
+            AppServices.usbOtgActions.askPermission(deviceName)
+            return
+        }
+        connectUsbOtg(deviceName)
+    }
+
+    /**
+     * 官方 USB Host 文档：Detached 仅应清理与该 [UsbDevice] 的通信。
+     * 根因：此前对任意拔出都 disconnect，会误杀 Wi‑Fi ADB 会话。
+     */
+    private suspend fun onUsbDeviceDetached(deviceName: String) {
+        val connecting = state.value.connectingUsbDeviceName == deviceName
+        if (adbRepository.isActiveUsbDevice(deviceName)) {
+            adbRepository.disconnect()
+            state.value = state.value.copy(
+                connectingUsbDeviceName = null,
+                canDisconnect = false,
+                operationStatus = OperationStatus.Success("USB 设备已断开"),
+            )
+            return
+        }
+        if (connecting) {
+            state.value = state.value.copy(connectingUsbDeviceName = null)
+        }
+    }
+
+    private fun connectUsbOtg(deviceName: String) {
+        val attachment = state.value.usbAttachments.firstOrNull { it.deviceName == deviceName }
+        val modeLabel = when (attachment?.mode) {
+            UsbOtgMode.Adb -> "ADB"
+            UsbOtgMode.Fastboot -> "Fastboot"
+            null -> "USB"
+        }
+        state.value = state.value.copy(
+            connectingUsbDeviceName = deviceName,
+            connectEnabled = false,
+            operationStatus = OperationStatus.Running("正在通过 USB OTG 连接 $modeLabel 设备…"),
+        )
+        viewModelScope.launch {
+            when (val result = adbRepository.connectUsbOtg(deviceName)) {
+                is AdbOperationResult.Success -> {
+                    state.value = state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = true,
+                        canDisconnect = true,
+                        operationStatus = OperationStatus.Success("USB 连接成功：${result.data}"),
+                    )
+                }
+                is AdbOperationResult.Failure -> {
+                    state.value = state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = true,
+                        operationStatus = OperationStatus.Failed(result.message, result.suggestion),
                     )
                 }
             }
@@ -128,7 +240,6 @@ class HomeViewModel(
             portError = validation.portError,
             connectEnabled = validation.isValid,
             operationStatus = OperationStatus.Idle,
-            connectionStateText = "未连接设备",
         )
     }
 

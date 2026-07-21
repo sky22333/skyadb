@@ -35,7 +35,7 @@ class NetworkInfoProvider(
             .asSequence()
             .filter { it.address is Inet4Address }
             .mapNotNull { linkAddress -> linkAddress.toLocalNetwork() }
-            .filter { it.hosts.isNotEmpty() }
+            .filter { it.hostCount > 0 }
             .distinctBy { it.subnetLabel }
             .toList()
     }

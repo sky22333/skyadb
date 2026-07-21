@@ -7,7 +7,6 @@ data class LocalInstalledApp(
     val versionName: String,
     val isSingleApk: Boolean,
     val apkSizeBytes: Long,
-    val iconPath: String = "",
 ) {
     val installable: Boolean = isSingleApk && apkSizeBytes > 0L
 }

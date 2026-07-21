@@ -83,16 +83,7 @@ private fun OnlineDownloadContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(text = "在线下载")
-                    Text(
-                        text = "下载 APK 安装，或下载文件后推送到设备",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = { Text("在线下载") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
@@ -144,7 +135,7 @@ private fun DownloadFormCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "下载任务", description = "建议使用稳定的 HTTP 或 HTTPS 直链")
+            SectionHeader(title = "下载任务")
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 OnlineDownloadMode.entries.forEachIndexed { index, mode ->
                     SegmentedButton(
@@ -167,9 +158,7 @@ private fun DownloadFormCard(
                 singleLine = true,
                 placeholder = { Text("https://example.com/app.apk") },
                 isError = uiState.urlError != null,
-                supportingText = {
-                    Text(uiState.urlError ?: "支持重定向，下载完成后自动执行后续操作")
-                },
+                supportingText = uiState.urlError?.let { { Text(it) } },
             )
             if (uiState.mode == OnlineDownloadMode.PushFile) {
                 OutlinedTextField(
@@ -180,9 +169,7 @@ private fun DownloadFormCard(
                     singleLine = true,
                     placeholder = { Text("/sdcard/Download/") },
                     isError = uiState.targetPathError != null,
-                    supportingText = {
-                        Text(uiState.targetPathError ?: "文件会保存到该目录下，文件名保持下载文件名")
-                    },
+                    supportingText = uiState.targetPathError?.let { { Text(it) } },
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -219,10 +206,10 @@ private fun DownloadTaskCard(task: DownloadTask?) {
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "任务状态", description = "下载、推送和安装进度会显示在这里")
+            SectionHeader(title = "任务状态")
             if (task == null) {
                 Text(
-                    text = "还没有下载任务。",
+                    text = "暂无任务",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )

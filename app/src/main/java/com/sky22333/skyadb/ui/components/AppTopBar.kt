@@ -15,6 +15,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sky22333.skyadb.ui.shared.LocalSharedToolKey
+import com.sky22333.skyadb.ui.shared.sharedToolBounds
 
 @Composable
 fun AppTopBar(
@@ -23,7 +25,9 @@ fun AppTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .sharedToolBounds(LocalSharedToolKey.current)
+            .fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
     ) {

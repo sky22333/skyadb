@@ -1,12 +1,10 @@
 package com.sky22333.skyadb.ui.localapps
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -20,8 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
@@ -42,15 +39,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.localapps.LocalAppIcons
 import com.sky22333.skyadb.localapps.LocalInstalledApp
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
+import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -188,7 +188,7 @@ private fun LocalAppCard(
                 shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
-                LocalAppIcon(app = app)
+                LocalAppIcon(packageName = app.packageName)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -213,32 +213,30 @@ private fun LocalAppCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            OutlinedButton(
+                onClick = { onInstallClick(app) },
+                enabled = app.installable && !installing,
+                modifier = Modifier.width(ActionWidth),
+                contentPadding = PaddingValues(horizontal = 8.dp),
             ) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(if (app.installable) "单 APK" else "暂不支持") },
+                Text(
+                    text = if (app.installable) "安装" else "暂不支持",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Button(
-                    onClick = { onInstallClick(app) },
-                    enabled = app.installable && !installing,
-                ) {
-                    Icon(Icons.Outlined.Android, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("安装")
-                }
             }
         }
     }
 }
 
+private val ActionWidth = 96.dp
+
 @Composable
-private fun LocalAppIcon(app: LocalInstalledApp) {
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = app.iconPath) {
+private fun LocalAppIcon(packageName: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
         value = withContext(Dispatchers.IO) {
-            BitmapFactory.decodeFile(app.iconPath)?.asImageBitmap()
+            LocalAppIcons.load(context, packageName)?.asImageBitmap()
         }
     }
     val icon = bitmap
@@ -271,7 +269,7 @@ private fun LocalAppsStatus(status: OperationStatus) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                OperationProgressIndicator(progress = status.progress)
                 Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

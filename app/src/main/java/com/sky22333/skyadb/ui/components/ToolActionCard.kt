@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sky22333.skyadb.ui.shared.sharedToolBounds
 import com.sky22333.skyadb.ui.theme.AppDimens
 
 @Composable
@@ -28,10 +29,13 @@ fun ToolActionCard(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    sharedContentKey: String? = null,
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(104.dp),
+        modifier = modifier
+            .sharedToolBounds(sharedContentKey)
+            .height(104.dp),
         shape = RoundedCornerShape(AppDimens.CardRadius),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
