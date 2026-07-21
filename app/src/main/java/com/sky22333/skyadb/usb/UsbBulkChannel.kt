@@ -5,16 +5,16 @@ import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import java.io.Closeable
-import java.io.EOFException
 import java.io.IOException
 
 class UsbBulkChannel(
     private val connection: UsbDeviceConnection,
     private val usbInterface: UsbInterface,
-    val ioTimeoutMs: Int,
+    private val ioTimeoutMs: Int,
 ) : Closeable {
     val endpointIn: UsbEndpoint
     val endpointOut: UsbEndpoint
+    val pollTimeoutMs: Int = ioTimeoutMs.coerceIn(MinPollTimeoutMs, MaxPollTimeoutMs)
 
     init {
         if (!connection.claimInterface(usbInterface, true)) {
@@ -39,17 +39,17 @@ class UsbBulkChannel(
         endpointOut = output
     }
 
-    fun readChunk(buffer: ByteArray): Int {
+    /**
+     * @return 读取到的字节数；`null` 表示超时/暂无数据，调用方应继续轮询。
+     */
+    fun readChunkOrTimeout(buffer: ByteArray): Int? {
         val transferred = connection.bulkTransfer(
             endpointIn,
             buffer,
             buffer.size,
-            ioTimeoutMs,
+            pollTimeoutMs,
         )
-        if (transferred < 0) {
-            throw EOFException("USB 读取失败：$transferred")
-        }
-        return transferred
+        return if (transferred < 0) null else transferred
     }
 
     fun writeChunk(source: ByteArray, offset: Int, length: Int) {
@@ -76,5 +76,7 @@ class UsbBulkChannel(
 
     private companion object {
         const val MaxChunkBytes = 16 * 1024
+        const val MinPollTimeoutMs = 250
+        const val MaxPollTimeoutMs = 1_000
     }
 }

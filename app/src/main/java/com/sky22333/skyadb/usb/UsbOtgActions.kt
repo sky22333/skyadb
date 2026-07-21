@@ -26,6 +26,11 @@ class UsbOtgActions(
         permissionEvents.tryEmit(UsbPermissionEvent.Granted(deviceName))
     }
 
+    fun onPermissionDenied(deviceName: String) {
+        host.refresh()
+        permissionEvents.tryEmit(UsbPermissionEvent.Denied(deviceName))
+    }
+
     fun onDeviceDetached(deviceName: String) {
         host.refresh()
         permissionEvents.tryEmit(UsbPermissionEvent.Detached(deviceName))
@@ -34,5 +39,6 @@ class UsbOtgActions(
 
 sealed interface UsbPermissionEvent {
     data class Granted(val deviceName: String) : UsbPermissionEvent
+    data class Denied(val deviceName: String) : UsbPermissionEvent
     data class Detached(val deviceName: String) : UsbPermissionEvent
 }

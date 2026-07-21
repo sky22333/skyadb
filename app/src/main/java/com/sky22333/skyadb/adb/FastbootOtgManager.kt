@@ -1,14 +1,14 @@
 package com.sky22333.skyadb.adb
 
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbDeviceConnection
-import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import com.rv882.fastbootjava.FastbootCommand
 import com.rv882.fastbootjava.FastbootDeviceContext
 import com.rv882.fastbootjava.FastbootResponse
 import com.rv882.fastbootjava.transport.UsbTransport
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.usb.AndroidUsbInterface
+import java.io.IOException
 import java.nio.charset.StandardCharsets
 
 class FastbootOtgManager {
@@ -32,7 +32,17 @@ class FastbootOtgManager {
             )
         return runCatching {
             val transport = UsbTransport(usbInterface, connection)
-            deviceContext = FastbootDeviceContext(transport)
+            val context = FastbootDeviceContext(transport)
+            context.sendCommand(
+                FastbootCommand.getVar("version").toString().toByteArray(StandardCharsets.UTF_8),
+                ProbeTimeoutMs,
+                true,
+            )
+            if (FastbootResponse.getStatus() == FastbootResponse.ResponseStatus.FAIL) {
+                context.close()
+                throw IOException(FastbootResponse.getData().ifBlank { "Fastboot 探测返回 FAIL" })
+            }
+            deviceContext = context
             activeDeviceName = device.deviceName
             AdbOperationResult.Success("fastboot:${device.deviceName}")
         }.getOrElse { error ->
@@ -51,10 +61,21 @@ class FastbootOtgManager {
                 message = "未连接 Fastboot 设备",
                 suggestion = "请先在首页通过 USB OTG 连接处于 Fastboot 模式的设备。",
             )
+        val normalized = command.trim()
+        if (normalized.isEmpty()) {
+            return AdbOperationResult.Failure(
+                message = "Fastboot 命令为空",
+                suggestion = "请输入有效的 Fastboot 命令，例如 getvar:version。",
+            )
+        }
         return runCatching {
-            context.sendCommand(command.toByteArray(StandardCharsets.UTF_8))
+            context.sendCommand(
+                normalized.toByteArray(StandardCharsets.UTF_8),
+                CommandTimeoutMs,
+                true,
+            )
             val status = FastbootResponse.getStatus().name
-            val data = FastbootResponse.getData()
+            val data = FastbootResponse.getData().trim { it <= ' ' || it == '\u0000' }
             AdbOperationResult.Success("$status: $data")
         }.getOrElse { error ->
             AdbOperationResult.Failure(
@@ -74,4 +95,9 @@ class FastbootOtgManager {
     fun currentDeviceName(): String? = activeDeviceName
 
     fun isConnected(): Boolean = deviceContext != null
+
+    private companion object {
+        const val ProbeTimeoutMs = 3_000
+        const val CommandTimeoutMs = 5_000
+    }
 }

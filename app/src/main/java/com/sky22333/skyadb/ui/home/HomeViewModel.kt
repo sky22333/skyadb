@@ -61,6 +61,17 @@ class HomeViewModel(
             AppServices.usbOtgActions.events.collect { event ->
                 when (event) {
                     is UsbPermissionEvent.Granted -> connectUsbOtg(event.deviceName)
+                    is UsbPermissionEvent.Denied -> {
+                        state.value = state.value.copy(
+                            connectingUsbDeviceName = null,
+                            connectEnabled = true,
+                            operationStatus = OperationStatus.Failed(
+                                text = "USB 授权被拒绝",
+                                suggestion = "请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。",
+                            ),
+                            connectionStateText = "USB 授权失败",
+                        )
+                    }
                     is UsbPermissionEvent.Detached -> {
                         if (adbRepository.sessionKind() != AdbSessionKind.None) {
                             adbRepository.disconnect()

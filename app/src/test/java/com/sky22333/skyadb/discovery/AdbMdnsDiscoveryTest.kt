@@ -1,15 +1,16 @@
 package com.sky22333.skyadb.discovery
 
+import com.flyfishxu.kadb.mdns.MdnsServiceType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AdbMdnsDiscoveryTest {
     @Test
-    fun serviceTypes_matchAdbMdnsRecords() {
-        assertEquals("_adb-tls-pairing._tcp.", AdbMdnsServiceType.Pairing.nsdType)
-        assertEquals("_adb-tls-connect._tcp.", AdbMdnsServiceType.Connect.nsdType)
-        assertEquals("_adb._tcp.", AdbMdnsServiceType.Legacy.nsdType)
+    fun serviceTypes_mapFromKadbMdns() {
+        assertEquals(AdbMdnsServiceType.Pairing, AdbMdnsServiceType.from(MdnsServiceType.TLS_PAIRING))
+        assertEquals(AdbMdnsServiceType.Connect, AdbMdnsServiceType.from(MdnsServiceType.TLS_CONNECT))
+        assertEquals(AdbMdnsServiceType.Legacy, AdbMdnsServiceType.from(MdnsServiceType.ADB))
     }
 
     @Test

@@ -9,14 +9,19 @@ import com.sky22333.skyadb.adb.MirrorConnections
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.model.AdbOperationResult
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ScrcpyRepository(
     private val context: Context,
     private val kadbManager: KadbManager,
 ) {
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val stopping = AtomicBoolean(false)
     private var session: ScrcpySession? = null
     private var mirrorConnections: MirrorConnections? = null
 
@@ -51,7 +56,7 @@ class ScrcpyRepository(
                         suggestion = mirrorDiagnosticSuggestion(qualityPreset, optionsText, serverLog),
                         cause = error,
                     )
-                    runBlocking { stop() }
+                    cleanupScope.launch { stop() }
                     onStreamError(error)
                 },
             ).also { session = it }
@@ -122,20 +127,26 @@ class ScrcpyRepository(
     }
 
     suspend fun stop() {
-        runCatching { session?.stop() }
-            .onFailure { error ->
-                DiagnosticLogger.record(
-                    module = DiagnosticModule.Mirror,
-                    operation = "停止镜像",
-                    message = "释放屏幕镜像资源失败",
-                    suggestion = "如果再次启动异常，请重新连接设备。",
-                    cause = error,
-                )
-            }
-        session = null
-        val connections = mirrorConnections
-        mirrorConnections = null
-        kadbManager.endMirrorSession(connections)
+        if (!stopping.compareAndSet(false, true)) return
+        try {
+            val currentSession = session
+            session = null
+            runCatching { currentSession?.stop() }
+                .onFailure { error ->
+                    DiagnosticLogger.record(
+                        module = DiagnosticModule.Mirror,
+                        operation = "停止镜像",
+                        message = "释放屏幕镜像资源失败",
+                        suggestion = "如果再次启动异常，请重新连接设备。",
+                        cause = error,
+                    )
+                }
+            val connections = mirrorConnections
+            mirrorConnections = null
+            kadbManager.endMirrorSession(connections)
+        } finally {
+            stopping.set(false)
+        }
     }
 
     private fun mirrorDiagnosticSuggestion(

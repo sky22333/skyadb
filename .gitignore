@@ -11,3 +11,4 @@ app/build/
 *.p12
 *.pfx
 .tmp/
+.tmp-deps/

@@ -76,14 +76,6 @@ class KadbManager {
             this@KadbManager.sessionKind = sessionKind
             AdbOperationResult.Success(endpoint)
         }.getOrElse { error ->
-            if (AdbIdentityManager.isRsaCrtError(error)) {
-                AdbIdentityManager.repairIdentity()
-                return@withContext AdbOperationResult.Failure(
-                    message = "ADB 身份密钥异常",
-                    suggestion = "当前系统的 RSA 私钥兼容性异常，已尝试重建 ADB 身份。请重新连接，并在目标设备上重新允许调试授权。",
-                    cause = error,
-                )
-            }
             AdbOperationResult.Failure(
                 message = "无法连接到设备",
                 suggestion = "请确认设备与本机处于同一网络、ADB 端口正确，并已允许调试授权。",
@@ -110,9 +102,11 @@ class KadbManager {
                 suggestion = "请重新插拔 OTG 线，并在系统弹窗中允许 USB 访问。",
             )
 
+        var bridgeOwned = false
         runCatching {
             val bridge = UsbAdbBridge(connection, adbInterface, socketTimeoutMillis)
             usbBridge = bridge
+            bridgeOwned = true
             bridge.start(bridgeScope)
             when (
                 val result = openKadbSession(
@@ -131,7 +125,11 @@ class KadbManager {
                 }
             }
         }.getOrElse { error ->
-            disconnect()
+            if (bridgeOwned) {
+                disconnect()
+            } else {
+                runCatching { connection.close() }
+            }
             AdbOperationResult.Failure(
                 message = "USB OTG 连接失败",
                 suggestion = "请确认目标设备已允许 USB 调试授权，并重新插拔 OTG 线。",
@@ -150,14 +148,6 @@ class KadbManager {
             Kadb.pair(host, port, pairingCode, name)
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
-            if (AdbIdentityManager.isRsaCrtError(error)) {
-                AdbIdentityManager.repairIdentity()
-                return@withContext AdbOperationResult.Failure(
-                    message = "ADB 身份密钥异常",
-                    suggestion = "当前系统的 RSA 私钥兼容性异常，已尝试重建 ADB 身份。请重新配对，并在目标设备上重新允许调试授权。",
-                    cause = error,
-                )
-            }
             AdbOperationResult.Failure(
                 message = "无线调试配对失败",
                 suggestion = "请确认配对码未过期，配对 IP 和配对端口来自目标设备的配对窗口。",
@@ -263,7 +253,7 @@ class KadbManager {
     }
 
     suspend fun forceStopApp(packageName: String): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
-        val result = shell("am force-stop $packageName")
+        val result = shell("am force-stop ${shellQuote(packageName)}")
         when (result) {
             is AdbOperationResult.Success -> {
                 if (result.data.exitCode == 0) {
@@ -280,7 +270,7 @@ class KadbManager {
     }
 
     suspend fun launchApp(packageName: String): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
-        val result = shell("monkey -p $packageName 1")
+        val result = shell("monkey -p ${shellQuote(packageName)} 1")
         when (result) {
             is AdbOperationResult.Success -> {
                 if (result.data.exitCode == 0) {

@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 data class MirrorUiState(
     val status: OperationStatus = OperationStatus.Idle,
@@ -125,8 +124,9 @@ class MirrorViewModel(
     }
 
     override fun onCleared() {
+        started = false
         controlScope.cancel()
-        runBlocking(Dispatchers.IO) {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             repository.stop()
         }
         super.onCleared()

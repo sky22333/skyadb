@@ -15,6 +15,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/**
+ * 将 USB ADB bulk 通道桥接到本机 TCP，供 Kadb 以 TCP ADB 客户端接入。
+ * 不设置 Socket soTimeout，USB 读超时视为空闲轮询而非断线。
+ */
 class UsbAdbBridge(
     private val connection: UsbDeviceConnection,
     adbInterface: UsbInterface,
@@ -28,16 +32,21 @@ class UsbAdbBridge(
     val localPort: Int
 
     init {
-        server.reuseAddress = true
-        server.bind(InetSocketAddress("127.0.0.1", 0))
-        localPort = server.localPort
+        try {
+            server.reuseAddress = true
+            server.bind(InetSocketAddress("127.0.0.1", 0))
+            localPort = server.localPort
+        } catch (error: Throwable) {
+            runCatching { channel.close() }
+            runCatching { connection.close() }
+            throw error
+        }
     }
 
     fun start(scope: CoroutineScope) {
         acceptJob = scope.launch(Dispatchers.IO) {
             while (isActive && running.get()) {
                 val client = runCatching { server.accept() }.getOrNull() ?: break
-                client.soTimeout = channel.ioTimeoutMs
                 client.tcpNoDelay = true
                 runCatching { relay(client) }
                 runCatching { client.close() }
@@ -68,7 +77,7 @@ class UsbAdbBridge(
     private fun pumpUsbToTcp(output: OutputStream) {
         val buffer = ByteArray(16 * 1024)
         while (running.get()) {
-            val read = channel.readChunk(buffer)
+            val read = channel.readChunkOrTimeout(buffer) ?: continue
             if (read == 0) continue
             output.write(buffer, 0, read)
             output.flush()

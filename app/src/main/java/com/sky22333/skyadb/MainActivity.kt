@@ -33,8 +33,11 @@ class MainActivity : ComponentActivity() {
             when (intent.action) {
                 usbPermissionAction -> {
                     val device = intent.deviceExtra()
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false) && device != null) {
+                    if (device == null) return
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                         AppServices.usbOtgActions.onPermissionGranted(device.deviceName)
+                    } else {
+                        AppServices.usbOtgActions.onPermissionDenied(device.deviceName)
                     }
                 }
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
@@ -119,10 +122,11 @@ class MainActivity : ComponentActivity() {
             } else {
                 0
             }
+        val intent = Intent(usbPermissionAction).setPackage(packageName)
         val pendingIntent = android.app.PendingIntent.getBroadcast(
             this,
             device.deviceId,
-            Intent(usbPermissionAction),
+            intent,
             flags,
         )
         AppServices.usbOtgHost.requestPermission(device, pendingIntent)
