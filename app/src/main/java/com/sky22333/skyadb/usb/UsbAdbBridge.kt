@@ -15,10 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/**
- * 将 USB ADB bulk 通道桥接到本机 TCP，供 Kadb 以 TCP ADB 客户端接入。
- * 不设置 Socket soTimeout，USB 读超时视为空闲轮询而非断线。
- */
+/** USB ADB bulk ↔ 本机 TCP，供 Kadb 接入。 */
 class UsbAdbBridge(
     private val connection: UsbDeviceConnection,
     adbInterface: UsbInterface,

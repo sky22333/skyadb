@@ -12,3 +12,4 @@ app/build/
 *.pfx
 .tmp/
 .tmp-deps/
+gradle.properties

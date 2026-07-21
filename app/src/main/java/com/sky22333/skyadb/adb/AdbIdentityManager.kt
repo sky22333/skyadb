@@ -10,9 +10,7 @@ import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import java.io.File
 import okio.Path.Companion.toPath
 
-/**
- * 配置 Kadb 持久化主机身份。CRT 兼容与密钥自愈由 Kadb 2.1.3+ 内部处理。
- */
+/** Kadb 主机身份持久化配置。 */
 object AdbIdentityManager {
     private const val Tag = "SkyadbIdentity"
 

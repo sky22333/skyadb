@@ -11,9 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/**
- * 基于上游 kadb-mdns 的薄适配层，保留应用侧中文 UI 模型。
- */
+/** kadb-mdns 适配为应用侧发现模型。 */
 class AndroidAdbMdnsDiscovery(
     context: Context,
 ) : AdbMdnsDiscovery {

@@ -5,7 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -53,12 +55,15 @@ fun AdbManagerApp() {
     val currentDestination = backStackEntry?.destination
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
             if (currentDestination?.route != MirrorRoute) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     tonalElevation = 0.dp,
+                    windowInsets = WindowInsets.navigationBars,
                 ) {
                     bottomDestinations.forEach { destination ->
                         val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true

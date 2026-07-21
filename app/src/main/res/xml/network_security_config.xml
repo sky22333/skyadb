@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- 在线下载支持局域网 HTTP 源；默认仍信任系统 CA。 -->
+    <!-- 允许 HTTP 下载 -->
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

@@ -39,9 +39,7 @@ class UsbBulkChannel(
         endpointOut = output
     }
 
-    /**
-     * @return 读取到的字节数；`null` 表示超时/暂无数据，调用方应继续轮询。
-     */
+    /** `null` 表示超时，可继续轮询。 */
     fun readChunkOrTimeout(buffer: ByteArray): Int? {
         val transferred = connection.bulkTransfer(
             endpointIn,

@@ -505,9 +505,7 @@ class KadbManager {
 
     fun currentEndpoint(): String? = activeEndpoint
 
-    /**
-     * 镜像使用两条专用连接：video 独占视频流，control 负责启动 server 与控制通道。
-     */
+    /** 镜像专用 video / control 双连接。 */
     suspend fun beginMirrorSession(): AdbOperationResult<MirrorConnections> = withContext(Dispatchers.IO) {
         if (sessionKind == AdbSessionKind.UsbAdb) {
             return@withContext AdbOperationResult.Failure(
