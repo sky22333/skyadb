@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.data.ThemeMode
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
-import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.components.SettingBlock
 import com.sky22333.skyadb.ui.components.SettingGroupCard
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
@@ -90,7 +89,6 @@ private fun SettingsContent(
             ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            item { SectionHeader(title = "连接参数", description = "ADB 连接默认值") }
             item {
                 SettingGroupCard {
                     SettingBlock(
@@ -157,7 +155,6 @@ private fun SettingsContent(
                 }
             }
 
-            item { SectionHeader(title = "屏幕镜像", description = "清晰度与流畅度") }
             item {
                 SettingGroupCard {
                     SettingBlock(
@@ -181,7 +178,6 @@ private fun SettingsContent(
                 }
             }
 
-            item { SectionHeader(title = "外观", description = "主题显示方式") }
             item {
                 SettingGroupCard {
                     SettingBlock(
@@ -205,7 +201,6 @@ private fun SettingsContent(
                 }
             }
 
-            item { SectionHeader(title = "数据管理", description = "本机数据") }
             item {
                 SettingGroupCard {
                     SettingBlock(
@@ -223,7 +218,6 @@ private fun SettingsContent(
                 }
             }
 
-            item { SectionHeader(title = "关于") }
             item {
                 SettingGroupCard {
                     SettingBlock(

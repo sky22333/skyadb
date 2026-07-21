@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -121,20 +120,10 @@ fun HomeScreen(
             }
 
             item {
-                SectionHeader(title = "最近设备")
-            }
-
-            if (uiState.recentDevices.isEmpty()) {
-                item {
-                    EmptyState(title = "暂无历史设备")
-                }
-            } else {
-                items(uiState.recentDevices, key = { it.id }) { device ->
-                    RecentDeviceCard(
-                        device = device,
-                        onClick = { viewModel.onRecentDeviceSelected(device) },
-                    )
-                }
+                RecentDevicesCard(
+                    devices = uiState.recentDevices,
+                    onDeviceClick = viewModel::onRecentDeviceSelected,
+                )
             }
         }
     }
@@ -306,7 +295,10 @@ private fun ManualConnectCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TextButton(onClick = onPairingClick) {
+                TextButton(
+                    onClick = onPairingClick,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Key,
                         contentDescription = null,
@@ -315,7 +307,10 @@ private fun ManualConnectCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("无线配对")
                 }
-                TextButton(onClick = onDiscoveryClick) {
+                TextButton(
+                    onClick = onDiscoveryClick,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
                         contentDescription = null,
@@ -373,7 +368,39 @@ private fun OperationStatusMessage(status: OperationStatus) {
 }
 
 @Composable
-private fun RecentDeviceCard(
+private fun RecentDevicesCard(
+    devices: List<AdbDevice>,
+    onDeviceClick: (AdbDevice) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppDimens.CardRadius),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppDimens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SectionHeader(title = "最近设备")
+
+            if (devices.isEmpty()) {
+                EmptyState(title = "暂无历史设备")
+            } else {
+                devices.forEach { device ->
+                    RecentDeviceRow(
+                        device = device,
+                        onClick = { onDeviceClick(device) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentDeviceRow(
     device: AdbDevice,
     onClick: () -> Unit,
 ) {
@@ -388,14 +415,14 @@ private fun RecentDeviceCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(AppDimens.CardPadding),
+                .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = device.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
@@ -404,7 +431,7 @@ private fun RecentDeviceCard(
                         AdbLinkKind.UsbOtg -> device.linkKind.label
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             AppStatusBadge(state = device.connectionState)
@@ -455,21 +482,23 @@ private fun ManualConnectCardErrorPreview() {
     }
 }
 
-@Preview(name = "最近设备卡片", showBackground = true, widthDp = 390)
+@Preview(name = "最近设备", showBackground = true, widthDp = 390)
 @Composable
-private fun RecentDeviceCardPreview() {
+private fun RecentDevicesCardPreview() {
     AdbManagerTheme(dynamicColor = false) {
-        RecentDeviceCard(
-            device = AdbDevice(
-                id = "preview-tv",
-                name = "客厅电视",
-                host = "192.168.1.86",
-                port = 5555,
-                type = DeviceType.Tv,
-                connectionState = ConnectionState.Connected,
-                lastConnectedText = "刚刚连接",
+        RecentDevicesCard(
+            devices = listOf(
+                AdbDevice(
+                    id = "preview-tv",
+                    name = "客厅电视",
+                    host = "192.168.1.86",
+                    port = 5555,
+                    type = DeviceType.Tv,
+                    connectionState = ConnectionState.Connected,
+                    lastConnectedText = "刚刚连接",
+                ),
             ),
-            onClick = {},
+            onDeviceClick = {},
         )
     }
 }

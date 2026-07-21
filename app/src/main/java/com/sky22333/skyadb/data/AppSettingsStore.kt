@@ -24,7 +24,7 @@ data class AppSettings(
 )
 
 enum class ThemeMode(val label: String) {
-    System("跟随系统"),
+    System("系统"),
     Light("浅色"),
     Dark("深色"),
 }

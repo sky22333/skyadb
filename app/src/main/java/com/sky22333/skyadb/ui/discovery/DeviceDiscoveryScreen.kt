@@ -98,16 +98,7 @@ private fun DeviceDiscoveryContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text("局域网发现")
-                    Text(
-                        text = "自动发现无线调试服务，也可主动扫描网段",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = { Text("局域网发现") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
@@ -130,12 +121,7 @@ private fun DeviceDiscoveryContent(
             ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            item {
-                SectionHeader(
-                    title = "自动发现",
-                    description = "显示开启无线调试或 WiFi ADB 广播的设备",
-                )
-            }
+            item { SectionHeader(title = "自动发现") }
             item {
                 MdnsDiscoveryStatus(
                     running = uiState.mdnsRunning,
@@ -157,22 +143,10 @@ private fun DeviceDiscoveryContent(
                     onStopScanClick = onStopScanClick,
                 )
             }
-            item {
-                SectionHeader(
-                    title = "发现结果",
-                    description = "显示 ADB 握手确认或目标端口开放的设备",
-                )
-            }
+            item { SectionHeader(title = "发现结果") }
             if (uiState.results.isEmpty()) {
                 item {
-                    EmptyState(
-                        title = if (uiState.scanning) "正在查找设备" else "暂无发现",
-                        message = if (uiState.scanning) {
-                            "发现可响应的 ADB 设备后会立即显示。"
-                        } else {
-                            "确认目标设备已开启无线调试，并与本机处于同一局域网。"
-                        },
-                    )
+                    EmptyState(title = if (uiState.scanning) "正在查找设备" else "暂无发现")
                 }
             } else {
                 items(uiState.results, key = { it.endpoint }) { result ->
@@ -191,27 +165,24 @@ private fun MdnsDiscoveryStatus(
 ) {
     when {
         error != null -> Text(
-            text = "$error 当前网络可能不支持自动发现，可以继续使用下方网段扫描。",
+            text = "$error 可改用下方网段扫描。",
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
         endpoints.isNotEmpty() -> Text(
-            text = "发现 ${endpoints.size} 个自动广播的 ADB 服务。",
+            text = "发现 ${endpoints.size} 个服务",
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall,
         )
         running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(
-                text = "正在自动发现无线调试服务。",
+                text = "正在自动发现…",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        else -> EmptyState(
-            title = "未发现自动广播的设备",
-            message = "请确认目标设备已开启无线调试，且处于同一局域网。也可以使用下方网段扫描。",
-        )
+        else -> EmptyState(title = "未发现设备")
     }
 }
 
@@ -242,11 +213,6 @@ private fun MdnsEndpointCard(
                 Text(endpoint.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = "${endpoint.type.label} · ${endpoint.endpoint}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = endpoint.type.description,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -371,11 +337,6 @@ private fun ScanResultCard(
                 Text(result.endpoint, style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = "${result.state.label} · ${result.latencyMs}ms",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = result.state.description,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )

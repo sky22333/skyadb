@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -20,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
@@ -213,26 +211,23 @@ private fun LocalAppCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            OutlinedButton(
+                onClick = { onInstallClick(app) },
+                enabled = app.installable && !installing,
+                modifier = Modifier.width(ActionWidth),
+                contentPadding = PaddingValues(horizontal = 8.dp),
             ) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(if (app.installable) "单 APK" else "暂不支持") },
+                Text(
+                    text = if (app.installable) "安装" else "暂不支持",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Button(
-                    onClick = { onInstallClick(app) },
-                    enabled = app.installable && !installing,
-                ) {
-                    Icon(Icons.Outlined.Android, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("安装")
-                }
             }
         }
     }
 }
+
+private val ActionWidth = 96.dp
 
 @Composable
 private fun LocalAppIcon(app: LocalInstalledApp) {
