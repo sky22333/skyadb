@@ -13,9 +13,9 @@ class ScanRangeParserTest {
 
         assertEquals(2, ranges.size)
         assertEquals("192.168.1.20/30", ranges[0].subnetLabel)
-        assertEquals(listOf("192.168.1.21", "192.168.1.22"), ranges[0].hosts)
+        assertEquals(listOf("192.168.1.21", "192.168.1.22"), ranges[0].expandHosts())
         assertEquals("10.0.0.8/32", ranges[1].subnetLabel)
-        assertEquals(listOf("10.0.0.8"), ranges[1].hosts)
+        assertEquals(listOf("10.0.0.8"), ranges[1].expandHosts())
     }
 
     @Test
@@ -32,9 +32,12 @@ class ScanRangeParserTest {
 
         requireNotNull(range)
         assertEquals("192.168.1.0/24", range.subnetLabel)
-        assertFalse(range.hosts.contains("192.168.1.23"))
-        assertTrue(range.hosts.contains("192.168.1.1"))
-        assertTrue(range.hosts.contains("192.168.1.254"))
+        assertEquals(253, range.hostCount)
+        val hosts = range.expandHosts()
+        assertFalse(hosts.contains("192.168.1.23"))
+        assertTrue(hosts.contains("192.168.1.1"))
+        assertTrue(hosts.contains("192.168.1.254"))
+        assertEquals(253, hosts.size)
     }
 
     @Test

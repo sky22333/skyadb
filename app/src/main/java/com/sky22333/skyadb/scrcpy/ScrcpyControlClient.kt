@@ -1,7 +1,6 @@
 package com.sky22333.skyadb.scrcpy
 
 import android.view.KeyEvent
-import android.view.MotionEvent
 import com.flyfishxu.kadb.stream.AdbStream
 
 class ScrcpyControlClient(
@@ -22,24 +21,23 @@ class ScrcpyControlClient(
         videoHeight = height
     }
 
-    fun sendTouch(event: MotionEvent, surfaceWidth: Int, surfaceHeight: Int) {
+    fun sendTouch(event: MirrorTouchEvent) {
         val width = videoWidth
         val height = videoHeight
         val action = ScrcpyProtocol.motionAction(event.actionMasked) ?: return
-        val pointerIndex = event.actionIndex.coerceIn(0, event.pointerCount - 1)
         val point = MirrorCoordinateMapper.map(
-            x = event.getX(pointerIndex),
-            y = event.getY(pointerIndex),
-            surfaceWidth = surfaceWidth,
-            surfaceHeight = surfaceHeight,
+            x = event.x,
+            y = event.y,
+            surfaceWidth = event.surfaceWidth,
+            surfaceHeight = event.surfaceHeight,
             videoWidth = width,
             videoHeight = height,
         ) ?: return
 
-        val pointerId = if (event.getPointerId(pointerIndex) == 0) {
+        val pointerId = if (event.pointerId == 0) {
             ScrcpyProtocol.PointerMouse
         } else {
-            event.getPointerId(pointerIndex).toLong()
+            event.pointerId.toLong()
         }
         send(
             ScrcpyProtocol.touch(
@@ -49,16 +47,19 @@ class ScrcpyControlClient(
                 y = point.y,
                 screenWidth = point.screenWidth,
                 screenHeight = point.screenHeight,
-                pressure = event.getPressure(pointerIndex),
+                pressure = event.pressure,
                 actionButton = event.actionButton,
-                buttons = event.buttonState,
+                buttons = event.buttons,
             ),
         )
     }
 
     fun sendKey(keyCode: Int) {
-        send(ScrcpyProtocol.keyEvent(KeyEvent.ACTION_DOWN, keyCode))
-        send(ScrcpyProtocol.keyEvent(KeyEvent.ACTION_UP, keyCode))
+        synchronized(lock) {
+            stream.sink.write(ScrcpyProtocol.keyEvent(KeyEvent.ACTION_DOWN, keyCode))
+            stream.sink.write(ScrcpyProtocol.keyEvent(KeyEvent.ACTION_UP, keyCode))
+            stream.sink.flush()
+        }
     }
 
     fun sendText(text: String) {
@@ -66,8 +67,11 @@ class ScrcpyControlClient(
     }
 
     fun sendBackOrScreenOn() {
-        send(ScrcpyProtocol.backOrScreenOn())
-        send(ScrcpyProtocol.backOrScreenOn(KeyEvent.ACTION_UP))
+        synchronized(lock) {
+            stream.sink.write(ScrcpyProtocol.backOrScreenOn())
+            stream.sink.write(ScrcpyProtocol.backOrScreenOn(KeyEvent.ACTION_UP))
+            stream.sink.flush()
+        }
     }
 
     private fun send(bytes: ByteArray) {

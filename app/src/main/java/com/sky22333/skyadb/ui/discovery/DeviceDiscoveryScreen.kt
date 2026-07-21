@@ -48,7 +48,7 @@ import com.sky22333.skyadb.discovery.AdbMdnsEndpoint
 import com.sky22333.skyadb.discovery.AdbMdnsServiceType
 import com.sky22333.skyadb.discovery.AdbProbeState
 import com.sky22333.skyadb.discovery.AdbScanResult
-import com.sky22333.skyadb.discovery.LocalNetwork
+import com.sky22333.skyadb.discovery.ScanRangeParser
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
 import com.sky22333.skyadb.ui.components.SectionHeader
@@ -361,16 +361,11 @@ private fun DeviceDiscoveryContentPreview() {
         DeviceDiscoveryContent(
             uiState = DeviceDiscoveryUiState(
                 networks = listOf(
-                    LocalNetwork(
-                        deviceIp = "10.71.180.42",
-                        subnetLabel = "10.71.180.0/24",
-                        hosts = emptyList(),
+                    requireNotNull(
+                        ScanRangeParser.subnetForLocalAddress("10.71.180.42", sourceLabel = "当前网络"),
                     ),
-                    LocalNetwork(
-                        deviceIp = "10.43.180.147",
-                        subnetLabel = "10.43.180.0/24",
-                        hosts = emptyList(),
-                        sourceLabel = "最近设备",
+                    requireNotNull(
+                        ScanRangeParser.subnetForHost("10.43.180.147", sourceLabel = "最近设备"),
                     ),
                 ),
                 scanning = true,

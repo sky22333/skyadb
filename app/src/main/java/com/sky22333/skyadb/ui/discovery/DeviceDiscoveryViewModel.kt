@@ -15,11 +15,13 @@ import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class DeviceDiscoveryUiState(
     val networks: List<LocalNetwork> = emptyList(),
@@ -110,17 +112,24 @@ class DeviceDiscoveryViewModel(
             refreshNetworkInfoOnly()
             return
         }
-        val hosts = networks.flatMap { it.hosts }.distinct()
         scanJob?.cancel()
         state.value = state.value.copy(
             scanning = true,
             scannedCount = 0,
-            totalCount = hosts.size * state.value.ports.size,
+            totalCount = 0,
             results = emptyList(),
-            status = OperationStatus.Running("正在扫描 ${networks.size} 个候选网段"),
+            status = OperationStatus.Running("正在准备扫描 ${networks.size} 个候选网段"),
         )
         scanJob = viewModelScope.launch {
             try {
+                val hosts = withContext(Dispatchers.Default) {
+                    networks.flatMap { it.expandHosts() }.distinct()
+                }
+                if (!state.value.scanning) return@launch
+                state.value = state.value.copy(
+                    totalCount = hosts.size * state.value.ports.size,
+                    status = OperationStatus.Running("正在扫描 ${networks.size} 个候选网段"),
+                )
                 scanner.scan(
                     hosts = hosts,
                     ports = state.value.ports,

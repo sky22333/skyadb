@@ -2,7 +2,6 @@ package com.sky22333.skyadb.scrcpy
 
 import android.content.Context
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.Surface
 import com.sky22333.skyadb.adb.KadbManager
 import com.sky22333.skyadb.adb.MirrorConnections
@@ -85,9 +84,9 @@ class ScrcpyRepository(
         )
     }
 
-    fun sendTouch(event: MotionEvent, surfaceWidth: Int, surfaceHeight: Int) {
+    fun sendTouch(event: MirrorTouchEvent) {
         runCatching {
-            session?.controlClient?.sendTouch(event, surfaceWidth, surfaceHeight)
+            session?.controlClient?.sendTouch(event)
         }.onFailure { error ->
             DiagnosticLogger.record(
                 module = DiagnosticModule.Mirror,

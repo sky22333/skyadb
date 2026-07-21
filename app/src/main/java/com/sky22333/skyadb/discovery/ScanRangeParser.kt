@@ -1,7 +1,5 @@
 package com.sky22333.skyadb.discovery
 
-import java.net.InetAddress
-
 object ScanRangeParser {
     fun parseConfiguredRanges(value: String): List<LocalNetwork> {
         return value
@@ -55,22 +53,38 @@ object ScanRangeParser {
         prefixLength: Int,
         sourceLabel: String,
         excludedHost: String? = address,
-    ): LocalNetwork {
-        val addressInt = address.toIpv4Int()
+    ): LocalNetwork? {
+        val addressInt = address.toIpv4IntOrNull() ?: return null
         val mask = prefixLength.toMask()
         val network = addressInt and mask
         val broadcast = network or mask.inv()
-        val hosts = when (prefixLength) {
-            32 -> listOf(address)
-            31 -> listOf(network.toIpv4String(), broadcast.toIpv4String())
-            else -> ((network + 1)..(broadcast - 1)).map { it.toIpv4String() }
-        }.filterNot { it == excludedHost }
+        val rawCount = when (prefixLength) {
+            32 -> 1
+            31 -> 2
+            else -> (broadcast - network - 1).coerceAtLeast(0)
+        }
+        val excludedInRange = excludedHost != null && when (prefixLength) {
+            32 -> excludedHost == address
+            31 -> {
+                val excludedInt = excludedHost.toIpv4IntOrNull()
+                excludedInt == network || excludedInt == broadcast
+            }
+            else -> {
+                val excludedInt = excludedHost.toIpv4IntOrNull()
+                excludedInt != null && excludedInt in (network + 1) until broadcast
+            }
+        }
+        val hostCount = if (excludedInRange) (rawCount - 1).coerceAtLeast(0) else rawCount
 
         return LocalNetwork(
             deviceIp = address,
             subnetLabel = "${network.toIpv4String()}/$prefixLength",
-            hosts = hosts,
             sourceLabel = sourceLabel,
+            hostCount = hostCount,
+            networkInt = network,
+            broadcastInt = broadcast,
+            prefixLength = prefixLength,
+            excludedHost = excludedHost,
         )
     }
 
@@ -82,18 +96,16 @@ object ScanRangeParser {
             parts[0] == 172 && parts[1] in 16..31
     }
 
-    private fun String.toIpv4Int(): Int {
-        val bytes = InetAddress.getByName(this).address
-        return bytes.fold(0) { value, byte -> (value shl 8) or (byte.toInt() and 0xff) }
-    }
-
-    private fun Int.toIpv4String(): String {
-        return listOf(
-            this ushr 24 and 0xff,
-            this ushr 16 and 0xff,
-            this ushr 8 and 0xff,
-            this and 0xff,
-        ).joinToString(".")
+    private fun String.toIpv4IntOrNull(): Int? {
+        val parts = split('.')
+        if (parts.size != 4) return null
+        var value = 0
+        for (part in parts) {
+            val octet = part.toIntOrNull() ?: return null
+            if (octet !in 0..255) return null
+            value = (value shl 8) or octet
+        }
+        return value
     }
 
     private fun Int.toMask(): Int {
