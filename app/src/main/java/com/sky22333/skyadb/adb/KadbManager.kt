@@ -563,13 +563,27 @@ class KadbManager {
 
     fun currentEndpoint(): String? = activeEndpoint
 
-    /** 镜像专用 video / control 双连接。 */
-    suspend fun beginMirrorSession(): AdbOperationResult<MirrorConnections> = withContext(Dispatchers.IO) {
+    /** Android 11+（API 30）才支持官方音频转发。 */
+    suspend fun currentDeviceSdkInt(): Int? = withContext(Dispatchers.IO) {
+        when (val result = shell("getprop ro.build.version.sdk")) {
+            is AdbOperationResult.Failure -> null
+            is AdbOperationResult.Success -> {
+                result.data.output
+                    .lineSequence()
+                    .map { it.trim() }
+                    .firstOrNull { it.isNotEmpty() }
+                    ?.toIntOrNull()
+            }
+        }
+    }
+
+    /** 镜像专用连接：video / [audio] / control。 */
+    suspend fun beginMirrorSession(audioEnabled: Boolean): AdbOperationResult<MirrorConnections> = withContext(Dispatchers.IO) {
         sessionMutex.withLock {
             if (sessionKind == AdbSessionKind.UsbAdb) {
                 return@withLock AdbOperationResult.Failure(
                     message = "USB OTG 暂不支持屏幕镜像",
-                    suggestion = "屏幕镜像需要两条并行 ADB 连接，当前 USB OTG 仅支持单通道。请改用 Wi-Fi ADB 连接后再试。",
+                    suggestion = "屏幕镜像需要多路并行 ADB 连接，当前 USB OTG 仅支持单通道。请改用 Wi-Fi ADB 连接后再试。",
                 )
             }
             val endpoint = parseWifiEndpoint(activeEndpoint.orEmpty())
@@ -589,7 +603,20 @@ class KadbManager {
                     control.close()
                     throw error
                 }
-                AdbOperationResult.Success(MirrorConnections(control = control, video = video))
+                val audio = if (audioEnabled) {
+                    try {
+                        Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
+                    } catch (error: Throwable) {
+                        video.close()
+                        control.close()
+                        throw error
+                    }
+                } else {
+                    null
+                }
+                AdbOperationResult.Success(
+                    MirrorConnections(control = control, video = video, audio = audio),
+                )
             }.getOrElse { error ->
                 val restored = restoreActiveConnectionLocked()
                 if (!restored) {

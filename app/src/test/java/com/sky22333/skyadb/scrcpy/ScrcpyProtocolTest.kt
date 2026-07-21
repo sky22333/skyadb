@@ -21,12 +21,14 @@ class ScrcpyProtocolTest {
     }
 
     @Test
-    fun text_usesUtf8Length() {
-        val packet = ScrcpyProtocol.text("测试")
+    fun setClipboard_usesPasteFlagAndUtf8() {
+        val packet = ScrcpyProtocol.setClipboard("你好scrcpy", paste = true, sequence = 0L)
         val buffer = ByteBuffer.wrap(packet).order(ByteOrder.BIG_ENDIAN)
 
+        assertEquals(9, buffer.get().toInt())
+        assertEquals(0L, buffer.long)
         assertEquals(1, buffer.get().toInt())
-        assertEquals("测试".toByteArray(Charsets.UTF_8).size, buffer.int)
+        assertEquals("你好scrcpy".toByteArray(Charsets.UTF_8).size, buffer.int)
     }
 
     @Test

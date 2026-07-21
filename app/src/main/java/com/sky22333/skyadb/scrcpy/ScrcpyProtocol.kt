@@ -10,6 +10,10 @@ object ScrcpyProtocol {
     const val CodecH264 = 0x68323634
     const val CodecH265 = 0x68323635
     const val CodecAv1 = 0x00617631
+    const val CodecOpus = 0x6f707573
+    const val CodecAac = 0x00616163
+    const val CodecFlac = 0x666c6163
+    const val CodecRaw = 0x00726177
 
     const val DeviceNameLength = 64
     const val PacketHeaderLength = 12
@@ -18,12 +22,13 @@ object ScrcpyProtocol {
     const val PacketFlagKeyFrame = 1L shl 61
     const val PacketPtsMask = (1L shl 61) - 1
     const val PointerMouse = -1L
+    const val ClipboardTextMaxBytes = 240_000
 
     private const val TypeInjectKeycode = 0
-    private const val TypeInjectText = 1
     private const val TypeInjectTouchEvent = 2
     private const val TypeInjectScrollEvent = 3
     private const val TypeBackOrScreenOn = 4
+    private const val TypeSetClipboard = 9
 
     fun keyEvent(action: Int, keyCode: Int, repeat: Int = 0, metaState: Int = 0): ByteArray {
         return ByteBuffer.allocate(14).order(ByteOrder.BIG_ENDIAN)
@@ -35,10 +40,18 @@ object ScrcpyProtocol {
             .array()
     }
 
-    fun text(text: String): ByteArray {
+    /** 官方 Unicode 文本路径：写入剪贴板并可选自动粘贴。 */
+    fun setClipboard(
+        text: String,
+        paste: Boolean = true,
+        sequence: Long = 0L,
+    ): ByteArray {
         val bytes = text.toByteArray(Charsets.UTF_8)
-        return ByteBuffer.allocate(5 + bytes.size).order(ByteOrder.BIG_ENDIAN)
-            .put(TypeInjectText.toByte())
+            .let { if (it.size <= ClipboardTextMaxBytes) it else it.copyOf(ClipboardTextMaxBytes) }
+        return ByteBuffer.allocate(14 + bytes.size).order(ByteOrder.BIG_ENDIAN)
+            .put(TypeSetClipboard.toByte())
+            .putLong(sequence)
+            .put(if (paste) 1 else 0)
             .putInt(bytes.size)
             .put(bytes)
             .array()

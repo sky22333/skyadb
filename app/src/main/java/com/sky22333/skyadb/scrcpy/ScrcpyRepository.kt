@@ -37,7 +37,8 @@ class ScrcpyRepository(
         stop()
         val options = qualityPreset.options
         val optionsText = options.diagnosticText()
-        val connections = when (val acquired = kadbManager.beginMirrorSession()) {
+        val audioEnabled = (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
+        val connections = when (val acquired = kadbManager.beginMirrorSession(audioEnabled)) {
             is AdbOperationResult.Failure -> return@withContext acquired
             is AdbOperationResult.Success -> acquired.data
         }
@@ -49,6 +50,7 @@ class ScrcpyRepository(
                 connections = connections,
                 surface = surface,
                 options = options,
+                audioEnabled = audioEnabled,
                 onVideoSize = onVideoSize,
                 onError = { error, serverLog ->
                     DiagnosticLogger.record(
@@ -167,5 +169,6 @@ class ScrcpyRepository(
 
     private companion object {
         const val ServerLogDiagnosticMaxChars = 300
+        const val MinAudioSdkInt = 30
     }
 }
