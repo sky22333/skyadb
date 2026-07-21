@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.files.LocalFileManager
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
@@ -89,9 +90,20 @@ class FileTransferViewModel(
                 localFile to buildRemotePath(current.currentPath, localFile.name)
             }.fold(
                 onSuccess = { (localFile, remotePath) ->
-                    state.value = state.value.copy(operationStatus = OperationStatus.Running("正在上传到 $remotePath"))
+                    state.value = state.value.copy(operationStatus = OperationStatus.Running("正在上传"))
                     try {
-                        when (val result = adbRepository.push(localFile, remotePath)) {
+                        when (
+                            val result = adbRepository.push(localFile, remotePath) { transferred, total ->
+                                state.value = state.value.copy(
+                                    operationStatus = adbTransferRunning(
+                                        transferringLabel = "正在上传",
+                                        finishingLabel = "正在完成上传",
+                                        transferred = transferred,
+                                        total = total,
+                                    ),
+                                )
+                            }
+                        ) {
                             is AdbOperationResult.Success -> {
                                 state.value = state.value.copy(
                                     operationStatus = OperationStatus.Success("文件已上传到 $remotePath"),
@@ -262,5 +274,4 @@ class FileTransferViewModel(
         val parent = normalizePath(parentPath)
         return if (parent == "/") "/$fileName" else "$parent/$fileName"
     }
-
 }

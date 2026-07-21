@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.files.LocalFileManager
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
@@ -65,8 +66,21 @@ class InstallApkViewModel(
                 fileManager.copyToCache(uri)
             }.fold(
                 onSuccess = { file ->
-                    state.value = state.value.copy(operationStatus = OperationStatus.Running("正在安装 ${file.name}"))
-                    when (val result = adbRepository.install(file)) {
+                    state.value = state.value.copy(
+                        operationStatus = OperationStatus.Running("正在传输 ${file.name}"),
+                    )
+                    when (
+                        val result = adbRepository.install(file) { transferred, total ->
+                            state.value = state.value.copy(
+                                operationStatus = adbTransferRunning(
+                                    transferringLabel = "正在传输 ${file.name}",
+                                    finishingLabel = "正在安装 ${file.name}",
+                                    transferred = transferred,
+                                    total = total,
+                                ),
+                            )
+                        }
+                    ) {
                         is AdbOperationResult.Success -> {
                             state.value = state.value.copy(
                                 installEnabled = true,

@@ -37,7 +37,10 @@ interface AdbRepository {
     suspend fun pair(host: String, port: Int, pairingCode: String): AdbOperationResult<Unit>
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
     suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult>
-    suspend fun install(apkFile: File): AdbOperationResult<Unit>
+    suspend fun install(
+        apkFile: File,
+        onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
+    ): AdbOperationResult<Unit>
     suspend fun listApps(): AdbOperationResult<List<AppInfo>>
     suspend fun launchApp(packageName: String): AdbOperationResult<Unit>
     suspend fun forceStopApp(packageName: String): AdbOperationResult<Unit>
@@ -47,7 +50,11 @@ interface AdbRepository {
     suspend fun listFiles(remotePath: String): AdbOperationResult<List<RemoteFileEntry>>
     suspend fun makeDirectory(remotePath: String): AdbOperationResult<Unit>
     suspend fun deleteFile(remotePath: String, isDirectory: Boolean): AdbOperationResult<Unit>
-    suspend fun push(localFile: File, remotePath: String): AdbOperationResult<Unit>
+    suspend fun push(
+        localFile: File,
+        remotePath: String,
+        onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
+    ): AdbOperationResult<Unit>
     suspend fun pull(remotePath: String, localFile: File): AdbOperationResult<Unit>
     suspend fun captureScreenshot(localFile: File): AdbOperationResult<File>
     suspend fun disconnect()
@@ -229,8 +236,11 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
 
-    override suspend fun install(apkFile: File): AdbOperationResult<Unit> {
-        return kadbManager.install(apkFile)
+    override suspend fun install(
+        apkFile: File,
+        onProgress: ((transferred: Long, total: Long) -> Unit)?,
+    ): AdbOperationResult<Unit> {
+        return kadbManager.install(apkFile, onProgress)
             .logFailure(DiagnosticModule.Install, "安装 APK", apkFile.name)
     }
 
@@ -279,8 +289,12 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Files, if (isDirectory) "删除目录" else "删除文件", remotePath)
     }
 
-    override suspend fun push(localFile: File, remotePath: String): AdbOperationResult<Unit> {
-        return kadbManager.push(localFile, remotePath)
+    override suspend fun push(
+        localFile: File,
+        remotePath: String,
+        onProgress: ((transferred: Long, total: Long) -> Unit)?,
+    ): AdbOperationResult<Unit> {
+        return kadbManager.push(localFile, remotePath, onProgress)
             .logFailure(DiagnosticModule.Files, "推送文件", remotePath)
     }
 

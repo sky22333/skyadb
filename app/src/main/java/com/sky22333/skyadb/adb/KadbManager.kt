@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okio.source
 
 enum class AdbSessionKind {
     None,
@@ -223,19 +224,33 @@ class KadbManager {
         }
     }
 
-    suspend fun install(apkFile: File): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
+    suspend fun install(
+        apkFile: File,
+        onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
+    ): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先连接设备，再安装 APK。",
         )
 
         runCatching {
-            kadb.install(apkFile)
+            val total = apkFile.length()
+            apkFile.source().use { raw ->
+                val source = if (onProgress == null) {
+                    raw
+                } else {
+                    CountingSource(raw, total, onProgress)
+                }
+                kadb.install(source, total)
+            }
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
                 message = "APK 安装失败",
-                suggestion = "请确认 APK 文件完整、设备存储空间充足，并允许安装该应用。",
+                suggestion = adbFailureSuggestion(
+                    error = error,
+                    fallback = "请确认 APK 文件完整、设备存储空间充足，并允许安装该应用。",
+                ),
                 cause = error,
             )
         }
@@ -417,19 +432,39 @@ class KadbManager {
         }
     }
 
-    suspend fun push(localFile: File, remotePath: String): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
+    suspend fun push(
+        localFile: File,
+        remotePath: String,
+        onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
+    ): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
             message = "未连接设备",
             suggestion = "请先连接设备，再推送文件。",
         )
 
         runCatching {
-            kadb.push(localFile, remotePath)
+            val total = localFile.length()
+            localFile.source().use { raw ->
+                val source = if (onProgress == null) {
+                    raw
+                } else {
+                    CountingSource(raw, total, onProgress)
+                }
+                kadb.push(
+                    source = source,
+                    remotePath = remotePath,
+                    mode = DefaultPushMode,
+                    lastModifiedMs = localFile.lastModified(),
+                )
+            }
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
                 message = "文件推送失败",
-                suggestion = "请确认本地文件存在，目标路径可写，并保持设备连接。",
+                suggestion = adbFailureSuggestion(
+                    error = error,
+                    fallback = "请确认本地文件存在，目标路径可写，并保持设备连接。",
+                ),
                 cause = error,
             )
         }
@@ -678,5 +713,10 @@ class KadbManager {
 
     private fun shellQuote(value: String): String {
         return "'" + value.replace("'", "'\"'\"'") + "'"
+    }
+
+    private companion object {
+        /** 0644，与 Kadb 默认推送权限一致。 */
+        const val DefaultPushMode = 420
     }
 }

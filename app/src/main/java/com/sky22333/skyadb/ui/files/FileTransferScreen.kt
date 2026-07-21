@@ -37,7 +37,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -64,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.ui.components.EmptyState
+import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -171,7 +171,7 @@ private fun FileManagerContent(
                     onNewFolderClick = onNewFolderClick,
                 )
             }
-            item { FileManagerStatus(status = uiState.operationStatus, loading = uiState.loading) }
+            item { FileManagerStatus(status = uiState.operationStatus) }
             item {
                 SectionHeader(
                     title = "文件列表",
@@ -358,11 +358,11 @@ private fun RemoteFileCard(
 }
 
 @Composable
-private fun FileManagerStatus(status: OperationStatus, loading: Boolean) {
+private fun FileManagerStatus(status: OperationStatus) {
     when (status) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            OperationProgressIndicator(progress = status.progress)
             Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)

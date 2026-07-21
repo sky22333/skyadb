@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.localapps.LocalInstalledApp
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
+import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -266,7 +267,7 @@ private fun LocalAppsStatus(status: OperationStatus) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                OperationProgressIndicator(progress = status.progress)
                 Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

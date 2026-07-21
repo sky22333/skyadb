@@ -3,6 +3,7 @@ package com.sky22333.skyadb.ui.localapps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.localapps.LocalAppExporter
@@ -118,7 +119,18 @@ class LocalAppsViewModel(
 
             state.value = state.value.copy(operationStatus = OperationStatus.Running("正在安装 ${app.label}"))
             try {
-                when (val result = adbRepository.install(apkFile)) {
+                when (
+                    val result = adbRepository.install(apkFile) { transferred, total ->
+                        state.value = state.value.copy(
+                            operationStatus = adbTransferRunning(
+                                transferringLabel = "正在传输 ${app.label}",
+                                finishingLabel = "正在安装 ${app.label}",
+                                transferred = transferred,
+                                total = total,
+                            ),
+                        )
+                    }
+                ) {
                     is AdbOperationResult.Success -> {
                         state.value = state.value.copy(operationStatus = OperationStatus.Success("${app.label} 安装完成"))
                     }
