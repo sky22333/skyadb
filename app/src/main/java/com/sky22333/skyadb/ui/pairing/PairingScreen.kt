@@ -1,5 +1,7 @@
 package com.sky22333.skyadb.ui.pairing
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,10 +16,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,11 +29,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.OperationStatus
+import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -88,16 +96,7 @@ private fun PairingContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(text = "无线调试配对")
-                    Text(
-                        text = "用于 Android 11 及以上设备",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = { Text(text = "无线配对") },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
@@ -130,6 +129,7 @@ private fun PairingContent(
 
 @Composable
 private fun PairingGuideCard() {
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(AppDimens.CardRadius),
@@ -137,17 +137,33 @@ private fun PairingGuideCard() {
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = "配对前检查",
-                description = "目标设备需开启无线调试，并显示配对码",
-            )
-            GuideStep("1", "在目标设备打开开发者选项和无线调试。")
-            GuideStep("2", "选择“使用配对码配对设备”，记录 IP、配对端口和配对码。")
-            GuideStep("3", "确认本机和目标设备处于同一网络，再开始配对。")
+        Column(modifier = Modifier.padding(AppDimens.CardPadding)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "使用说明",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "收起" else "展开",
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    GuideStep("1", "目标设备开启无线调试，选择配对码配对。")
+                    GuideStep("2", "填写配对窗口中的 IP、临时端口和 6 位配对码。")
+                    GuideStep("3", "配对成功后再用连接端口连接设备。")
+                }
+            }
         }
     }
 }
@@ -190,10 +206,7 @@ private fun PairingFormCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(
-                title = "配对信息",
-                description = "配对端口和连接端口不同，请填写配对窗口中显示的端口",
-            )
+            SectionHeader(title = "配对信息")
 
             OutlinedTextField(
                 value = uiState.ip,
@@ -201,11 +214,9 @@ private fun PairingFormCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("配对 IP") },
                 singleLine = true,
-                placeholder = { Text("例如 192.168.1.86") },
+                placeholder = { Text("192.168.1.86") },
                 isError = uiState.ipError != null,
-                supportingText = {
-                    Text(uiState.ipError ?: "填写目标设备无线调试配对窗口中的 IP")
-                },
+                supportingText = uiState.ipError?.let { { Text(it) } },
             )
 
             OutlinedTextField(
@@ -216,9 +227,7 @@ private fun PairingFormCard(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = uiState.portError != null,
-                supportingText = {
-                    Text(uiState.portError ?: "填写配对窗口中的临时端口")
-                },
+                supportingText = uiState.portError?.let { { Text(it) } },
             )
 
             OutlinedTextField(
@@ -229,9 +238,7 @@ private fun PairingFormCard(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 isError = uiState.codeError != null,
-                supportingText = {
-                    Text(uiState.codeError ?: "输入目标设备显示的 6 位数字配对码")
-                },
+                supportingText = uiState.codeError?.let { { Text(it) } },
             )
 
             PairingStatusMessage(status = uiState.operationStatus)
@@ -323,27 +330,6 @@ private fun PairingContentErrorPreview() {
                     text = "无法发起配对",
                     suggestion = "请检查配对 IP、配对端口和 6 位配对码是否正确。",
                 ),
-            ),
-            onBackClick = {},
-            onIpChanged = {},
-            onPairingPortChanged = {},
-            onPairingCodeChanged = {},
-            onPairClick = {},
-        )
-    }
-}
-
-@Preview(name = "无线配对 - 准备中", showBackground = true, widthDp = 390)
-@Composable
-private fun PairingContentRunningPreview() {
-    AdbManagerTheme(dynamicColor = false) {
-        PairingContent(
-            uiState = PairingUiState(
-                ip = "192.168.1.86",
-                pairingPort = "37125",
-                pairingCode = "123456",
-                pairEnabled = true,
-                operationStatus = OperationStatus.Running("正在准备配对 192.168.1.86:37125"),
             ),
             onBackClick = {},
             onIpChanged = {},

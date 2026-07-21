@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
-import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import com.sky22333.skyadb.usb.UsbOtgAttachment
@@ -23,7 +23,6 @@ data class HomeUiState(
     val port: String = "5555",
     val recentDevices: List<AdbDevice> = emptyList(),
     val usbAttachments: List<UsbOtgAttachment> = emptyList(),
-    val connectionStateText: String = "未连接设备",
     val ipError: String? = null,
     val portError: String? = null,
     val connectEnabled: Boolean = false,
@@ -69,7 +68,6 @@ class HomeViewModel(
                                 text = "USB 授权被拒绝",
                                 suggestion = "请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。",
                             ),
-                            connectionStateText = "USB 授权失败",
                         )
                     }
                     is UsbPermissionEvent.Detached -> {
@@ -77,8 +75,8 @@ class HomeViewModel(
                             adbRepository.disconnect()
                         }
                         state.value = state.value.copy(
-                            connectionStateText = "USB 设备已断开",
                             connectingUsbDeviceName = null,
+                            operationStatus = OperationStatus.Success("USB 设备已断开"),
                         )
                     }
                 }
@@ -112,8 +110,7 @@ class HomeViewModel(
             ipError = validation.ipError,
             portError = validation.portError,
             connectEnabled = validation.isValid,
-            operationStatus = OperationStatus.Success("已填入自动发现的连接地址，请确认后连接。"),
-            connectionStateText = "未连接设备",
+            operationStatus = OperationStatus.Success("已填入发现的地址，请确认后连接。"),
         )
     }
 
@@ -129,7 +126,6 @@ class HomeViewModel(
                     text = "无法发起连接",
                     suggestion = "请先检查 IP 地址和端口是否正确。",
                 ),
-                connectionStateText = "连接信息不完整",
             )
             return
         }
@@ -139,7 +135,6 @@ class HomeViewModel(
             portError = validation.portError,
             connectEnabled = false,
             operationStatus = OperationStatus.Running("正在连接 ${current.ip}:${current.port}"),
-            connectionStateText = "正在连接设备",
         )
 
         viewModelScope.launch {
@@ -148,14 +143,12 @@ class HomeViewModel(
                     state.value = state.value.copy(
                         connectEnabled = true,
                         operationStatus = OperationStatus.Success("设备连接成功：${result.data}"),
-                        connectionStateText = "已连接设备",
                     )
                 }
                 is AdbOperationResult.Failure -> {
                     state.value = state.value.copy(
                         connectEnabled = true,
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
-                        connectionStateText = "连接失败",
                     )
                 }
             }
@@ -186,7 +179,6 @@ class HomeViewModel(
             connectingUsbDeviceName = deviceName,
             connectEnabled = false,
             operationStatus = OperationStatus.Running("正在通过 USB OTG 连接 $modeLabel 设备…"),
-            connectionStateText = "正在连接 USB 设备",
         )
         viewModelScope.launch {
             when (val result = adbRepository.connectUsbOtg(deviceName)) {
@@ -195,11 +187,6 @@ class HomeViewModel(
                         connectingUsbDeviceName = null,
                         connectEnabled = true,
                         operationStatus = OperationStatus.Success("USB 连接成功：${result.data}"),
-                        connectionStateText = if (attachment?.mode == UsbOtgMode.Fastboot) {
-                            "已连接 Fastboot 设备"
-                        } else {
-                            "已连接 USB 设备"
-                        },
                     )
                 }
                 is AdbOperationResult.Failure -> {
@@ -207,7 +194,6 @@ class HomeViewModel(
                         connectingUsbDeviceName = null,
                         connectEnabled = true,
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
-                        connectionStateText = "USB 连接失败",
                     )
                 }
             }
@@ -223,7 +209,6 @@ class HomeViewModel(
             portError = validation.portError,
             connectEnabled = validation.isValid,
             operationStatus = OperationStatus.Idle,
-            connectionStateText = "未连接设备",
         )
     }
 
