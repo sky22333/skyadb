@@ -26,7 +26,6 @@ object ScrcpyProtocol {
 
     private const val TypeInjectKeycode = 0
     private const val TypeInjectTouchEvent = 2
-    private const val TypeInjectScrollEvent = 3
     private const val TypeBackOrScreenOn = 4
     private const val TypeSetClipboard = 9
 
@@ -40,7 +39,6 @@ object ScrcpyProtocol {
             .array()
     }
 
-    /** 官方 Unicode 文本路径：写入剪贴板并可选自动粘贴。 */
     fun setClipboard(
         text: String,
         paste: Boolean = true,
@@ -82,27 +80,6 @@ object ScrcpyProtocol {
             .array()
     }
 
-    fun scroll(
-        x: Int,
-        y: Int,
-        screenWidth: Int,
-        screenHeight: Int,
-        horizontal: Float,
-        vertical: Float,
-        buttons: Int = 0,
-    ): ByteArray {
-        return ByteBuffer.allocate(21).order(ByteOrder.BIG_ENDIAN)
-            .put(TypeInjectScrollEvent.toByte())
-            .putInt(x)
-            .putInt(y)
-            .putShort(screenWidth.toShort())
-            .putShort(screenHeight.toShort())
-            .putShort(signedFixedPoint16(horizontal / 16f))
-            .putShort(signedFixedPoint16(vertical / 16f))
-            .putInt(buttons)
-            .array()
-    }
-
     fun backOrScreenOn(action: Int = KeyEvent.ACTION_DOWN): ByteArray {
         return byteArrayOf(TypeBackOrScreenOn.toByte(), action.toByte())
     }
@@ -120,15 +97,6 @@ object ScrcpyProtocol {
             0xffff.toShort()
         } else {
             (clamped * 65536f).roundToInt().coerceIn(0, 0xfffe).toShort()
-        }
-    }
-
-    private fun signedFixedPoint16(value: Float): Short {
-        val clamped = value.coerceIn(-1f, 1f)
-        return when {
-            clamped >= 1f -> 0x7fff.toShort()
-            clamped <= -1f -> (-0x8000).toShort()
-            else -> (clamped * 32768f).roundToInt().coerceIn(-0x8000, 0x7ffe).toShort()
         }
     }
 }

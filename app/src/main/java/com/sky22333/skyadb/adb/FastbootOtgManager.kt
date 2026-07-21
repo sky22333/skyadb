@@ -94,8 +94,6 @@ class FastbootOtgManager {
 
     fun currentDeviceName(): String? = activeDeviceName
 
-    fun isConnected(): Boolean = deviceContext != null
-
     private companion object {
         const val ProbeTimeoutMs = 3_000
         const val CommandTimeoutMs = 5_000

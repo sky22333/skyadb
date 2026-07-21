@@ -17,7 +17,6 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 
-/** 工具入口卡片 ↔ 详情顶栏 的共享键；镜像等重页刻意不设。 */
 object SharedToolKeys {
     const val Apps = "tool/apps"
     const val LocalApps = "tool/local_apps"

@@ -26,8 +26,6 @@ object AndroidUsbInterface {
 
     fun findFastbootInterface(device: UsbDevice): UsbInterface? = findInterface(device, ProtocolFastboot)
 
-    fun isAndroidDebugDevice(device: UsbDevice): Boolean = modeOf(device) != null
-
     fun isAndroidDebugInterface(
         interfaceClass: Int,
         interfaceSubclass: Int,

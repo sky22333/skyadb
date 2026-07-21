@@ -66,33 +66,37 @@ class InstallApkViewModel(
                 fileManager.copyToCache(uri)
             }.fold(
                 onSuccess = { file ->
-                    state.value = state.value.copy(
-                        operationStatus = OperationStatus.Running("正在传输 ${file.name}"),
-                    )
-                    when (
-                        val result = adbRepository.install(file) { transferred, total ->
-                            state.value = state.value.copy(
-                                operationStatus = adbTransferRunning(
-                                    transferringLabel = "正在传输 ${file.name}",
-                                    finishingLabel = "正在安装 ${file.name}",
-                                    transferred = transferred,
-                                    total = total,
-                                ),
-                            )
+                    try {
+                        state.value = state.value.copy(
+                            operationStatus = OperationStatus.Running("正在传输 ${file.name}"),
+                        )
+                        when (
+                            val result = adbRepository.install(file) { transferred, total ->
+                                state.value = state.value.copy(
+                                    operationStatus = adbTransferRunning(
+                                        transferringLabel = "正在传输 ${file.name}",
+                                        finishingLabel = "正在安装 ${file.name}",
+                                        transferred = transferred,
+                                        total = total,
+                                    ),
+                                )
+                            }
+                        ) {
+                            is AdbOperationResult.Success -> {
+                                state.value = state.value.copy(
+                                    installEnabled = true,
+                                    operationStatus = OperationStatus.Success("APK 安装完成"),
+                                )
+                            }
+                            is AdbOperationResult.Failure -> {
+                                state.value = state.value.copy(
+                                    installEnabled = true,
+                                    operationStatus = OperationStatus.Failed(result.message, result.suggestion),
+                                )
+                            }
                         }
-                    ) {
-                        is AdbOperationResult.Success -> {
-                            state.value = state.value.copy(
-                                installEnabled = true,
-                                operationStatus = OperationStatus.Success("APK 安装完成"),
-                            )
-                        }
-                        is AdbOperationResult.Failure -> {
-                            state.value = state.value.copy(
-                                installEnabled = true,
-                                operationStatus = OperationStatus.Failed(result.message, result.suggestion),
-                            )
-                        }
+                    } finally {
+                        runCatching { file.delete() }
                     }
                 },
                 onFailure = { error ->

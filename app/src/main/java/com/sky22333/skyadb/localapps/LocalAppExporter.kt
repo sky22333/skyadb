@@ -107,7 +107,6 @@ class LocalAppExporter(
     }
 }
 
-/** 可见项懒加载 + 内存缓存；不做磁盘 PNG 中转。 */
 object LocalAppIcons {
     private const val IconSize = 96
     private val cache = LruCache<String, Bitmap>(48)
