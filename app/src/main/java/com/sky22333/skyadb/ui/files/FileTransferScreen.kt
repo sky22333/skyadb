@@ -170,7 +170,7 @@ private fun FileManagerContent(
 ) {
     val transferring = uiState.operationStatus is OperationStatus.Running
     val active = uiState.active
-    val sideLabel = if (uiState.activePane == FilePaneId.Local) "本机" else "设备"
+    val sideLabel = if (uiState.activePane == FilePaneId.Local) "本机" else "对端"
     val selectedCount = uiState.selectedPaths.size
     val titleKey = remember(uiState.activePane, active.path, active.entries.size, selectedCount) {
         listOf(sideLabel, active.path, active.entries.size.toString(), selectedCount.toString())
@@ -753,7 +753,7 @@ private fun JumpPathDialog(
     if (!visible) return
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isRemote) "跳转设备路径" else "跳转本机路径") },
+        title = { Text(if (isRemote) "跳转对端路径" else "跳转本机路径") },
         text = {
             OutlinedTextField(
                 value = value,
