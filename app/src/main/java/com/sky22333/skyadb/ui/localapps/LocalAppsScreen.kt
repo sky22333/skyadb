@@ -36,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -55,9 +54,6 @@ import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 @Composable
 fun LocalAppsScreen(
     bottomPadding: Dp = 0.dp,
@@ -234,10 +230,12 @@ private val ActionWidth = 96.dp
 @Composable
 private fun LocalAppIcon(packageName: String) {
     val context = LocalContext.current
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
-        value = withContext(Dispatchers.IO) {
-            LocalAppIcons.load(context, packageName)?.asImageBitmap()
-        }
+    val bitmap by produceState(
+        initialValue = LocalAppIcons.peek(packageName)?.asImageBitmap(),
+        key1 = packageName,
+    ) {
+        if (value != null) return@produceState
+        value = LocalAppIcons.load(context, packageName)?.asImageBitmap()
     }
     val icon = bitmap
     if (icon != null) {

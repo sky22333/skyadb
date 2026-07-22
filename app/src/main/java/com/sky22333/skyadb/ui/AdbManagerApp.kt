@@ -1,10 +1,13 @@
 package com.sky22333.skyadb.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -48,6 +52,7 @@ import com.sky22333.skyadb.ui.remote.RemoteControlScreen
 import com.sky22333.skyadb.ui.screenshot.ScreenshotScreen
 import com.sky22333.skyadb.ui.settings.SettingsScreen
 import com.sky22333.skyadb.ui.shared.LocalSharedTransitionScope
+import com.sky22333.skyadb.ui.shared.SharedMotion
 import com.sky22333.skyadb.ui.shared.SharedToolKeys
 import com.sky22333.skyadb.ui.shared.appComposable
 import com.sky22333.skyadb.ui.shell.ShellScreen
@@ -65,7 +70,17 @@ fun AdbManagerApp() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
-            if (showBottomBar) {
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = expandVertically(
+                    animationSpec = SharedMotion.sizeTween(),
+                    expandFrom = Alignment.Bottom,
+                ) + fadeIn(animationSpec = tween(SharedMotion.FadeMs)),
+                exit = shrinkVertically(
+                    animationSpec = SharedMotion.sizeTween(),
+                    shrinkTowards = Alignment.Bottom,
+                ) + fadeOut(animationSpec = tween(SharedMotion.FadeMs)),
+            ) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = MaterialTheme.colorScheme.onSurface,
@@ -105,11 +120,9 @@ fun AdbManagerApp() {
             }
         },
     ) { padding ->
-        val bottomPadding = if (showBottomBar) {
-            padding.calculateBottomPadding()
-        } else {
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        }
+        val systemNavBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        // 收起过程中 Scaffold 底边距连续变化；始终不低于系统导航区，避免手势条穿透。
+        val bottomPadding = maxOf(padding.calculateBottomPadding(), systemNavBottom)
 
         SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalSharedTransitionScope provides this) {
@@ -120,18 +133,26 @@ fun AdbManagerApp() {
                     enterTransition = {
                         val tabSwitch = initialState.destination.route in bottomRoutes &&
                             targetState.destination.route in bottomRoutes
-                        fadeIn(animationSpec = tween(if (tabSwitch) 120 else 180))
+                        fadeIn(
+                            animationSpec = tween(
+                                if (tabSwitch) SharedMotion.TabFadeInMs else SharedMotion.PageFadeMs,
+                            ),
+                        )
                     },
                     exitTransition = {
                         val tabSwitch = initialState.destination.route in bottomRoutes &&
                             targetState.destination.route in bottomRoutes
-                        fadeOut(animationSpec = tween(if (tabSwitch) 100 else 140))
+                        fadeOut(
+                            animationSpec = tween(
+                                if (tabSwitch) SharedMotion.TabFadeOutMs else SharedMotion.PageFadeMs,
+                            ),
+                        )
                     },
                     popEnterTransition = {
-                        fadeIn(animationSpec = tween(180))
+                        fadeIn(animationSpec = tween(SharedMotion.PageFadeMs))
                     },
                     popExitTransition = {
-                        fadeOut(animationSpec = tween(140))
+                        fadeOut(animationSpec = tween(SharedMotion.PageFadeMs))
                     },
                 ) {
                     appComposable(AppDestination.Home.route) {

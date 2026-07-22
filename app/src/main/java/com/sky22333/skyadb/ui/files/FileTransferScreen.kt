@@ -270,7 +270,6 @@ private fun FileManagerContent(
                     .fillMaxHeight(),
                 paneId = FilePaneId.Local,
                 pane = uiState.local,
-                isActive = uiState.activePane == FilePaneId.Local,
                 selectedPaths = uiState.selectedPaths.takeIf { uiState.activePane == FilePaneId.Local }
                     .orEmpty(),
                 enabled = !transferring,
@@ -286,7 +285,6 @@ private fun FileManagerContent(
                     .fillMaxHeight(),
                 paneId = FilePaneId.Remote,
                 pane = uiState.remote,
-                isActive = uiState.activePane == FilePaneId.Remote,
                 selectedPaths = uiState.selectedPaths.takeIf { uiState.activePane == FilePaneId.Remote }
                     .orEmpty(),
                 enabled = !transferring,
@@ -495,7 +493,6 @@ private fun FilePane(
     modifier: Modifier = Modifier,
     paneId: FilePaneId,
     pane: FilePaneState,
-    @Suppress("UNUSED_PARAMETER") isActive: Boolean,
     selectedPaths: Set<String>,
     enabled: Boolean,
     onActivate: (FilePaneId) -> Unit,

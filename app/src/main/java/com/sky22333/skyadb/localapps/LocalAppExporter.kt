@@ -4,12 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.os.Build
-import android.util.LruCache
 import java.io.File
 import java.io.FileInputStream
 import java.util.Locale
@@ -104,35 +99,5 @@ class LocalAppExporter(
         targetDir.listFiles()
             ?.filter { it.isFile && it.extension.equals("apk", ignoreCase = true) }
             ?.forEach { file -> runCatching { file.delete() } }
-    }
-}
-
-object LocalAppIcons {
-    private const val IconSize = 96
-    private val cache = LruCache<String, Bitmap>(48)
-
-    fun load(context: Context, packageName: String): Bitmap? {
-        synchronized(cache) {
-            cache.get(packageName)?.let { return it }
-        }
-        val appContext = context.applicationContext
-        val bitmap = runCatching {
-            appContext.packageManager.getApplicationIcon(packageName).toScaledBitmap(IconSize)
-        }.getOrNull() ?: return null
-        synchronized(cache) {
-            cache.put(packageName, bitmap)
-        }
-        return bitmap
-    }
-
-    private fun Drawable.toScaledBitmap(size: Int): Bitmap {
-        if (this is BitmapDrawable && bitmap != null) {
-            return Bitmap.createScaledBitmap(bitmap, size, size, true)
-        }
-        return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { out ->
-            val canvas = Canvas(out)
-            setBounds(0, 0, canvas.width, canvas.height)
-            draw(canvas)
-        }
     }
 }
