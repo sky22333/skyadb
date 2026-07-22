@@ -2,6 +2,7 @@ package com.sky22333.skyadb.ui.files
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -76,7 +78,6 @@ import com.sky22333.skyadb.ui.components.AppTopBar
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
 import java.util.Locale
-
 private val FileMotion = tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val FileMotionDp = tween<androidx.compose.ui.unit.Dp>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val RowHeight = 44.dp
@@ -130,12 +131,14 @@ fun FileTransferScreen(
         onJumpInputChanged = viewModel::onJumpInputChanged,
         onConfirmJump = viewModel::confirmJump,
         onRequestStoragePermission = {
-            permissionLauncher.launch(
-                Intent(
-                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                    Uri.parse("package:${context.packageName}"),
-                ),
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                permissionLauncher.launch(
+                    Intent(
+                        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:${context.packageName}"),
+                    ),
+                )
+            }
         },
     )
 }
@@ -426,7 +429,7 @@ private fun ActivePaneIndicator(activePane: FilePaneId) {
         val x by animateDpAsState(targetValue = targetX, animationSpec = FileMotionDp, label = "pane-indicator")
         Box(
             modifier = Modifier
-                .offset(x = x)
+                .offset { IntOffset(x.roundToPx(), 0) }
                 .width(maxWidth / 2)
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.primary),

@@ -79,7 +79,7 @@ fun MirrorScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            val surfaceModifier = mirrorSurfaceModifier(
+            val surfaceModifier = Modifier.mirrorSurface(
                 containerWidth = maxWidth.value,
                 containerHeight = maxHeight.value,
                 videoWidth = uiState.videoWidth,
@@ -149,25 +149,21 @@ fun MirrorScreen(
     }
 }
 
-private fun mirrorSurfaceModifier(
+private fun Modifier.mirrorSurface(
     containerWidth: Float,
     containerHeight: Float,
     videoWidth: Int,
     videoHeight: Int,
 ): Modifier {
     if (containerWidth <= 0f || containerHeight <= 0f || videoWidth <= 0 || videoHeight <= 0) {
-        return Modifier.fillMaxSize()
+        return fillMaxSize()
     }
     val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
     val containerRatio = containerWidth / containerHeight
     return if (containerRatio > videoRatio) {
-        Modifier
-            .fillMaxHeight()
-            .aspectRatio(videoRatio)
+        fillMaxHeight().aspectRatio(videoRatio)
     } else {
-        Modifier
-            .fillMaxWidth()
-            .aspectRatio(videoRatio)
+        fillMaxWidth().aspectRatio(videoRatio)
     }
 }
 
