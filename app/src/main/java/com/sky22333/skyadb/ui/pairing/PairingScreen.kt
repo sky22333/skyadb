@@ -53,6 +53,7 @@ import com.sky22333.skyadb.ui.theme.AppDimens
 fun PairingScreen(
     bottomPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
+    onContinueToConnect: (host: String, connectPort: Int?) -> Unit = { _, _ -> },
     discoveredHost: String = "",
     discoveredPort: String = "",
     onDiscoveredEndpointConsumed: () -> Unit = {},
@@ -76,6 +77,7 @@ fun PairingScreen(
         onPairingPortChanged = viewModel::onPairingPortChanged,
         onPairingCodeChanged = viewModel::onPairingCodeChanged,
         onPairClick = viewModel::onPairClicked,
+        onContinueToConnect = { onContinueToConnect(uiState.ip, uiState.connectPort) },
     )
 }
 
@@ -89,6 +91,7 @@ private fun PairingContent(
     onPairingPortChanged: (String) -> Unit,
     onPairingCodeChanged: (String) -> Unit,
     onPairClick: () -> Unit,
+    onContinueToConnect: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -122,6 +125,7 @@ private fun PairingContent(
                 onPairingPortChanged = onPairingPortChanged,
                 onPairingCodeChanged = onPairingCodeChanged,
                 onPairClick = onPairClick,
+                onContinueToConnect = onContinueToConnect,
             )
         }
     }
@@ -161,7 +165,7 @@ private fun PairingGuideCard() {
                 ) {
                     GuideStep("1", "目标设备开启无线调试，选择配对码配对。")
                     GuideStep("2", "填写配对窗口中的 IP、临时端口和 6 位配对码。")
-                    GuideStep("3", "配对成功后再用连接端口连接设备。")
+                    GuideStep("3", "配对成功后点「去连接」，确认地址后连接。")
                 }
             }
         }
@@ -194,6 +198,7 @@ private fun PairingFormCard(
     onPairingPortChanged: (String) -> Unit,
     onPairingCodeChanged: (String) -> Unit,
     onPairClick: () -> Unit,
+    onContinueToConnect: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -243,14 +248,23 @@ private fun PairingFormCard(
 
             PairingStatusMessage(status = uiState.operationStatus)
 
-            Button(
-                onClick = onPairClick,
-                enabled = uiState.pairEnabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(imageVector = Icons.Outlined.Key, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "开始配对")
+            if (uiState.readyToConnect) {
+                Button(
+                    onClick = onContinueToConnect,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = "去连接")
+                }
+            } else {
+                Button(
+                    onClick = onPairClick,
+                    enabled = uiState.pairEnabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(imageVector = Icons.Outlined.Key, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "开始配对")
+                }
             }
         }
     }

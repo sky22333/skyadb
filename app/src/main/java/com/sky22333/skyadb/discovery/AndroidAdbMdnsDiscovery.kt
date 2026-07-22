@@ -10,6 +10,9 @@ import java.util.concurrent.Executor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AndroidAdbMdnsDiscovery(
     context: Context,
@@ -27,7 +30,8 @@ class AndroidAdbMdnsDiscovery(
     private val mutableState = MutableStateFlow(AdbMdnsDiscoveryState())
     override val state: StateFlow<AdbMdnsDiscoveryState> = mutableState.asStateFlow()
 
-    override fun start() {
+    override fun start(types: Set<AdbMdnsServiceType>) {
+        if (types.isEmpty()) return
         synchronized(lock) {
             if (active) return
             active = true
@@ -37,7 +41,7 @@ class AndroidAdbMdnsDiscovery(
             mutableState.value = AdbMdnsDiscoveryState(running = true)
         }
 
-        AdbMdnsServiceType.entries.forEach(::startServiceType)
+        types.forEach(::startServiceType)
     }
 
     override fun stop() {
@@ -56,6 +60,21 @@ class AndroidAdbMdnsDiscovery(
 
         synchronized(lock) {
             mutableState.value = AdbMdnsDiscoveryState(running = false)
+        }
+    }
+
+    override suspend fun findConnectPort(host: String, timeoutMs: Long): Int? {
+        val target = host.trim()
+        if (target.isEmpty() || timeoutMs <= 0L) return null
+
+        stop()
+        start(setOf(AdbMdnsServiceType.Connect))
+        return try {
+            withTimeoutOrNull(timeoutMs) {
+                state.mapNotNull { it.endpoints.connectPortForHost(target) }.first()
+            }
+        } finally {
+            stop()
         }
     }
 

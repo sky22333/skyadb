@@ -46,6 +46,26 @@ data class AdbMdnsDiscoveryState(
 
 interface AdbMdnsDiscovery {
     val state: StateFlow<AdbMdnsDiscoveryState>
-    fun start()
+
+    fun start(types: Set<AdbMdnsServiceType> = AdbMdnsServiceType.entries.toSet())
+
     fun stop()
+
+    /** 短时只扫连接服务；超时或取消后必定 stop，避免常驻耗电。 */
+    suspend fun findConnectPort(
+        host: String,
+        timeoutMs: Long = DefaultConnectLookupTimeoutMs,
+    ): Int?
+
+    companion object {
+        const val DefaultConnectLookupTimeoutMs = 2_500L
+    }
+}
+
+fun List<AdbMdnsEndpoint>.connectPortForHost(host: String): Int? {
+    val target = host.trim()
+    if (target.isEmpty()) return null
+    return firstOrNull { endpoint ->
+        endpoint.type == AdbMdnsServiceType.Connect && endpoint.host == target
+    }?.port
 }

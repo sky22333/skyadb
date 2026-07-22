@@ -112,6 +112,21 @@ class HomeViewModel(
         )
     }
 
+    fun onPairedHostPrepared(host: String) {
+        val port = state.value.port
+        val validation = validateForm(host, port)
+        state.value = state.value.copy(
+            ip = host,
+            port = port,
+            ipError = validation.ipError,
+            portError = validation.portError,
+            connectEnabled = validation.isValid,
+            operationStatus = OperationStatus.Success(
+                "配对成功，已填入 IP。请确认连接端口（无线调试页的「IP 地址与端口」）后连接。",
+            ),
+        )
+    }
+
     fun onDisconnectClicked() {
         viewModelScope.launch {
             adbRepository.disconnect()

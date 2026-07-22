@@ -1,6 +1,7 @@
 package com.sky22333.skyadb.discovery
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,5 +32,18 @@ class AdbMdnsDiscoveryTest {
 
         assertEquals("Pairing:192.168.1.23:37125", endpoint.id)
         assertEquals("192.168.1.23:37125", endpoint.endpoint)
+    }
+
+    @Test
+    fun connectPortForHost_prefersConnectServiceOnSameHost() {
+        val endpoints = listOf(
+            AdbMdnsEndpoint("pair", "192.168.1.23", 37125, AdbMdnsServiceType.Pairing),
+            AdbMdnsEndpoint("connect", "192.168.1.23", 41567, AdbMdnsServiceType.Connect),
+            AdbMdnsEndpoint("other", "192.168.1.24", 5555, AdbMdnsServiceType.Connect),
+        )
+
+        assertEquals(41567, endpoints.connectPortForHost("192.168.1.23"))
+        assertNull(endpoints.connectPortForHost("192.168.1.99"))
+        assertNull(endpoints.connectPortForHost(""))
     }
 }

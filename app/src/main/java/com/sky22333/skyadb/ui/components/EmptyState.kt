@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun EmptyState(
     title: String,
-    message: String? = null,
     modifier: Modifier = Modifier,
+    message: String? = null,
 ) {
     Column(
         modifier = modifier
