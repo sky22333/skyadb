@@ -2,6 +2,7 @@ package com.sky22333.skyadb.ui.apps
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,14 +48,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.localapps.LocalAppIcons
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
@@ -75,6 +82,8 @@ fun AppsScreen(
     )
 
     LaunchedEffect(Unit) {
+        // 先让进页转场画完一帧，再触发 loading 重组，避免 Skipped frames
+        withFrameNanos { }
         viewModel.loadApps()
     }
 
@@ -290,7 +299,7 @@ private fun AppItemCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppIconPlaceholder(app = app)
+            DeviceAppIcon(app = app)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = app.label,
@@ -321,7 +330,15 @@ private fun AppItemCard(
 }
 
 @Composable
-private fun AppIconPlaceholder(app: AppInfo) {
+private fun DeviceAppIcon(app: AppInfo) {
+    val context = LocalContext.current
+    val bitmap by produceState(
+        initialValue = LocalAppIcons.peek(app.packageName)?.asImageBitmap(),
+        key1 = app.packageName,
+    ) {
+        if (value != null) return@produceState
+        value = LocalAppIcons.load(context, app.packageName)?.asImageBitmap()
+    }
     Card(
         modifier = Modifier.size(36.dp),
         shape = RoundedCornerShape(8.dp),
@@ -333,17 +350,27 @@ private fun AppIconPlaceholder(app: AppInfo) {
             },
         ),
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Outlined.Android,
+        val icon = bitmap
+        if (icon != null) {
+            Image(
+                bitmap = icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (app.isSystem) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                },
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
             )
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Outlined.Android,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = if (app.isSystem) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    },
+                )
+            }
         }
     }
 }
