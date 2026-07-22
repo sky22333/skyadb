@@ -50,6 +50,7 @@ interface AdbRepository {
     suspend fun listFiles(remotePath: String): AdbOperationResult<List<RemoteFileEntry>>
     suspend fun makeDirectory(remotePath: String): AdbOperationResult<Unit>
     suspend fun deleteFile(remotePath: String, isDirectory: Boolean): AdbOperationResult<Unit>
+    suspend fun renameFile(remotePath: String, newName: String): AdbOperationResult<Unit>
     suspend fun push(
         localFile: File,
         remotePath: String,
@@ -287,6 +288,11 @@ class DefaultAdbRepository(
     override suspend fun deleteFile(remotePath: String, isDirectory: Boolean): AdbOperationResult<Unit> {
         return kadbManager.deleteFile(remotePath, isDirectory)
             .logFailure(DiagnosticModule.Files, if (isDirectory) "删除目录" else "删除文件", remotePath)
+    }
+
+    override suspend fun renameFile(remotePath: String, newName: String): AdbOperationResult<Unit> {
+        return kadbManager.renameFile(remotePath, newName)
+            .logFailure(DiagnosticModule.Files, "重命名", remotePath)
     }
 
     override suspend fun push(

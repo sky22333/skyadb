@@ -12,4 +12,7 @@ app/build/
 *.pfx
 .tmp/
 .tmp-deps/
+.tmp*/
+.tmp-mr-apk/
+*.apk
 gradle.properties

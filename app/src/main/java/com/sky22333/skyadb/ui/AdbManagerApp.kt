@@ -63,7 +63,9 @@ fun AdbManagerApp() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
-            if (currentDestination?.route != MirrorRoute) {
+            if (currentDestination?.route != MirrorRoute &&
+                currentDestination?.route != AppDestination.Files.route
+            ) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = MaterialTheme.colorScheme.onSurface,

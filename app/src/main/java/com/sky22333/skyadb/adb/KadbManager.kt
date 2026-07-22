@@ -432,6 +432,24 @@ class KadbManager {
         }
     }
 
+    suspend fun renameFile(remotePath: String, newName: String): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
+        val parent = remotePath.trimEnd('/').substringBeforeLast('/', missingDelimiterValue = "/")
+        val target = if (parent == "/") "/$newName" else "$parent/$newName"
+        when (val result = shell("mv ${shellQuote(remotePath)} ${shellQuote(target)}")) {
+            is AdbOperationResult.Failure -> result
+            is AdbOperationResult.Success -> {
+                if (result.data.exitCode == 0) {
+                    AdbOperationResult.Success(Unit)
+                } else {
+                    AdbOperationResult.Failure(
+                        message = "重命名失败",
+                        suggestion = result.data.errorOutput.ifBlank { "请确认名称合法，且目标路径未被占用。" },
+                    )
+                }
+            }
+        }
+    }
+
     suspend fun push(
         localFile: File,
         remotePath: String,
