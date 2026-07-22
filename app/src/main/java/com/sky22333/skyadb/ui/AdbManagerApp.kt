@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
@@ -58,14 +59,13 @@ fun AdbManagerApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val bottomRoutes = remember { bottomDestinations.map { it.route }.toSet() }
+    val showBottomBar = currentDestination?.route in bottomRoutes
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
-            if (currentDestination?.route != MirrorRoute &&
-                currentDestination?.route != AppDestination.Files.route
-            ) {
+            if (showBottomBar) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = MaterialTheme.colorScheme.onSurface,
@@ -105,7 +105,11 @@ fun AdbManagerApp() {
             }
         },
     ) { padding ->
-        val bottomPadding = padding.calculateBottomPadding()
+        val bottomPadding = if (showBottomBar) {
+            padding.calculateBottomPadding()
+        } else {
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        }
 
         SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalSharedTransitionScope provides this) {
@@ -190,6 +194,18 @@ fun AdbManagerApp() {
                         PairingScreen(
                             bottomPadding = bottomPadding,
                             onBackClick = { navController.popBackStack() },
+                            onContinueToConnect = { host, connectPort ->
+                                val homeHandle = navController
+                                    .getBackStackEntry(AppDestination.Home.route)
+                                    .savedStateHandle
+                                homeHandle[DiscoveryHostKey] = host
+                                if (connectPort != null) {
+                                    homeHandle[DiscoveryPortKey] = connectPort.toString()
+                                } else {
+                                    homeHandle.remove<String>(DiscoveryPortKey)
+                                }
+                                navController.popBackStack(AppDestination.Home.route, inclusive = false)
+                            },
                             discoveredHost = pairingHost,
                             discoveredPort = pairingPort,
                             onDiscoveredEndpointConsumed = {

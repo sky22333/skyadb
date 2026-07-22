@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -85,7 +85,7 @@ private val IconSize = 22.dp
 
 @Composable
 fun FileTransferScreen(
-    @Suppress("UNUSED_PARAMETER") bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    bottomPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
     viewModel: FileTransferViewModel = viewModel(),
 ) {
@@ -104,6 +104,7 @@ fun FileTransferScreen(
 
     FileManagerContent(
         uiState = uiState,
+        bottomPadding = bottomPadding,
         onBackClick = onBackClick,
         onRefreshClick = viewModel::refreshAll,
         onGoUpClick = { viewModel.goUp() },
@@ -142,6 +143,7 @@ fun FileTransferScreen(
 @Composable
 private fun FileManagerContent(
     uiState: FileTransferUiState,
+    bottomPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onGoUpClick: () -> Unit,
@@ -180,7 +182,7 @@ private fun FileManagerContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
-            .navigationBarsPadding(),
+            .padding(bottom = bottomPadding),
     ) {
         AppTopBar(
             title = {

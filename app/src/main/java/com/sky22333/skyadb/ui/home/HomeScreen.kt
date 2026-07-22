@@ -73,11 +73,14 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(discoveredHost, discoveredPort) {
+        if (discoveredHost.isBlank()) return@LaunchedEffect
         val port = discoveredPort.toIntOrNull()
-        if (discoveredHost.isNotBlank() && port != null) {
+        if (port != null) {
             viewModel.onDiscoveredEndpointSelected(discoveredHost, port)
-            onDiscoveredEndpointConsumed()
+        } else {
+            viewModel.onPairedHostPrepared(discoveredHost)
         }
+        onDiscoveredEndpointConsumed()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

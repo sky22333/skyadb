@@ -3,10 +3,12 @@ package com.sky22333.skyadb.ui.pairing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.discovery.AdbMdnsDiscovery
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import com.sky22333.skyadb.validation.NetworkInputValidator
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,14 +22,18 @@ data class PairingUiState(
     val portError: String? = null,
     val codeError: String? = null,
     val pairEnabled: Boolean = false,
+    val readyToConnect: Boolean = false,
+    val connectPort: Int? = null,
     val operationStatus: OperationStatus = OperationStatus.Idle,
 )
 
 class PairingViewModel(
     private val adbRepository: AdbRepository = AppServices.adbRepository,
+    private val mdnsDiscovery: AdbMdnsDiscovery = AppServices.adbMdnsDiscovery,
 ) : ViewModel() {
     private val state = MutableStateFlow(PairingUiState())
     val uiState: StateFlow<PairingUiState> = state.asStateFlow()
+    private var pairJob: Job? = null
 
     fun onIpChanged(value: String) {
         updateForm(ip = value.trim(), pairingPort = state.value.pairingPort, pairingCode = state.value.pairingCode)
@@ -50,6 +56,8 @@ class PairingViewModel(
     }
 
     fun onDiscoveredEndpointSelected(host: String, port: Int) {
+        pairJob?.cancel()
+        pairJob = null
         val currentCode = state.value.pairingCode
         val validation = validateForm(host, port.toString(), currentCode)
         state.value = state.value.copy(
@@ -59,6 +67,8 @@ class PairingViewModel(
             portError = validation.portError,
             codeError = validation.codeError,
             pairEnabled = validation.isValid,
+            readyToConnect = false,
+            connectPort = null,
             operationStatus = OperationStatus.Success("已填入自动发现的配对地址，请输入 6 位配对码。"),
         )
     }
@@ -72,6 +82,8 @@ class PairingViewModel(
                 portError = validation.portError,
                 codeError = validation.codeError,
                 pairEnabled = false,
+                readyToConnect = false,
+                connectPort = null,
                 operationStatus = OperationStatus.Failed(
                     text = "无法发起配对",
                     suggestion = "请检查配对 IP、配对端口和 6 位配对码是否正确。",
@@ -80,15 +92,18 @@ class PairingViewModel(
             return
         }
 
+        pairJob?.cancel()
         state.value = current.copy(
             ipError = validation.ipError,
             portError = validation.portError,
             codeError = validation.codeError,
             pairEnabled = false,
+            readyToConnect = false,
+            connectPort = null,
             operationStatus = OperationStatus.Running("正在配对 ${current.ip}:${current.pairingPort}"),
         )
 
-        viewModelScope.launch {
+        pairJob = viewModelScope.launch {
             when (
                 val result = adbRepository.pair(
                     host = current.ip,
@@ -98,13 +113,27 @@ class PairingViewModel(
             ) {
                 is AdbOperationResult.Success -> {
                     state.value = state.value.copy(
+                        operationStatus = OperationStatus.Running("正在查找连接端口…"),
+                    )
+                    val connectPort = mdnsDiscovery.findConnectPort(current.ip)
+                    state.value = state.value.copy(
                         pairEnabled = true,
-                        operationStatus = OperationStatus.Success("配对成功，请返回首页输入连接端口完成连接。"),
+                        readyToConnect = true,
+                        connectPort = connectPort,
+                        operationStatus = if (connectPort != null) {
+                            OperationStatus.Success("配对成功，已找到连接端口 $connectPort。")
+                        } else {
+                            OperationStatus.Success(
+                                "配对成功。未自动发现连接端口，请确认无线调试页的「IP 地址与端口」后连接。",
+                            )
+                        },
                     )
                 }
                 is AdbOperationResult.Failure -> {
                     state.value = state.value.copy(
                         pairEnabled = true,
+                        readyToConnect = false,
+                        connectPort = null,
                         operationStatus = OperationStatus.Failed(result.message, result.suggestion),
                     )
                 }
@@ -113,6 +142,8 @@ class PairingViewModel(
     }
 
     private fun updateForm(ip: String, pairingPort: String, pairingCode: String) {
+        pairJob?.cancel()
+        pairJob = null
         val validation = validateForm(ip, pairingPort, pairingCode)
         state.value = state.value.copy(
             ip = ip,
@@ -122,8 +153,16 @@ class PairingViewModel(
             portError = validation.portError,
             codeError = validation.codeError,
             pairEnabled = validation.isValid,
+            readyToConnect = false,
+            connectPort = null,
             operationStatus = OperationStatus.Idle,
         )
+    }
+
+    override fun onCleared() {
+        pairJob?.cancel()
+        mdnsDiscovery.stop()
+        super.onCleared()
     }
 
     private fun validateForm(ip: String, pairingPort: String, pairingCode: String): PairingValidationResult {
