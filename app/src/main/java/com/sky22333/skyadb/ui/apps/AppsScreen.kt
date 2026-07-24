@@ -82,7 +82,6 @@ fun AppsScreen(
     )
 
     LaunchedEffect(Unit) {
-        // 先让进页转场画完一帧，再触发 loading 重组，避免 Skipped frames
         withFrameNanos { }
         viewModel.loadApps()
     }

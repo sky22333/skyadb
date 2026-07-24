@@ -11,9 +11,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
-/**
- * 限制 getApplicationIcon 并发，避免 MIUI 主题图标管线首屏洪峰。
- */
+/** 本机应用图标：限流加载，避免 MIUI 图标管线洪峰。 */
 object LocalAppIcons {
     private const val IconSize = 96
     private const val MaxConcurrentLoads = 3

@@ -42,7 +42,6 @@ interface AdbRepository {
         onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
     ): AdbOperationResult<Unit>
     suspend fun listApps(): AdbOperationResult<List<AppInfo>>
-    suspend fun resolveAppLabels(packageNames: List<String>): AdbOperationResult<Map<String, String>>
     suspend fun launchApp(packageName: String): AdbOperationResult<Unit>
     suspend fun forceStopApp(packageName: String): AdbOperationResult<Unit>
     suspend fun setAppEnabled(packageName: String, enabled: Boolean): AdbOperationResult<Unit>
@@ -249,11 +248,6 @@ class DefaultAdbRepository(
     override suspend fun listApps(): AdbOperationResult<List<AppInfo>> {
         return kadbManager.listApps()
             .logFailure(DiagnosticModule.Apps, "读取应用列表")
-    }
-
-    override suspend fun resolveAppLabels(packageNames: List<String>): AdbOperationResult<Map<String, String>> {
-        return kadbManager.resolveAppLabels(packageNames)
-            .logFailure(DiagnosticModule.Apps, "读取应用名称")
     }
 
     override suspend fun launchApp(packageName: String): AdbOperationResult<Unit> {

@@ -382,55 +382,6 @@ class KadbManager {
         }
     }
 
-    /** 对尚未解析出可读名的包，设备侧探测 nonLocalizedLabel（不 pull APK）。 */
-    suspend fun resolveAppLabels(packageNames: List<String>): AdbOperationResult<Map<String, String>> =
-        withContext(Dispatchers.IO) {
-            val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-                message = "未连接设备",
-                suggestion = "请先连接设备，再刷新应用列表。",
-            )
-            val targets = packageNames.distinct().filter { it.isNotBlank() }.take(MaxLabelProbePackages)
-            if (targets.isEmpty()) return@withContext AdbOperationResult.Success(emptyMap())
-
-            runCatching {
-                val script = buildString {
-                    append("for p in")
-                    targets.forEach { pkg ->
-                        append(' ')
-                        append(shellQuote(pkg))
-                    }
-                    append("; do ")
-                    append("label=\$(dumpsys package \"\$p\" 2>/dev/null | grep -m1 'nonLocalizedLabel=' | sed 's/.*nonLocalizedLabel=//;s/[[:space:]].*//'); ")
-                    append("if [ -n \"\$label\" ] && [ \"\$label\" != \"null\" ]; then printf 'L|%s|%s\\n' \"\$p\" \"\$label\"; fi; ")
-                    append("done")
-                }
-                val output = kadb.shell(script).output
-                AdbOperationResult.Success(parseLabelProbeOutput(output))
-            }.getOrElse { error ->
-                AdbOperationResult.Failure(
-                    message = "读取应用名称失败",
-                    suggestion = "列表仍可用包名浏览；可稍后下拉刷新重试。",
-                    cause = error,
-                )
-            }
-        }
-
-    private fun parseLabelProbeOutput(output: String): Map<String, String> {
-        return output
-            .lineSequence()
-            .map { it.trim() }
-            .mapNotNull { line ->
-                if (!line.startsWith("L|")) return@mapNotNull null
-                val parts = line.split('|', limit = 3)
-                if (parts.size < 3) return@mapNotNull null
-                val packageName = parts[1].trim()
-                val label = parts[2].trim()
-                if (packageName.isEmpty() || label.isEmpty() || label == "null") null
-                else packageName to label
-            }
-            .toMap()
-    }
-
     suspend fun listFiles(remotePath: String): AdbOperationResult<List<RemoteFileEntry>> = withContext(Dispatchers.IO) {
         val path = remotePath.ifBlank { "/" }
         val command = buildListFilesCommand(path)
@@ -811,8 +762,6 @@ class KadbManager {
     }
 
     private companion object {
-        /** 0644，与 Kadb 默认推送权限一致。 */
         const val DefaultPushMode = 420
-        const val MaxLabelProbePackages = 40
     }
 }
