@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -315,7 +318,10 @@ private fun ManualConnectCard(
             ) {
                 TextButton(
                     onClick = onPairingClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Key,
@@ -323,11 +329,19 @@ private fun ManualConnectCard(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_wireless_pairing))
+                    Text(
+                        text = stringResource(R.string.action_wireless_pairing),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Start,
+                    )
                 }
                 TextButton(
                     onClick = onDiscoveryClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
@@ -335,7 +349,12 @@ private fun ManualConnectCard(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_discover_devices))
+                    Text(
+                        text = stringResource(R.string.action_discover_devices),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Start,
+                    )
                 }
             }
         }

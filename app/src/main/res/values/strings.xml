@@ -3,7 +3,7 @@
     <string name="app_name">sky adb</string>
 
     <!-- Language -->
-    <string name="language_follow_system">System default</string>
+    <string name="language_follow_system">System</string>
     <string name="language_chinese">Chinese</string>
     <string name="language_english">English</string>
     <string name="settings_language">Language</string>
@@ -69,15 +69,15 @@
     <string name="action_connect">Connect</string>
     <string name="home_manual_connect_title">Manual connection</string>
     <string name="home_ip_label">IP address</string>
-    <string name="action_wireless_pairing">Wireless pairing</string>
-    <string name="action_discover_devices">Discover devices</string>
+    <string name="action_wireless_pairing">Pair</string>
+    <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
     <string name="home_no_recent_devices">No device history</string>
 
     <!-- Device screen -->
     <string name="device_details_title">Device details</string>
     <string name="device_refresh_info_desc">Refresh device info</string>
-    <string name="device_connect_hint">Connect a device to view system info below</string>
+    <string name="device_connect_hint">Connect a device to view system info</string>
     <string name="section_quick_actions">Quick actions</string>
     <string name="section_system_info">System info</string>
     <string name="device_info_expanded_desc">Missing basic info is shown as Unknown</string>
@@ -439,7 +439,7 @@
     <string name="connection_state_disconnected">Disconnected</string>
     <string name="connection_state_connecting">Connecting</string>
     <string name="connection_state_connected">Connected</string>
-    <string name="connection_state_failed">Connection failed</string>
+    <string name="connection_state_failed">Failed</string>
     <string name="connection_state_offline">Offline</string>
 
     <!-- Download task states -->
