@@ -1,8 +1,12 @@
 package com.sky22333.skyadb.ui.remote
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.AppText
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -15,24 +19,24 @@ data class RemoteControlUiState(
     val status: OperationStatus = OperationStatus.Idle,
 )
 
-enum class RemoteKey(val label: String, val keyCode: String) {
-    Power("电源", "KEYCODE_POWER"),
-    Wakeup("唤醒", "KEYCODE_WAKEUP"),
-    Sleep("息屏", "KEYCODE_SLEEP"),
-    Home("主页", "KEYCODE_HOME"),
-    Back("返回", "KEYCODE_BACK"),
-    Menu("菜单", "KEYCODE_MENU"),
-    Up("上", "KEYCODE_DPAD_UP"),
-    Down("下", "KEYCODE_DPAD_DOWN"),
-    Left("左", "KEYCODE_DPAD_LEFT"),
-    Right("右", "KEYCODE_DPAD_RIGHT"),
-    Center("确认", "KEYCODE_DPAD_CENTER"),
-    VolumeUp("音量+", "KEYCODE_VOLUME_UP"),
-    VolumeDown("音量-", "KEYCODE_VOLUME_DOWN"),
-    Mute("静音", "KEYCODE_VOLUME_MUTE"),
-    PlayPause("播放/暂停", "KEYCODE_MEDIA_PLAY_PAUSE"),
-    Previous("上一首", "KEYCODE_MEDIA_PREVIOUS"),
-    Next("下一首", "KEYCODE_MEDIA_NEXT"),
+enum class RemoteKey(@param:StringRes val labelRes: Int, val keyCode: String) {
+    Power(R.string.remote_key_power, "KEYCODE_POWER"),
+    Wakeup(R.string.remote_key_wakeup, "KEYCODE_WAKEUP"),
+    Sleep(R.string.remote_key_sleep, "KEYCODE_SLEEP"),
+    Home(R.string.remote_key_home, "KEYCODE_HOME"),
+    Back(R.string.remote_key_back, "KEYCODE_BACK"),
+    Menu(R.string.remote_key_menu, "KEYCODE_MENU"),
+    Up(R.string.remote_key_up, "KEYCODE_DPAD_UP"),
+    Down(R.string.remote_key_down, "KEYCODE_DPAD_DOWN"),
+    Left(R.string.remote_key_left, "KEYCODE_DPAD_LEFT"),
+    Right(R.string.remote_key_right, "KEYCODE_DPAD_RIGHT"),
+    Center(R.string.remote_key_center, "KEYCODE_DPAD_CENTER"),
+    VolumeUp(R.string.remote_key_volume_up, "KEYCODE_VOLUME_UP"),
+    VolumeDown(R.string.remote_key_volume_down, "KEYCODE_VOLUME_DOWN"),
+    Mute(R.string.remote_key_mute, "KEYCODE_VOLUME_MUTE"),
+    PlayPause(R.string.remote_key_play_pause, "KEYCODE_MEDIA_PLAY_PAUSE"),
+    Previous(R.string.remote_key_previous, "KEYCODE_MEDIA_PREVIOUS"),
+    Next(R.string.remote_key_next, "KEYCODE_MEDIA_NEXT"),
 }
 
 class RemoteControlViewModel(
@@ -42,17 +46,20 @@ class RemoteControlViewModel(
     val uiState: StateFlow<RemoteControlUiState> = state.asStateFlow()
 
     fun sendKey(key: RemoteKey) {
-        state.value = state.value.copy(status = OperationStatus.Running("正在发送 ${key.label}"))
+        val label = appString(key.labelRes)
+        state.value = state.value.copy(status = OperationStatus.Running(appString(R.string.remote_sending, label)))
         viewModelScope.launch {
             when (val result = adbRepository.runShell("input keyevent ${key.keyCode}")) {
                 is AdbOperationResult.Success -> {
                     state.value = if (result.data.exitCode == 0) {
-                        state.value.copy(status = OperationStatus.Success("已发送：${key.label}"))
+                        state.value.copy(status = OperationStatus.Success(appString(R.string.remote_sent, label)))
                     } else {
                         state.value.copy(
                             status = OperationStatus.Failed(
-                                text = "按键发送失败",
-                                suggestion = result.data.errorOutput.toRemoteInputSuggestion(),
+                                text = appString(R.string.remote_send_failed),
+                                suggestion = result.data.errorOutput
+                                    .toRemoteInputSuggestion()
+                                    .resolve(AppServices.context),
                             ),
                         )
                     }
@@ -67,13 +74,18 @@ class RemoteControlViewModel(
     }
 }
 
-internal fun String.toRemoteInputSuggestion(): String {
+internal fun String.toRemoteInputSuggestion(): AppText {
     return when {
         contains("INJECT_EVENTS", ignoreCase = true) ||
             contains("Injecting input events", ignoreCase = true) ->
-            "目标设备禁止 ADB 按键控制，请检查开发者选项中的安全调试设置。"
-        else -> lineSequence()
-            .firstOrNull { it.isNotBlank() }
-            ?: "请确认目标设备仍保持连接。"
+            AppText.Res(R.string.remote_key_control_blocked)
+        else -> {
+            val firstLine = lineSequence().firstOrNull { it.isNotBlank() }
+            if (firstLine != null) {
+                AppText.Plain(firstLine)
+            } else {
+                AppText.Res(R.string.remote_confirm_connected)
+            }
+        }
     }
 }

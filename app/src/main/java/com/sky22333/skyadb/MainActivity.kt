@@ -10,12 +10,12 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +26,7 @@ import com.sky22333.skyadb.data.ThemeMode
 import com.sky22333.skyadb.ui.AdbManagerApp
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private val usbPermissionAction = "${BuildConfig.APPLICATION_ID}.USB_PERMISSION"
 
     private val usbReceiver = object : BroadcastReceiver() {

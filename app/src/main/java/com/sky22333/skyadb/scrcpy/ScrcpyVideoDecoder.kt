@@ -4,6 +4,8 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import android.view.Surface
 import com.flyfishxu.kadb.stream.AdbStream
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlinx.coroutines.Dispatchers
@@ -122,7 +124,7 @@ class ScrcpyVideoDecoder(
             ScrcpyProtocol.CodecAv1 -> "video/av01"
             ScrcpyProtocol.CodecVp8 -> MediaFormat.MIMETYPE_VIDEO_VP8
             ScrcpyProtocol.CodecVp9 -> MediaFormat.MIMETYPE_VIDEO_VP9
-            else -> error("不支持的视频编码：0x${codecId.toString(16)}")
+            else -> error(appString(R.string.scrcpy_unsupported_codec, codecId.toString(16)))
         }
         return MediaCodec.createDecoderByType(mime).also { decoder ->
             decoder.configure(MediaFormat.createVideoFormat(mime, width, height), surface, null, 0)

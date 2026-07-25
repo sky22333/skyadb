@@ -1,5 +1,8 @@
 package com.sky22333.skyadb.diagnostics
 
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
+
 data class DiagnosticLog(
     val id: Long,
     val timeMillis: Long,
@@ -12,21 +15,21 @@ data class DiagnosticLog(
     val errorMessage: String? = null,
 )
 
-enum class DiagnosticModule(val label: String) {
-    App("应用"),
-    WifiAdb("Wi-Fi ADB"),
-    UsbOtg("USB OTG"),
-    Fastboot("Fastboot"),
-    Pairing("无线配对"),
-    Discovery("设备发现"),
-    Files("文件"),
-    Apps("应用管理"),
-    Install("安装"),
-    Shell("Shell"),
-    Screenshot("截图"),
-    Logs("系统日志"),
-    Remote("遥控器"),
-    Mirror("屏幕镜像"),
-    Download("下载"),
-    Settings("设置"),
+enum class DiagnosticModule(@param:StringRes val labelRes: Int) {
+    App(R.string.diagnostic_module_app),
+    WifiAdb(R.string.diagnostic_module_wifi_adb),
+    UsbOtg(R.string.diagnostic_module_usb_otg),
+    Fastboot(R.string.diagnostic_module_fastboot),
+    Pairing(R.string.diagnostic_module_pairing),
+    Discovery(R.string.diagnostic_module_discovery),
+    Files(R.string.diagnostic_module_files),
+    Apps(R.string.diagnostic_module_apps),
+    Install(R.string.diagnostic_module_install),
+    Shell(R.string.diagnostic_module_shell),
+    Screenshot(R.string.diagnostic_module_screenshot),
+    Logs(R.string.diagnostic_module_logs),
+    Remote(R.string.diagnostic_module_remote),
+    Mirror(R.string.diagnostic_module_mirror),
+    Download(R.string.diagnostic_module_download),
+    Settings(R.string.diagnostic_module_settings),
 }

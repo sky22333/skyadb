@@ -34,10 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.download.DownloadState
 import com.sky22333.skyadb.download.DownloadTask
 import com.sky22333.skyadb.model.OperationStatus
@@ -83,10 +85,10 @@ private fun OnlineDownloadContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = { Text("在线下载") },
+            title = { Text(stringResource(R.string.online_download_title)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -135,7 +137,7 @@ private fun DownloadFormCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "下载任务")
+            SectionHeader(title = stringResource(R.string.online_download_task_title))
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 OnlineDownloadMode.entries.forEachIndexed { index, mode ->
                     SegmentedButton(
@@ -146,7 +148,7 @@ private fun DownloadFormCard(
                             count = OnlineDownloadMode.entries.size,
                         ),
                     ) {
-                        Text(mode.label)
+                        Text(stringResource(mode.labelRes))
                     }
                 }
             }
@@ -154,7 +156,7 @@ private fun DownloadFormCard(
                 value = uiState.url,
                 onValueChange = onUrlChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("下载链接") },
+                label = { Text(stringResource(R.string.online_download_url_label)) },
                 singleLine = true,
                 placeholder = { Text("https://example.com/app.apk") },
                 isError = uiState.urlError != null,
@@ -165,7 +167,7 @@ private fun DownloadFormCard(
                     value = uiState.targetPath,
                     onValueChange = onTargetPathChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("设备目标目录") },
+                    label = { Text(stringResource(R.string.online_download_target_path_label)) },
                     singleLine = true,
                     placeholder = { Text("/sdcard/Download/") },
                     isError = uiState.targetPathError != null,
@@ -180,7 +182,7 @@ private fun DownloadFormCard(
                 ) {
                     Icon(imageVector = Icons.Outlined.Download, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("开始")
+                    Text(stringResource(R.string.action_start))
                 }
                 OutlinedButton(
                     onClick = onCancelClick,
@@ -188,7 +190,7 @@ private fun DownloadFormCard(
                 ) {
                     Icon(imageVector = Icons.Outlined.Cancel, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }
@@ -206,10 +208,10 @@ private fun DownloadTaskCard(task: DownloadTask?) {
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "任务状态")
+            SectionHeader(title = stringResource(R.string.online_download_task_status_title))
             if (task == null) {
                 Text(
-                    text = "暂无任务",
+                    text = stringResource(R.string.online_download_no_task),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -225,7 +227,10 @@ private fun DownloadTaskCard(task: DownloadTask?) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = "状态：${task.state.label}",
+                    text = stringResource(
+                        R.string.online_download_status_format,
+                        stringResource(task.state.labelRes),
+                    ),
                     color = if (task.state == DownloadState.Failed) {
                         MaterialTheme.colorScheme.error
                     } else {
@@ -235,7 +240,7 @@ private fun DownloadTaskCard(task: DownloadTask?) {
                 )
                 if (task.targetPath.isNotBlank()) {
                     Text(
-                        text = "目标：${task.targetPath}",
+                        text = stringResource(R.string.online_download_target_format, task.targetPath),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -252,7 +257,7 @@ private fun DownloadStatusMessage(status: OperationStatus) {
         is OperationStatus.Running -> Text(text = status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
         is OperationStatus.Success -> Text(text = status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

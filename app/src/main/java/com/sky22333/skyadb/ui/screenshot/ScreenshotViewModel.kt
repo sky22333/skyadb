@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -36,7 +38,7 @@ class ScreenshotViewModel(
         val localFile = File(context.cacheDir, "screenshots/$fileName")
         state.value = state.value.copy(
             saveEnabled = false,
-            operationStatus = OperationStatus.Running("正在截取设备屏幕"),
+            operationStatus = OperationStatus.Running(appString(R.string.screenshot_capturing)),
         )
 
         viewModelScope.launch {
@@ -48,7 +50,7 @@ class ScreenshotViewModel(
                         latestFileName = result.data.name,
                         latestLocalPath = result.data.absolutePath,
                         saveEnabled = true,
-                        operationStatus = OperationStatus.Success("截图已生成，请选择保存位置"),
+                        operationStatus = OperationStatus.Success(appString(R.string.screenshot_captured_choose_location)),
                     )
                 }
                 is AdbOperationResult.Failure -> {
@@ -65,29 +67,32 @@ class ScreenshotViewModel(
         val file = latestFile
         if (file == null || uri == null) {
             state.value = state.value.copy(
-                operationStatus = OperationStatus.Failed("无法保存截图", "请先完成截图并选择保存位置。"),
+                operationStatus = OperationStatus.Failed(
+                    appString(R.string.screenshot_cannot_save),
+                    appString(R.string.screenshot_finish_capture_hint),
+                ),
             )
             return
         }
 
-        state.value = state.value.copy(operationStatus = OperationStatus.Running("正在保存截图"))
+        state.value = state.value.copy(operationStatus = OperationStatus.Running(appString(R.string.screenshot_saving)))
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri).use { output ->
-                        requireNotNull(output) { "无法打开保存位置" }
+                        requireNotNull(output) { appString(R.string.screenshot_cannot_open_location) }
                         file.inputStream().use { input -> input.copyTo(output) }
                     }
                 }
             }.fold(
                 onSuccess = {
-                    state.value = state.value.copy(operationStatus = OperationStatus.Success("截图已保存"))
+                    state.value = state.value.copy(operationStatus = OperationStatus.Success(appString(R.string.screenshot_saved)))
                 },
                 onFailure = { error ->
                     state.value = state.value.copy(
                         operationStatus = OperationStatus.Failed(
-                            text = "保存截图失败",
-                            suggestion = error.message ?: "请确认保存位置可写。",
+                            text = appString(R.string.screenshot_save_failed),
+                            suggestion = error.message ?: appString(R.string.screenshot_confirm_writable),
                         ),
                     )
                 },

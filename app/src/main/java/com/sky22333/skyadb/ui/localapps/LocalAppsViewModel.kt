@@ -3,9 +3,11 @@ package com.sky22333.skyadb.ui.localapps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.localapps.LocalAppExporter
 import com.sky22333.skyadb.localapps.LocalInstalledApp
 import com.sky22333.skyadb.model.AdbOperationResult
@@ -48,7 +50,7 @@ class LocalAppsViewModel(
         if (!force && state.value.apps.isNotEmpty()) return
         state.value = state.value.copy(
             loading = true,
-            operationStatus = OperationStatus.Running("正在读取本机应用"),
+            operationStatus = OperationStatus.Running(appString(R.string.localapps_loading)),
         )
         viewModelScope.launch {
             try {
@@ -56,22 +58,22 @@ class LocalAppsViewModel(
                 state.value = state.value.copy(
                     apps = apps,
                     loading = false,
-                    operationStatus = OperationStatus.Success("已读取 ${apps.size} 个可启动用户应用"),
+                    operationStatus = OperationStatus.Success(appString(R.string.localapps_loaded_count, apps.size)),
                 )
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 DiagnosticLogger.record(
                     module = DiagnosticModule.Apps,
-                    operation = "读取本机应用",
-                    message = "读取本机应用失败",
-                    suggestion = error.message ?: "请确认系统允许读取已安装应用列表。",
+                    operation = appString(R.string.localapps_op_read),
+                    message = appString(R.string.localapps_read_failed),
+                    suggestion = error.message ?: appString(R.string.localapps_confirm_read_permission),
                     cause = error,
                 )
                 state.value = state.value.copy(
                     loading = false,
                     operationStatus = OperationStatus.Failed(
-                        text = "读取本机应用失败",
-                        suggestion = error.message ?: "请确认系统允许读取已安装应用列表。",
+                        text = appString(R.string.localapps_read_failed),
+                        suggestion = error.message ?: appString(R.string.localapps_confirm_read_permission),
                     ),
                 )
             }
@@ -87,14 +89,16 @@ class LocalAppsViewModel(
         if (!app.installable) {
             state.value = state.value.copy(
                 operationStatus = OperationStatus.Failed(
-                    text = "暂不支持该应用",
-                    suggestion = "该应用可能是拆分安装包，当前仅支持单 APK 用户应用。",
+                    text = appString(R.string.localapps_unsupported_app),
+                    suggestion = appString(R.string.localapps_split_apk_hint),
                 ),
             )
             return
         }
 
-        state.value = state.value.copy(operationStatus = OperationStatus.Running("正在导出 ${app.label}"))
+        state.value = state.value.copy(
+            operationStatus = OperationStatus.Running(appString(R.string.common_exporting_arg, app.label)),
+        )
         viewModelScope.launch {
             val apkFile = try {
                 exporter.exportSingleApk(app)
@@ -102,29 +106,31 @@ class LocalAppsViewModel(
                 if (error is CancellationException) throw error
                 DiagnosticLogger.record(
                     module = DiagnosticModule.Apps,
-                    operation = "导出本机应用",
+                    operation = appString(R.string.localapps_op_export),
                     target = app.packageName,
-                    message = "导出应用失败",
-                    suggestion = error.message ?: "该应用安装包无法读取或已被系统限制。",
+                    message = appString(R.string.localapps_export_failed),
+                    suggestion = error.message ?: appString(R.string.localapps_export_failed_hint),
                     cause = error,
                 )
                 state.value = state.value.copy(
                     operationStatus = OperationStatus.Failed(
-                        text = "导出应用失败",
-                        suggestion = error.message ?: "该应用安装包无法读取或已被系统限制。",
+                        text = appString(R.string.localapps_export_failed),
+                        suggestion = error.message ?: appString(R.string.localapps_export_failed_hint),
                     ),
                 )
                 return@launch
             }
 
-            state.value = state.value.copy(operationStatus = OperationStatus.Running("正在安装 ${app.label}"))
+            state.value = state.value.copy(
+                operationStatus = OperationStatus.Running(appString(R.string.common_installing_arg, app.label)),
+            )
             try {
                 when (
                     val result = adbRepository.install(apkFile) { transferred, total ->
                         state.value = state.value.copy(
                             operationStatus = adbTransferRunning(
-                                transferringLabel = "正在传输 ${app.label}",
-                                finishingLabel = "正在安装 ${app.label}",
+                                transferringLabel = appString(R.string.common_transferring_arg, app.label),
+                                finishingLabel = appString(R.string.common_installing_arg, app.label),
                                 transferred = transferred,
                                 total = total,
                             ),
@@ -132,7 +138,11 @@ class LocalAppsViewModel(
                     }
                 ) {
                     is AdbOperationResult.Success -> {
-                        state.value = state.value.copy(operationStatus = OperationStatus.Success("${app.label} 安装完成"))
+                        state.value = state.value.copy(
+                            operationStatus = OperationStatus.Success(
+                                appString(R.string.localapps_install_success, app.label),
+                            ),
+                        )
                     }
                     is AdbOperationResult.Failure -> {
                         state.value = state.value.copy(
@@ -144,16 +154,16 @@ class LocalAppsViewModel(
                 if (error is CancellationException) throw error
                 DiagnosticLogger.record(
                     module = DiagnosticModule.Install,
-                    operation = "安装本机应用",
+                    operation = appString(R.string.localapps_op_install),
                     target = app.packageName,
-                    message = "安装应用失败",
-                    suggestion = error.message ?: "请确认目标设备仍保持连接，并允许安装该应用。",
+                    message = appString(R.string.localapps_install_failed),
+                    suggestion = error.message ?: appString(R.string.localapps_install_failed_hint),
                     cause = error,
                 )
                 state.value = state.value.copy(
                     operationStatus = OperationStatus.Failed(
-                        text = "安装应用失败",
-                        suggestion = error.message ?: "请确认目标设备仍保持连接，并允许安装该应用。",
+                        text = appString(R.string.localapps_install_failed),
+                        suggestion = error.message ?: appString(R.string.localapps_install_failed_hint),
                     ),
                 )
             } finally {

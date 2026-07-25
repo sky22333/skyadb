@@ -4,7 +4,9 @@ import android.content.Context
 import android.view.Surface
 import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.stream.AdbStream
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.MirrorConnections
+import com.sky22333.skyadb.i18n.appString
 import java.io.EOFException
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
@@ -118,7 +120,7 @@ class ScrcpySession private constructor(
             val controlKadb = connections.control
             val videoKadb = connections.video
             val audioKadb = connections.audio
-            require(!audioEnabled || audioKadb != null) { "启用音频时需要 audio 连接" }
+            require(!audioEnabled || audioKadb != null) { appString(R.string.scrcpy_audio_requires_connection) }
 
             val serverManager = ScrcpyServerManager(context)
             val logs = ArrayDeque<String>()
@@ -187,7 +189,7 @@ class ScrcpySession private constructor(
                     delay(ScrcpyConstants.ConnectRetryDelayMillis)
                 }
             }
-            throw IllegalStateException("无法连接 scrcpy socket：$socketName", lastError)
+            throw IllegalStateException(appString(R.string.scrcpy_socket_connect_failed, socketName), lastError)
         }
 
         private fun skipDeviceName(stream: AdbStream) {

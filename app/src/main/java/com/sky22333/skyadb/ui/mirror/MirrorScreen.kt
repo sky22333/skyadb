@@ -49,9 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 
 @Composable
@@ -181,10 +183,16 @@ private fun MirrorTopActions(
     ) {
         MirrorIconButton(
             icon = Icons.Outlined.MoreVert,
-            contentDescription = if (controlsVisible) "隐藏控制区" else "显示控制区",
+            contentDescription = stringResource(
+                if (controlsVisible) R.string.mirror_hide_controls_desc else R.string.mirror_show_controls_desc,
+            ),
             onClick = onToggleControls,
         )
-        MirrorIconButton(icon = Icons.Outlined.Close, contentDescription = "关闭镜像", onClick = onClose)
+        MirrorIconButton(
+            icon = Icons.Outlined.Close,
+            contentDescription = stringResource(R.string.mirror_close_desc),
+            onClick = onClose,
+        )
     }
 }
 
@@ -213,12 +221,12 @@ private fun MirrorControls(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MirrorIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "返回") { onKey(KeyEvent.KEYCODE_BACK) }
+                MirrorIconButton(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.action_back)) { onKey(KeyEvent.KEYCODE_BACK) }
                 MirrorIconButton(Icons.Outlined.Home, "Home") { onKey(KeyEvent.KEYCODE_HOME) }
-                MirrorIconButton(Icons.Outlined.Apps, "最近任务") { onKey(KeyEvent.KEYCODE_APP_SWITCH) }
-                MirrorIconButton(Icons.Outlined.PowerSettingsNew, "电源") { onKey(KeyEvent.KEYCODE_POWER) }
-                MirrorIconButton(Icons.AutoMirrored.Outlined.VolumeDown, "音量减") { onKey(KeyEvent.KEYCODE_VOLUME_DOWN) }
-                MirrorIconButton(Icons.AutoMirrored.Outlined.VolumeUp, "音量加") { onKey(KeyEvent.KEYCODE_VOLUME_UP) }
+                MirrorIconButton(Icons.Outlined.Apps, stringResource(R.string.mirror_recent_tasks_desc)) { onKey(KeyEvent.KEYCODE_APP_SWITCH) }
+                MirrorIconButton(Icons.Outlined.PowerSettingsNew, stringResource(R.string.remote_power_title)) { onKey(KeyEvent.KEYCODE_POWER) }
+                MirrorIconButton(Icons.AutoMirrored.Outlined.VolumeDown, stringResource(R.string.mirror_volume_down_desc)) { onKey(KeyEvent.KEYCODE_VOLUME_DOWN) }
+                MirrorIconButton(Icons.AutoMirrored.Outlined.VolumeUp, stringResource(R.string.mirror_volume_up_desc)) { onKey(KeyEvent.KEYCODE_VOLUME_UP) }
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -230,7 +238,7 @@ private fun MirrorControls(
                     onValueChange = onInputTextChange,
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Outlined.Keyboard, contentDescription = null) },
-                    placeholder = { Text("发送文本") },
+                    placeholder = { Text(stringResource(R.string.mirror_send_text)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -244,7 +252,7 @@ private fun MirrorControls(
                 )
                 MirrorIconButton(
                     icon = Icons.AutoMirrored.Outlined.Send,
-                    contentDescription = "发送文本",
+                    contentDescription = stringResource(R.string.mirror_send_text),
                     enabled = inputText.isNotBlank(),
                     onClick = onSendText,
                 )

@@ -1,8 +1,8 @@
 package com.sky22333.skyadb.discovery
 
+import com.sky22333.skyadb.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AdbMdnsDiscoveryTest {
@@ -15,10 +15,10 @@ class AdbMdnsDiscoveryTest {
 
     @Test
     fun serviceTypes_exposeUserActionsByRole() {
-        assertEquals("配对", AdbMdnsServiceType.Pairing.actionLabel)
-        assertEquals("连接", AdbMdnsServiceType.Connect.actionLabel)
-        assertEquals("连接", AdbMdnsServiceType.Legacy.actionLabel)
-        assertTrue(AdbMdnsServiceType.Pairing.description.contains("配对码"))
+        assertEquals(R.string.mdns_service_pairing_action, AdbMdnsServiceType.Pairing.actionLabelRes)
+        assertEquals(R.string.mdns_service_connect_action, AdbMdnsServiceType.Connect.actionLabelRes)
+        assertEquals(R.string.mdns_service_connect_action, AdbMdnsServiceType.Legacy.actionLabelRes)
+        assertEquals(R.string.mdns_service_pairing_desc, AdbMdnsServiceType.Pairing.descriptionRes)
     }
 
     @Test

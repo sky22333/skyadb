@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.OpenableColumns
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.RemoteFileEntry
 import java.io.File
 
@@ -15,10 +17,10 @@ class LocalFileManager(
 
     fun listDirectory(path: String): Result<List<RemoteFileEntry>> = runCatching {
         val dir = File(path)
-        require(dir.exists()) { "目录不存在" }
-        require(dir.isDirectory) { "不是目录" }
+        require(dir.exists()) { appString(R.string.files_dir_not_exist) }
+        require(dir.isDirectory) { appString(R.string.files_not_a_directory) }
         val children = dir.listFiles()
-            ?: error("无法读取目录，请授予「所有文件访问」权限")
+            ?: error(appString(R.string.files_list_dir_permission))
         children
             .asSequence()
             .filter { it.name != "." && it.name != ".." }
@@ -36,26 +38,26 @@ class LocalFileManager(
 
     fun createDirectory(parentPath: String, name: String): Result<Unit> = runCatching {
         val target = File(parentPath, name)
-        require(!target.exists()) { "已存在同名项目" }
-        require(target.mkdir()) { "创建文件夹失败" }
+        require(!target.exists()) { appString(R.string.files_name_exists) }
+        require(target.mkdir()) { appString(R.string.files_mkdir_failed) }
     }
 
     fun delete(path: String, isDirectory: Boolean): Result<Unit> = runCatching {
         val target = File(path)
-        require(target.exists()) { "目标不存在" }
+        require(target.exists()) { appString(R.string.files_target_not_exist) }
         val ok = if (isDirectory) target.deleteRecursively() else target.delete()
-        require(ok) { "删除失败" }
+        require(ok) { appString(R.string.error_delete_failed) }
     }
 
     fun rename(path: String, newName: String): Result<Unit> = runCatching {
         val safeName = newName.trim()
-        require(safeName.isNotEmpty()) { "名称不能为空" }
-        require(!safeName.contains('/') && !safeName.contains('\\')) { "名称不能包含路径分隔符" }
+        require(safeName.isNotEmpty()) { appString(R.string.files_rename_name_empty) }
+        require(!safeName.contains('/') && !safeName.contains('\\')) { appString(R.string.files_name_no_separator) }
         val source = File(path)
-        require(source.exists()) { "目标不存在" }
+        require(source.exists()) { appString(R.string.files_target_not_exist) }
         val target = File(source.parentFile, safeName)
-        require(!target.exists()) { "已存在同名项目" }
-        require(source.renameTo(target)) { "重命名失败" }
+        require(!target.exists()) { appString(R.string.files_name_exists) }
+        require(source.renameTo(target)) { appString(R.string.error_rename_failed) }
     }
 
     fun displayName(uri: Uri): String {
@@ -78,7 +80,7 @@ class LocalFileManager(
         val target = File(context.cacheDir, "picked/$safeName")
         target.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "无法读取选择的文件" }
+            requireNotNull(input) { appString(R.string.files_cannot_read_picked) }
             target.outputStream().use { output ->
                 input.copyTo(output)
             }
@@ -96,7 +98,7 @@ class LocalFileManager(
 
     fun copyToUri(file: File, uri: Uri) {
         context.contentResolver.openOutputStream(uri).use { output ->
-            requireNotNull(output) { "无法写入选择的保存位置" }
+            requireNotNull(output) { appString(R.string.files_cannot_write_save_location) }
             file.inputStream().use { input ->
                 input.copyTo(output)
             }

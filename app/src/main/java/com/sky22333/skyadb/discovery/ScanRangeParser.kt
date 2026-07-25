@@ -1,41 +1,47 @@
 package com.sky22333.skyadb.discovery
 
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.AppText
+
 object ScanRangeParser {
     fun parseConfiguredRanges(value: String): List<LocalNetwork> {
         return value
             .split("\n", ",", "，", ";", "；")
             .map { it.trim() }
             .filter { it.isNotBlank() }
-            .mapNotNull { parseEntry(it, sourceLabel = "手动配置") }
+            .mapNotNull { parseEntry(it, sourceLabelRes = R.string.discovery_source_manual_config) }
             .distinctBy { it.subnetLabel }
             .take(MaxConfiguredRanges)
     }
 
-    fun validationError(value: String): String? {
+    fun validationError(value: String): AppText.Res? {
         val entries = value
             .split("\n", ",", "，", ";", "；")
             .map { it.trim() }
             .filter { it.isNotBlank() }
 
-        if (entries.size > MaxConfiguredRanges) return "最多配置 $MaxConfiguredRanges 个网段"
-        val invalid = entries.firstOrNull { parseEntry(it, sourceLabel = "手动配置") == null }
-        return if (invalid == null) null else "格式错误或范围过大：$invalid"
+        if (entries.size > MaxConfiguredRanges) {
+            return AppText.Res(R.string.scan_range_error_too_many, MaxConfiguredRanges)
+        }
+        val invalid = entries.firstOrNull { parseEntry(it, sourceLabelRes = R.string.discovery_source_manual_config) == null }
+        return if (invalid == null) null else AppText.Res(R.string.scan_range_error_invalid, invalid)
     }
 
-    fun subnetForHost(host: String, sourceLabel: String): LocalNetwork? {
+    fun subnetForHost(host: String, @StringRes sourceLabelRes: Int): LocalNetwork? {
         return if (host.isPrivateIpv4()) {
-            createSubnet(address = host, prefixLength = 24, sourceLabel = sourceLabel, excludedHost = null)
+            createSubnet(address = host, prefixLength = 24, sourceLabelRes = sourceLabelRes, excludedHost = null)
         } else {
             null
         }
     }
 
-    fun subnetForLocalAddress(address: String, sourceLabel: String): LocalNetwork? {
+    fun subnetForLocalAddress(address: String, @StringRes sourceLabelRes: Int): LocalNetwork? {
         if (!address.isPrivateIpv4()) return null
-        return createSubnet(address = address, prefixLength = DefaultPrefixLength, sourceLabel = sourceLabel)
+        return createSubnet(address = address, prefixLength = DefaultPrefixLength, sourceLabelRes = sourceLabelRes)
     }
 
-    private fun parseEntry(entry: String, sourceLabel: String): LocalNetwork? {
+    private fun parseEntry(entry: String, @StringRes sourceLabelRes: Int): LocalNetwork? {
         val parts = entry.split("/")
         val address = parts.firstOrNull()?.trim().orEmpty()
         if (!address.isPrivateIpv4()) return null
@@ -45,13 +51,13 @@ object ScanRangeParser {
             else -> return null
         }
         if (prefix !in 24..32) return null
-        return createSubnet(address = address, prefixLength = prefix, sourceLabel = sourceLabel, excludedHost = null)
+        return createSubnet(address = address, prefixLength = prefix, sourceLabelRes = sourceLabelRes, excludedHost = null)
     }
 
     private fun createSubnet(
         address: String,
         prefixLength: Int,
-        sourceLabel: String,
+        @StringRes sourceLabelRes: Int,
         excludedHost: String? = address,
     ): LocalNetwork? {
         val addressInt = address.toIpv4IntOrNull() ?: return null
@@ -79,7 +85,7 @@ object ScanRangeParser {
         return LocalNetwork(
             deviceIp = address,
             subnetLabel = "${network.toIpv4String()}/$prefixLength",
-            sourceLabel = sourceLabel,
+            sourceLabelRes = sourceLabelRes,
             hostCount = hostCount,
             networkInt = network,
             broadcastInt = broadcast,

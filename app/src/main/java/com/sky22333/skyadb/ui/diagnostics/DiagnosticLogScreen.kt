@@ -30,11 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.diagnostics.DiagnosticFormatter
 import com.sky22333.skyadb.diagnostics.DiagnosticLog
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
@@ -54,6 +56,8 @@ fun DiagnosticLogScreen(
     val clipboard = LocalClipboard.current
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val clipLabel = stringResource(R.string.diagnostics_clip_label)
+    val copiedToast = stringResource(R.string.diagnostics_copied_toast)
 
     DiagnosticLogContent(
         bottomPadding = bottomPadding,
@@ -63,9 +67,9 @@ fun DiagnosticLogScreen(
         onCopyClick = {
             coroutineScope.launch {
                 clipboard.setClipEntry(
-                    ClipEntry(ClipData.newPlainText("诊断日志", viewModel.copyText(logs))),
+                    ClipEntry(ClipData.newPlainText(clipLabel, viewModel.copyText(logs))),
                 )
-                Toast.makeText(context, "已复制诊断日志", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
             }
         },
     )
@@ -83,9 +87,9 @@ private fun DiagnosticLogContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("诊断日志")
+                    Text(stringResource(R.string.settings_diagnostics_title))
                     Text(
-                        "仅保留本次运行的错误信息",
+                        stringResource(R.string.diagnostics_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -93,15 +97,15 @@ private fun DiagnosticLogContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onCopyClick, enabled = logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = "复制日志")
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.syslog_copy_desc))
                 }
                 IconButton(onClick = onClearClick, enabled = logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.DeleteSweep, contentDescription = "清空日志")
+                    Icon(Icons.Outlined.DeleteSweep, contentDescription = stringResource(R.string.syslog_clear_desc))
                 }
             },
         )
@@ -118,15 +122,15 @@ private fun DiagnosticLogContent(
         ) {
             item {
                 SectionHeader(
-                    title = "最近错误",
-                    description = "${logs.size} 条",
+                    title = stringResource(R.string.diagnostics_recent_errors_title),
+                    description = stringResource(R.string.diagnostics_count_format, logs.size),
                 )
             }
             if (logs.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "暂无诊断日志",
-                        message = "连接或功能执行失败时，会自动记录到这里。",
+                        title = stringResource(R.string.diagnostics_empty_title),
+                        message = stringResource(R.string.diagnostics_empty_message),
                     )
                 }
             } else {
@@ -152,7 +156,7 @@ private fun DiagnosticLogCard(log: DiagnosticLog) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "${log.module.label} · ${log.operation}",
+                text = "${stringResource(log.module.labelRes)} · ${log.operation}",
                 style = MaterialTheme.typography.titleSmall,
             )
             log.target?.let {

@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -57,10 +58,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.localapps.LocalAppIcons
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.OperationStatus
@@ -130,9 +133,9 @@ private fun AppsContent(
         TopAppBar(
             title = {
                 Column {
-                    Text(text = "应用管理")
+                    Text(text = stringResource(R.string.apps_title))
                     Text(
-                        text = "查看、启动、停止或卸载应用",
+                        text = stringResource(R.string.apps_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -140,12 +143,12 @@ private fun AppsContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onRefreshClick) {
-                    Icon(imageVector = Icons.Outlined.Refresh, contentDescription = "刷新应用列表")
+                    Icon(imageVector = Icons.Outlined.Refresh, contentDescription = stringResource(R.string.apps_refresh_list_desc))
                 }
             },
         )
@@ -165,9 +168,9 @@ private fun AppsContent(
                     value = uiState.query,
                     onValueChange = onQueryChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("搜索应用") },
+                    label = { Text(stringResource(R.string.apps_search_label)) },
                     singleLine = true,
-                    placeholder = { Text("输入包名或应用名") },
+                    placeholder = { Text(stringResource(R.string.apps_search_placeholder)) },
                 )
             }
             item {
@@ -180,15 +183,20 @@ private fun AppsContent(
             item { AppsStatusMessage(status = uiState.operationStatus) }
             item {
                 SectionHeader(
-                    title = "应用列表",
-                    description = "共 ${uiState.filteredApps.size} 个，分类和搜索在本地即时过滤",
+                    title = stringResource(R.string.apps_list_title),
+                    description = stringResource(R.string.apps_list_desc_format, uiState.filteredApps.size),
                 )
             }
             if (uiState.loading) {
                 item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
             }
             if (!uiState.loading && uiState.filteredApps.isEmpty()) {
-                item { EmptyState(title = "暂无应用", message = "连接设备并刷新后，应用会显示在这里。") }
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.apps_empty_title),
+                        message = stringResource(R.string.apps_empty_message),
+                    )
+                }
             } else {
                 items(
                     items = uiState.filteredApps,
@@ -236,7 +244,7 @@ private fun AppFilterRow(
             FilterChip(
                 selected = selected == filter,
                 onClick = { onFilterChanged(filter) },
-                label = { Text("${filter.label} ${counts[filter] ?: 0}") },
+                label = { Text("${stringResource(filter.labelRes)} ${counts[filter] ?: 0}") },
             )
         }
     }
@@ -250,29 +258,37 @@ private fun PendingActionDialog(
 ) {
     if (pendingAction == null) return
 
-    val title = when (pendingAction) {
-        is AppPendingAction.Uninstall -> "确认卸载应用？"
-        is AppPendingAction.SetEnabled -> if (pendingAction.enabled) "确认启用应用？" else "确认冻结应用？"
-    }
+    val title = stringResource(
+        when (pendingAction) {
+            is AppPendingAction.Uninstall -> R.string.apps_confirm_uninstall_title
+            is AppPendingAction.SetEnabled -> {
+                if (pendingAction.enabled) R.string.apps_confirm_enable_title else R.string.apps_confirm_freeze_title
+            }
+        },
+    )
     val message = when (pendingAction) {
-        is AppPendingAction.Uninstall -> "将从目标设备卸载 ${pendingAction.packageName}。"
+        is AppPendingAction.Uninstall ->
+            stringResource(R.string.apps_uninstall_message_format, pendingAction.packageName)
         is AppPendingAction.SetEnabled -> when {
-            pendingAction.enabled -> "将恢复 ${pendingAction.packageName} 的可用状态。"
-            pendingAction.isSystem -> "冻结系统应用可能影响桌面、设置或播放功能。"
-            else -> "冻结后 ${pendingAction.packageName} 将无法启动。"
+            pendingAction.enabled ->
+                stringResource(R.string.apps_enable_message_format, pendingAction.packageName)
+            pendingAction.isSystem -> stringResource(R.string.apps_freeze_system_warning)
+            else -> stringResource(R.string.apps_freeze_message_format, pendingAction.packageName)
         }
     }
-    val confirmLabel = when (pendingAction) {
-        is AppPendingAction.Uninstall -> "卸载"
-        is AppPendingAction.SetEnabled -> if (pendingAction.enabled) "启用" else "冻结"
-    }
+    val confirmLabel = stringResource(
+        when (pendingAction) {
+            is AppPendingAction.Uninstall -> R.string.action_uninstall
+            is AppPendingAction.SetEnabled -> if (pendingAction.enabled) R.string.action_enable else R.string.action_freeze
+        },
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(message) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -314,7 +330,7 @@ private fun AppItemCard(
             }
             AssistChip(
                 onClick = {},
-                label = { Text(app.statusLabel) },
+                label = { Text(stringResource(app.statusLabelRes)) },
             )
             AppActionMenu(
                 app = app,
@@ -392,13 +408,13 @@ private fun AppActionMenu(
         ) {
             Icon(
                 imageVector = Icons.Outlined.MoreVert,
-                contentDescription = "应用操作",
+                contentDescription = stringResource(R.string.apps_action_menu_desc),
                 modifier = Modifier.size(18.dp),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("启动") },
+                text = { Text(stringResource(R.string.action_launch)) },
                 leadingIcon = { Icon(Icons.Outlined.PlayArrow, contentDescription = null) },
                 enabled = app.enabled,
                 onClick = {
@@ -407,7 +423,7 @@ private fun AppActionMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("停止") },
+                text = { Text(stringResource(R.string.action_stop)) },
                 leadingIcon = { Icon(Icons.Outlined.StopCircle, contentDescription = null) },
                 enabled = app.enabled,
                 onClick = {
@@ -416,7 +432,7 @@ private fun AppActionMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text(if (app.enabled) "冻结" else "启用") },
+                text = { Text(stringResource(if (app.enabled) R.string.action_freeze else R.string.action_enable)) },
                 leadingIcon = {
                     Icon(
                         imageVector = if (app.enabled) Icons.Outlined.Close else Icons.Outlined.Check,
@@ -429,7 +445,7 @@ private fun AppActionMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("导出") },
+                text = { Text(stringResource(R.string.action_export)) },
                 leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) },
                 onClick = {
                     expanded = false
@@ -437,7 +453,7 @@ private fun AppActionMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("卸载") },
+                text = { Text(stringResource(R.string.action_uninstall)) },
                 leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                 onClick = {
                     expanded = false
@@ -448,12 +464,12 @@ private fun AppActionMenu(
     }
 }
 
-private val AppInfo.statusLabel: String
+private val AppInfo.statusLabelRes: Int
     get() = when {
-        !enabled && isSystem -> "系统冻结"
-        !enabled -> "已冻结"
-        isSystem -> "系统"
-        else -> "用户"
+        !enabled && isSystem -> R.string.app_status_system_frozen
+        !enabled -> R.string.app_status_frozen
+        isSystem -> R.string.app_status_system
+        else -> R.string.app_status_user
     }
 
 @Composable
@@ -463,7 +479,7 @@ private fun AppsStatusMessage(status: OperationStatus) {
         is OperationStatus.Running -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         is OperationStatus.Success -> Text(text = status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

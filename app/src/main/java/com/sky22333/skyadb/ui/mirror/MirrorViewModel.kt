@@ -5,7 +5,9 @@ import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.data.AppSettingsStore
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.scrcpy.MirrorTouchEvent
@@ -62,7 +64,7 @@ class MirrorViewModel(
     private fun start(surface: Surface) {
         if (started) return
         started = true
-        state.value = state.value.copy(status = OperationStatus.Running("正在启动屏幕镜像"))
+        state.value = state.value.copy(status = OperationStatus.Running(appString(R.string.mirror_starting)))
         viewModelScope.launch {
             val qualityPreset = settingsStore.settings.first().mirrorQualityPreset
             if (!started) return@launch
@@ -70,7 +72,10 @@ class MirrorViewModel(
             if (!launchSurface.isValid) {
                 started = false
                 state.value = state.value.copy(
-                    status = OperationStatus.Failed("屏幕镜像启动失败", "画面表面无效，请重新进入屏幕镜像。"),
+                    status = OperationStatus.Failed(
+                        appString(R.string.scrcpy_start_failed),
+                        appString(R.string.mirror_invalid_surface),
+                    ),
                 )
                 return@launch
             }
@@ -85,8 +90,8 @@ class MirrorViewModel(
                         started = false
                         state.value = state.value.copy(
                             status = OperationStatus.Failed(
-                                text = "屏幕镜像已断开",
-                                suggestion = error.message ?: "请重新进入屏幕镜像。",
+                                text = appString(R.string.mirror_disconnected),
+                                suggestion = error.message ?: appString(R.string.mirror_reenter_hint),
                             ),
                         )
                     },
@@ -94,7 +99,7 @@ class MirrorViewModel(
             ) {
                 is AdbOperationResult.Success -> {
                     latestSurface?.takeIf { it.isValid }?.let { repository.setSurface(it) }
-                    state.value = state.value.copy(status = OperationStatus.Success("正在镜像"))
+                    state.value = state.value.copy(status = OperationStatus.Success(appString(R.string.mirror_active)))
                 }
                 is AdbOperationResult.Failure -> {
                     started = false

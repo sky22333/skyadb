@@ -39,12 +39,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.localapps.LocalAppIcons
 import com.sky22333.skyadb.localapps.LocalInstalledApp
 import com.sky22333.skyadb.model.OperationStatus
@@ -90,9 +93,9 @@ private fun LocalAppsContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("本机应用")
+                    Text(stringResource(R.string.local_apps_title))
                     Text(
-                        "导出单 APK 用户应用并安装到目标设备",
+                        stringResource(R.string.local_apps_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -100,12 +103,12 @@ private fun LocalAppsContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onRefreshClick, enabled = !uiState.loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "刷新本机应用")
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.local_apps_refresh_desc))
                 }
             },
         )
@@ -125,16 +128,16 @@ private fun LocalAppsContent(
                     value = uiState.query,
                     onValueChange = onQueryChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("搜索本机应用") },
-                    placeholder = { Text("输入应用名或包名") },
+                    label = { Text(stringResource(R.string.local_apps_search_label)) },
+                    placeholder = { Text(stringResource(R.string.local_apps_search_placeholder)) },
                     singleLine = true,
                 )
             }
             item { LocalAppsStatus(status = uiState.operationStatus) }
             item {
                 SectionHeader(
-                    title = "用户应用",
-                    description = "共 ${uiState.filteredApps.size} 个，当前仅支持可启动的单 APK 应用",
+                    title = stringResource(R.string.local_apps_user_apps_title),
+                    description = stringResource(R.string.local_apps_list_desc_format, uiState.filteredApps.size),
                 )
             }
             if (uiState.loading) {
@@ -143,8 +146,8 @@ private fun LocalAppsContent(
             if (!uiState.loading && uiState.filteredApps.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "暂无可显示应用",
-                        message = "没有读取到用户应用，或当前搜索没有结果。",
+                        title = stringResource(R.string.local_apps_empty_title),
+                        message = stringResource(R.string.local_apps_empty_message),
                     )
                 }
             } else {
@@ -216,7 +219,7 @@ private fun LocalAppCard(
                 contentPadding = PaddingValues(horizontal = 8.dp),
             ) {
                 Text(
-                    text = if (app.installable) "安装" else "暂不支持",
+                    text = stringResource(if (app.installable) R.string.nav_install else R.string.local_apps_install_unsupported),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -273,7 +276,7 @@ private fun LocalAppsStatus(status: OperationStatus) {
         }
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -281,7 +284,7 @@ private fun LocalAppsStatus(status: OperationStatus) {
 }
 
 private fun formatSize(bytes: Long): String {
-    if (bytes <= 0L) return "未知大小"
+    if (bytes <= 0L) return appString(R.string.local_apps_unknown_size)
     val mb = bytes / 1024.0 / 1024.0
     return if (mb >= 1.0) {
         String.format(Locale.US, "%.1f MB", mb)

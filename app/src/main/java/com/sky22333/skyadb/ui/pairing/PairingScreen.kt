@@ -38,11 +38,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import com.sky22333.skyadb.ui.components.SectionHeader
@@ -99,10 +101,10 @@ private fun PairingContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = { Text(text = "无线配对") },
+            title = { Text(text = stringResource(R.string.action_wireless_pairing)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -150,12 +152,12 @@ private fun PairingGuideCard() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "使用说明",
+                    text = stringResource(R.string.pairing_guide_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                    contentDescription = if (expanded) "收起" else "展开",
+                    contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
                 )
             }
             AnimatedVisibility(visible = expanded) {
@@ -163,9 +165,9 @@ private fun PairingGuideCard() {
                     modifier = Modifier.padding(top = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    GuideStep("1", "目标设备开启无线调试，选择配对码配对。")
-                    GuideStep("2", "填写配对窗口中的 IP、临时端口和 6 位配对码。")
-                    GuideStep("3", "配对成功后点「去连接」，确认地址后连接。")
+                    GuideStep("1", stringResource(R.string.pairing_guide_step1))
+                    GuideStep("2", stringResource(R.string.pairing_guide_step2))
+                    GuideStep("3", stringResource(R.string.pairing_guide_step3))
                 }
             }
         }
@@ -211,13 +213,13 @@ private fun PairingFormCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "配对信息")
+            SectionHeader(title = stringResource(R.string.pairing_info_title))
 
             OutlinedTextField(
                 value = uiState.ip,
                 onValueChange = onIpChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("配对 IP") },
+                label = { Text(stringResource(R.string.pairing_ip_label)) },
                 singleLine = true,
                 placeholder = { Text("192.168.1.86") },
                 isError = uiState.ipError != null,
@@ -228,7 +230,7 @@ private fun PairingFormCard(
                 value = uiState.pairingPort,
                 onValueChange = onPairingPortChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("配对端口") },
+                label = { Text(stringResource(R.string.pairing_port_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = uiState.portError != null,
@@ -239,7 +241,7 @@ private fun PairingFormCard(
                 value = uiState.pairingCode,
                 onValueChange = onPairingCodeChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("配对码") },
+                label = { Text(stringResource(R.string.pairing_code_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 isError = uiState.codeError != null,
@@ -253,7 +255,7 @@ private fun PairingFormCard(
                     onClick = onContinueToConnect,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(text = "去连接")
+                    Text(text = stringResource(R.string.action_go_connect))
                 }
             } else {
                 Button(
@@ -263,7 +265,7 @@ private fun PairingFormCard(
                 ) {
                     Icon(imageVector = Icons.Outlined.Key, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "开始配对")
+                    Text(text = stringResource(R.string.action_start_pairing))
                 }
             }
         }

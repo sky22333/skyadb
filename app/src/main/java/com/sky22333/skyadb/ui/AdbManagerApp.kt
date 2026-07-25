@@ -31,7 +31,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -89,6 +92,7 @@ fun AdbManagerApp() {
                 ) {
                     bottomDestinations.forEach { destination ->
                         val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
+                        val label = stringResource(destination.labelRes)
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
@@ -103,10 +107,10 @@ fun AdbManagerApp() {
                             icon = {
                                 Icon(
                                     imageVector = destination.icon,
-                                    contentDescription = destination.label,
+                                    contentDescription = label,
                                 )
                             },
-                            label = { Text(destination.label) },
+                            label = { Text(label) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -298,21 +302,21 @@ private val bottomDestinations = listOf(
 
 private sealed class AppDestination(
     val route: String,
-    val label: String,
+    @param:StringRes val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
-    data object Home : AppDestination("home", "设备", Icons.Outlined.Devices)
-    data object Device : AppDestination("device", "详情", Icons.Outlined.PhoneAndroid)
-    data object Settings : AppDestination("settings", "设置", Icons.Outlined.Settings)
-    data object Pairing : AppDestination("pairing", "配对", Icons.Outlined.PhoneAndroid)
-    data object Discovery : AppDestination("discovery", "扫描", Icons.Outlined.Devices)
-    data object Shell : AppDestination("shell", "Shell", Icons.Outlined.PhoneAndroid)
-    data object Apps : AppDestination("apps", "应用", Icons.Outlined.PhoneAndroid)
-    data object LocalApps : AppDestination("local_apps", "本机应用", Icons.Outlined.PhoneAndroid)
-    data object Download : AppDestination("download", "下载", Icons.Outlined.PhoneAndroid)
-    data object Install : AppDestination("install", "安装", Icons.Outlined.PhoneAndroid)
-    data object Files : AppDestination("files", "文件", Icons.Outlined.PhoneAndroid)
-    data object Screenshot : AppDestination("screenshot", "截图", Icons.Outlined.PhoneAndroid)
+    data object Home : AppDestination("home", R.string.nav_devices, Icons.Outlined.Devices)
+    data object Device : AppDestination("device", R.string.nav_details, Icons.Outlined.PhoneAndroid)
+    data object Settings : AppDestination("settings", R.string.nav_settings, Icons.Outlined.Settings)
+    data object Pairing : AppDestination("pairing", R.string.nav_pairing, Icons.Outlined.PhoneAndroid)
+    data object Discovery : AppDestination("discovery", R.string.nav_discovery, Icons.Outlined.Devices)
+    data object Shell : AppDestination("shell", R.string.nav_shell, Icons.Outlined.PhoneAndroid)
+    data object Apps : AppDestination("apps", R.string.nav_apps, Icons.Outlined.PhoneAndroid)
+    data object LocalApps : AppDestination("local_apps", R.string.nav_local_apps, Icons.Outlined.PhoneAndroid)
+    data object Download : AppDestination("download", R.string.nav_download, Icons.Outlined.PhoneAndroid)
+    data object Install : AppDestination("install", R.string.nav_install, Icons.Outlined.PhoneAndroid)
+    data object Files : AppDestination("files", R.string.nav_files, Icons.Outlined.PhoneAndroid)
+    data object Screenshot : AppDestination("screenshot", R.string.nav_screenshot, Icons.Outlined.PhoneAndroid)
 }
 
 private const val DiscoveryHostKey = "discovery_host"

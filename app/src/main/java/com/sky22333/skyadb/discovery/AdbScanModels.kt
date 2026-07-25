@@ -1,9 +1,12 @@
 package com.sky22333.skyadb.discovery
 
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
+
 data class LocalNetwork(
     val deviceIp: String,
     val subnetLabel: String,
-    val sourceLabel: String = "当前网络",
+    @param:StringRes val sourceLabelRes: Int,
     val hostCount: Int,
     private val networkInt: Int,
     private val broadcastInt: Int,
@@ -39,17 +42,17 @@ data class AdbScanResult(
 }
 
 enum class AdbProbeState(
-    val label: String,
-    val description: String,
+    @param:StringRes val labelRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val visible: Boolean,
 ) {
-    PortClosed("未开放", "目标端口未响应", false),
-    NotAdb("非 ADB", "端口开放，但未响应 ADB 握手", false),
-    PortOpen("端口开放", "端口可连接，可尝试使用 ADB 连接确认", true),
-    AdbUnauthorized("需要授权", "发现 ADB 服务，需要在目标设备确认授权", true),
-    AdbAvailable("可连接", "发现可响应的 ADB 服务", true),
-    AdbSecure("无线调试", "发现 Android 11+ 无线调试安全握手端口", true),
-    Failed("探测失败", "探测过程异常，可重试扫描", false),
+    PortClosed(R.string.adb_probe_port_closed_label, R.string.adb_probe_port_closed_desc, false),
+    NotAdb(R.string.adb_probe_not_adb_label, R.string.adb_probe_not_adb_desc, false),
+    PortOpen(R.string.adb_probe_port_open_label, R.string.adb_probe_port_open_desc, true),
+    AdbUnauthorized(R.string.adb_probe_unauthorized_label, R.string.adb_probe_unauthorized_desc, true),
+    AdbAvailable(R.string.adb_probe_available_label, R.string.adb_probe_available_desc, true),
+    AdbSecure(R.string.adb_probe_secure_label, R.string.adb_probe_secure_desc, true),
+    Failed(R.string.adb_probe_failed_label, R.string.adb_probe_failed_desc, false),
 }
 
 data class AdbScanProgress(

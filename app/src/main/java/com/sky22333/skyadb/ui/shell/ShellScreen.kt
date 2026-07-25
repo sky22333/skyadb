@@ -34,11 +34,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
 import com.sky22333.skyadb.ui.components.SectionHeader
@@ -75,10 +77,10 @@ private fun ShellContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Shell 命令") },
+            title = { Text(stringResource(R.string.shell_title)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -121,13 +123,13 @@ private fun ShellCommandCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "命令输入")
+            SectionHeader(title = stringResource(R.string.shell_command_input_title))
             OutlinedTextField(
                 value = uiState.command,
                 onValueChange = onCommandChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Shell 命令") },
-                placeholder = { Text("例如 getprop ro.product.model") },
+                label = { Text(stringResource(R.string.shell_command_label)) },
+                placeholder = { Text(stringResource(R.string.shell_command_placeholder)) },
                 minLines = 1,
                 maxLines = 4,
             )
@@ -139,7 +141,7 @@ private fun ShellCommandCard(
             ) {
                 Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "执行命令")
+                Text(text = stringResource(R.string.action_execute))
             }
         }
     }
@@ -156,9 +158,9 @@ private fun ShellOutputCard(output: String) {
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "输出结果")
+            SectionHeader(title = stringResource(R.string.shell_output_title))
             if (output.isBlank()) {
-                EmptyState(title = "暂无输出")
+                EmptyState(title = stringResource(R.string.shell_no_output))
             } else {
                 Text(
                     text = output,
@@ -193,9 +195,9 @@ private fun ShellHistoryCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionHeader(title = "历史命令")
+            SectionHeader(title = stringResource(R.string.shell_history_title))
             if (history.isEmpty()) {
-                EmptyState(title = "暂无历史命令")
+                EmptyState(title = stringResource(R.string.shell_no_history))
             } else {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -223,7 +225,7 @@ private fun ShellStatusMessage(status: OperationStatus) {
         }
         is OperationStatus.Success -> Text(text = status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

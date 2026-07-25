@@ -1,5 +1,9 @@
 package com.sky22333.skyadb.download
 
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
+
 data class DownloadTask(
     val url: String,
     val fileName: String,
@@ -7,17 +11,17 @@ data class DownloadTask(
     val localPath: String? = null,
     val progress: Float,
     val state: DownloadState,
-    val message: String = state.label,
+    val message: String = appString(state.labelRes),
 )
 
-enum class DownloadState(val label: String) {
-    Waiting("等待下载"),
-    Downloading("下载中"),
-    Pushing("推送中"),
-    Installing("安装中"),
-    Success("已完成"),
-    Failed("失败"),
-    Canceled("已取消"),
+enum class DownloadState(@param:StringRes val labelRes: Int) {
+    Waiting(R.string.download_state_waiting),
+    Downloading(R.string.download_state_downloading),
+    Pushing(R.string.download_state_pushing),
+    Installing(R.string.download_state_installing),
+    Success(R.string.download_state_success),
+    Failed(R.string.download_state_failed),
+    Canceled(R.string.download_state_canceled),
 }
 
 sealed interface DownloadResult {

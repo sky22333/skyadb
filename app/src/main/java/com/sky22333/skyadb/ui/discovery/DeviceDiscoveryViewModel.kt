@@ -3,6 +3,7 @@ package com.sky22333.skyadb.ui.discovery
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.discovery.AdbMdnsDiscovery
 import com.sky22333.skyadb.discovery.AdbMdnsEndpoint
@@ -11,6 +12,7 @@ import com.sky22333.skyadb.discovery.LanAdbScanner
 import com.sky22333.skyadb.discovery.LocalNetwork
 import com.sky22333.skyadb.discovery.NetworkInfoProvider
 import com.sky22333.skyadb.discovery.ScanRangeParser
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -100,7 +102,10 @@ class DeviceDiscoveryViewModel(
         state.value = state.value.copy(
             networks = networks,
             status = if (networks.isEmpty()) {
-                OperationStatus.Failed("无法扫描局域网", "请连接 WiFi 或局域网后重试。")
+                OperationStatus.Failed(
+                    appString(R.string.discovery_cannot_scan_lan),
+                    appString(R.string.discovery_connect_wifi_hint),
+                )
             } else {
                 OperationStatus.Idle
             },
@@ -118,7 +123,7 @@ class DeviceDiscoveryViewModel(
             scannedCount = 0,
             totalCount = 0,
             results = emptyList(),
-            status = OperationStatus.Running("正在准备扫描 ${networks.size} 个候选网段"),
+            status = OperationStatus.Running(appString(R.string.discovery_preparing_scan, networks.size)),
         )
         scanJob = viewModelScope.launch {
             try {
@@ -128,7 +133,7 @@ class DeviceDiscoveryViewModel(
                 if (!state.value.scanning) return@launch
                 state.value = state.value.copy(
                     totalCount = hosts.size * state.value.ports.size,
-                    status = OperationStatus.Running("正在扫描 ${networks.size} 个候选网段"),
+                    status = OperationStatus.Running(appString(R.string.discovery_scanning, networks.size)),
                 )
                 scanner.scan(
                     hosts = hosts,
@@ -151,7 +156,7 @@ class DeviceDiscoveryViewModel(
                 val found = state.value.results.size
                 state.value = state.value.copy(
                     scanning = false,
-                    status = OperationStatus.Success("扫描完成，发现 $found 个 ADB 设备"),
+                    status = OperationStatus.Success(appString(R.string.discovery_scan_complete, found)),
                 )
                 scanJob = null
             } catch (_: CancellationException) {
@@ -159,7 +164,10 @@ class DeviceDiscoveryViewModel(
             } catch (error: Throwable) {
                 state.value = state.value.copy(
                     scanning = false,
-                    status = OperationStatus.Failed("扫描已停止", error.message ?: "可以稍后重新扫描。"),
+                    status = OperationStatus.Failed(
+                        appString(R.string.discovery_scan_stopped),
+                        error.message ?: appString(R.string.discovery_retry_later_hint),
+                    ),
                 )
                 scanJob = null
             }
@@ -171,7 +179,7 @@ class DeviceDiscoveryViewModel(
         scanJob = null
         state.value = state.value.copy(
             scanning = false,
-            status = OperationStatus.Success("扫描已取消"),
+            status = OperationStatus.Success(appString(R.string.discovery_scan_canceled)),
         )
     }
 
@@ -185,7 +193,7 @@ class DeviceDiscoveryViewModel(
         val configured = ScanRangeParser.parseConfiguredRanges(configuredScanRanges)
         val current = networkInfoProvider.currentLocalNetworks()
         val recent = recentDevices.mapNotNull { device ->
-            networkInfoProvider.subnetForHost(device.host, sourceLabel = "最近设备")
+            networkInfoProvider.subnetForHost(device.host, sourceLabelRes = R.string.discovery_source_recent_device)
         }
         return (configured + recent + current)
             .distinctBy { it.subnetLabel }

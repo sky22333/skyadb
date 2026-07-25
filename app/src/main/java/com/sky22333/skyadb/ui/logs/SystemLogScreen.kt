@@ -39,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
 import com.sky22333.skyadb.ui.components.SectionHeader
@@ -62,6 +64,8 @@ fun SystemLogScreen(
     val clipboard = LocalClipboard.current
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val clipLabel = stringResource(R.string.syslog_clip_label)
+    val copiedToast = stringResource(R.string.syslog_copied_toast)
 
     SystemLogContent(
         bottomPadding = bottomPadding,
@@ -71,9 +75,9 @@ fun SystemLogScreen(
         onClearClick = viewModel::clearLogs,
         onCopyClick = {
             coroutineScope.launch {
-                val clipData = ClipData.newPlainText("系统日志", buildLogCopyText(uiState))
+                val clipData = ClipData.newPlainText(clipLabel, buildLogCopyText(uiState))
                 clipboard.setClipEntry(ClipEntry(clipData))
-                Toast.makeText(context, "已复制当前日志", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
             }
         },
         onQueryChanged = viewModel::onQueryChanged,
@@ -98,9 +102,9 @@ private fun SystemLogContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("系统日志")
+                    Text(stringResource(R.string.syslog_title))
                     Text(
-                        "按需读取目标设备最近日志",
+                        stringResource(R.string.syslog_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -108,7 +112,7 @@ private fun SystemLogContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
@@ -116,13 +120,13 @@ private fun SystemLogContent(
                     onClick = onCopyClick,
                     enabled = uiState.filteredLogs.isNotEmpty(),
                 ) {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = "复制日志")
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.syslog_copy_desc))
                 }
                 IconButton(onClick = onClearClick, enabled = uiState.logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.DeleteSweep, contentDescription = "清空日志")
+                    Icon(Icons.Outlined.DeleteSweep, contentDescription = stringResource(R.string.syslog_clear_desc))
                 }
                 IconButton(onClick = onRefreshClick, enabled = !uiState.loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "刷新日志")
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.syslog_refresh_desc))
                 }
             },
         )
@@ -148,15 +152,19 @@ private fun SystemLogContent(
             item { LogStatus(uiState.status, uiState.loading) }
             item {
                 SectionHeader(
-                    title = "日志内容",
-                    description = "显示 ${uiState.filteredLogs.size} / ${uiState.logs.size} 行",
+                    title = stringResource(R.string.syslog_content_title),
+                    description = stringResource(
+                        R.string.syslog_content_desc_format,
+                        uiState.filteredLogs.size,
+                        uiState.logs.size,
+                    ),
                 )
             }
             if (uiState.filteredLogs.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "暂无日志",
-                        message = "点击右上角刷新读取最近日志。",
+                        title = stringResource(R.string.syslog_empty_title),
+                        message = stringResource(R.string.syslog_empty_message),
                     )
                 }
             } else {
@@ -189,7 +197,7 @@ private fun LogFilterCard(
                 value = uiState.query,
                 onValueChange = onQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("关键词") },
+                label = { Text(stringResource(R.string.syslog_keyword_label)) },
                 singleLine = true,
             )
 
@@ -214,7 +222,15 @@ private fun LogFilterCard(
                     FilterChip(
                         selected = uiState.level == level,
                         onClick = { onLevelSelected(level) },
-                        label = { Text(level) },
+                        label = {
+                            Text(
+                                if (level == LogLevelAll) {
+                                    stringResource(R.string.logs_level_all)
+                                } else {
+                                    level
+                                },
+                            )
+                        },
                     )
                 }
             }
@@ -254,7 +270,7 @@ private fun LogStatus(status: OperationStatus, loading: Boolean) {
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
 
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

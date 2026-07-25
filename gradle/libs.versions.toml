@@ -3,6 +3,7 @@ agp = "9.2.0"
 kotlin = "2.3.20"
 composeBom = "2026.05.01"
 activityCompose = "1.12.1"
+appcompat = "1.7.1"
 lifecycle = "2.10.0"
 navigation = "2.9.8"
 datastore = "1.2.1"
@@ -15,6 +16,7 @@ fastbootJava = "1.2.0"
 junit = "4.13.2"
 
 [libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }

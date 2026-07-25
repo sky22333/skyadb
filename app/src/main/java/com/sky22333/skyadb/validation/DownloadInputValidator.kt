@@ -1,13 +1,15 @@
 package com.sky22333.skyadb.validation
 
+import com.sky22333.skyadb.R
+
 object DownloadInputValidator {
-    fun urlError(value: String, requireApk: Boolean = false): String? {
+    fun urlError(value: String, requireApk: Boolean = false): Int? {
         val normalized = value.trim()
         return when {
             normalized.isBlank() -> null
-            !isHttpUrl(normalized) -> "请输入以 http:// 或 https:// 开头的链接"
+            !isHttpUrl(normalized) -> R.string.error_url_scheme
             requireApk && !normalized.substringBefore("?").endsWith(".apk", ignoreCase = true) -> {
-                "APK 下载链接建议以 .apk 结尾"
+                R.string.error_url_apk_suffix
             }
             else -> null
         }

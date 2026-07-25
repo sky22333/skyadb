@@ -3,7 +3,9 @@ package com.sky22333.skyadb.ui.shell
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -44,8 +46,8 @@ class ShellViewModel(
             state.value = state.value.copy(
                 executeEnabled = false,
                 operationStatus = OperationStatus.Failed(
-                    text = "无法执行命令",
-                    suggestion = "请先输入 Shell 命令。",
+                    text = appString(R.string.shell_cannot_execute),
+                    suggestion = appString(R.string.shell_enter_command_hint),
                 ),
             )
             return
@@ -53,7 +55,7 @@ class ShellViewModel(
 
         state.value = state.value.copy(
             executeEnabled = false,
-            operationStatus = OperationStatus.Running("正在执行：$command"),
+            operationStatus = OperationStatus.Running(appString(R.string.shell_executing, command)),
         )
 
         viewModelScope.launch {
@@ -74,7 +76,7 @@ class ShellViewModel(
                             if (isNotEmpty()) appendLine()
                             append(commandResult.errorOutput.trim())
                         }
-                        if (isEmpty()) append("命令执行完成，无输出。")
+                        if (isEmpty()) append(appString(R.string.shell_command_no_output))
                     }
                     applySuccess(command, combinedOutput, commandResult.exitCode)
                 }
@@ -88,7 +90,7 @@ class ShellViewModel(
             output = output,
             history = (listOf(command) + state.value.history).distinct().take(20),
             executeEnabled = true,
-            operationStatus = OperationStatus.Success("命令执行完成，退出码 $exitCode"),
+            operationStatus = OperationStatus.Success(appString(R.string.shell_execute_success, exitCode)),
         )
     }
 

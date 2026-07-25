@@ -31,10 +31,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.OperationProgressIndicator
 import com.sky22333.skyadb.ui.components.SectionHeader
@@ -78,9 +80,9 @@ private fun InstallApkContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("安装 APK")
+                    Text(stringResource(R.string.install_apk_title))
                     Text(
-                        "选择本机 APK 并安装到已连接设备",
+                        stringResource(R.string.install_apk_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -88,7 +90,7 @@ private fun InstallApkContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -113,9 +115,12 @@ private fun InstallApkContent(
                     modifier = Modifier.padding(AppDimens.CardPadding),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    SectionHeader(title = "本地 APK", description = "安装前请确认目标设备已连接")
+                    SectionHeader(
+                        title = stringResource(R.string.install_apk_local_title),
+                        description = stringResource(R.string.install_apk_local_desc),
+                    )
                     Text(
-                        text = uiState.selectedName ?: "尚未选择文件",
+                        text = uiState.selectedName ?: stringResource(R.string.install_apk_no_file_selected),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     if (uiState.selectedUriText != null) {
@@ -130,7 +135,7 @@ private fun InstallApkContent(
                         OutlinedButton(onClick = onPickClick, modifier = Modifier.weight(1f)) {
                             Icon(imageVector = Icons.Outlined.FolderOpen, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("选择 APK")
+                            Text(stringResource(R.string.action_pick_apk))
                         }
                         Button(
                             onClick = onInstallClick,
@@ -139,7 +144,7 @@ private fun InstallApkContent(
                         ) {
                             Icon(imageVector = Icons.Outlined.Android, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("安装")
+                            Text(stringResource(R.string.nav_install))
                         }
                     }
                 }
@@ -160,7 +165,7 @@ private fun InstallStatusMessage(status: OperationStatus) {
         }
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

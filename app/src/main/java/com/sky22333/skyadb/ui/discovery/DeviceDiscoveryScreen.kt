@@ -40,10 +40,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.discovery.AdbMdnsEndpoint
 import com.sky22333.skyadb.discovery.AdbMdnsServiceType
 import com.sky22333.skyadb.discovery.AdbProbeState
@@ -98,15 +100,15 @@ private fun DeviceDiscoveryContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("局域网发现") },
+            title = { Text(stringResource(R.string.discovery_title)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onRefreshNetworkClick, enabled = !uiState.scanning) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "刷新网络")
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.discovery_refresh_network_desc))
                 }
             },
         )
@@ -121,7 +123,7 @@ private fun DeviceDiscoveryContent(
             ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            item { SectionHeader(title = "自动发现") }
+            item { SectionHeader(title = stringResource(R.string.discovery_auto_discovery_title)) }
             item {
                 MdnsDiscoveryStatus(
                     running = uiState.mdnsRunning,
@@ -143,10 +145,14 @@ private fun DeviceDiscoveryContent(
                     onStopScanClick = onStopScanClick,
                 )
             }
-            item { SectionHeader(title = "发现结果") }
+            item { SectionHeader(title = stringResource(R.string.discovery_results_title)) }
             if (uiState.results.isEmpty()) {
                 item {
-                    EmptyState(title = if (uiState.scanning) "正在查找设备" else "暂无发现")
+                    EmptyState(
+                        title = stringResource(
+                            if (uiState.scanning) R.string.discovery_searching else R.string.discovery_no_results,
+                        ),
+                    )
                 }
             } else {
                 items(uiState.results, key = { it.endpoint }) { result ->
@@ -165,24 +171,24 @@ private fun MdnsDiscoveryStatus(
 ) {
     when {
         error != null -> Text(
-            text = "$error 可改用下方网段扫描。",
+            text = stringResource(R.string.discovery_mdns_error_suffix_format, error),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
         endpoints.isNotEmpty() -> Text(
-            text = "发现 ${endpoints.size} 个服务",
+            text = stringResource(R.string.discovery_mdns_found_format, endpoints.size),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall,
         )
         running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(
-                text = "正在自动发现…",
+                text = stringResource(R.string.discovery_mdns_running),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        else -> EmptyState(title = "未发现设备")
+        else -> EmptyState(title = stringResource(R.string.discovery_mdns_none_found))
     }
 }
 
@@ -212,7 +218,7 @@ private fun MdnsEndpointCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(endpoint.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "${endpoint.type.label} · ${endpoint.endpoint}",
+                    text = "${stringResource(endpoint.type.labelRes)} · ${endpoint.endpoint}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -226,7 +232,7 @@ private fun MdnsEndpointCard(
                     }
                 },
             ) {
-                Text(endpoint.type.actionLabel)
+                Text(stringResource(endpoint.type.actionLabelRes))
             }
         }
     }
@@ -256,7 +262,7 @@ private fun ScanControlCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SectionHeader(
-                title = "扫描范围",
+                title = stringResource(R.string.discovery_scan_range_title),
                 description = scanRangeDescription(uiState),
             )
             if (uiState.scanning) {
@@ -267,7 +273,12 @@ private fun ScanControlCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = "已扫描 ${uiState.scannedCount} / ${uiState.totalCount}，发现 ${uiState.results.size} 个",
+                    text = stringResource(
+                        R.string.discovery_scan_progress_format,
+                        uiState.scannedCount,
+                        uiState.totalCount,
+                        uiState.results.size,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -281,7 +292,7 @@ private fun ScanControlCard(
                 ) {
                     Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("开始扫描")
+                    Text(stringResource(R.string.action_start_scan))
                 }
                 OutlinedButton(
                     onClick = onStopScanClick,
@@ -290,7 +301,7 @@ private fun ScanControlCard(
                 ) {
                     Icon(Icons.Outlined.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }
@@ -304,7 +315,7 @@ private fun DiscoveryStatus(status: OperationStatus) {
         is OperationStatus.Running -> Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -336,22 +347,31 @@ private fun ScanResultCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(result.endpoint, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "${result.state.label} · ${result.latencyMs}ms",
+                    text = "${stringResource(result.state.labelRes)} · ${result.latencyMs}ms",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             TextButton(onClick = { onUseEndpoint(result.host, result.port) }) {
-                Text("使用")
+                Text(stringResource(R.string.action_use))
             }
         }
     }
 }
 
+@Composable
 private fun scanRangeDescription(uiState: DeviceDiscoveryUiState): String {
-    if (uiState.networks.isEmpty()) return "请先连接 WiFi 或局域网"
-    val ranges = uiState.networks.joinToString("、") { "${it.subnetLabel}（${it.sourceLabel}）" }
-    return "$ranges，端口 ${uiState.ports.joinToString(" / ")}"
+    if (uiState.networks.isEmpty()) return stringResource(R.string.discovery_connect_wifi_first)
+    val parts = ArrayList<String>(uiState.networks.size)
+    for (network in uiState.networks) {
+        val source = stringResource(network.sourceLabelRes)
+        parts += stringResource(R.string.discovery_network_with_source, network.subnetLabel, source)
+    }
+    return stringResource(
+        R.string.discovery_scan_range_format,
+        parts.joinToString(", "),
+        uiState.ports.joinToString(" / "),
+    )
 }
 
 @Preview(name = "局域网扫描", showBackground = true, widthDp = 390)
@@ -362,10 +382,16 @@ private fun DeviceDiscoveryContentPreview() {
             uiState = DeviceDiscoveryUiState(
                 networks = listOf(
                     requireNotNull(
-                        ScanRangeParser.subnetForLocalAddress("10.71.180.42", sourceLabel = "当前网络"),
+                        ScanRangeParser.subnetForLocalAddress(
+                            "10.71.180.42",
+                            sourceLabelRes = R.string.discovery_source_current_network,
+                        ),
                     ),
                     requireNotNull(
-                        ScanRangeParser.subnetForHost("10.43.180.147", sourceLabel = "最近设备"),
+                        ScanRangeParser.subnetForHost(
+                            "10.43.180.147",
+                            sourceLabelRes = R.string.discovery_source_recent_device,
+                        ),
                     ),
                 ),
                 scanning = true,
