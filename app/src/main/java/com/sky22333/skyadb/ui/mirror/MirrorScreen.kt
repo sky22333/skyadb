@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -27,7 +26,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeDown
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Gamepad
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.PowerSettingsNew
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.model.OperationStatus
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MirrorScreen(
     onBackClick: () -> Unit,
@@ -92,7 +90,7 @@ fun MirrorScreen(
                         holder.addCallback(object : SurfaceHolder.Callback {
                             override fun surfaceCreated(holder: SurfaceHolder) {
                                 surface = holder.surface
-                                viewModel.start(holder.surface)
+                                viewModel.onSurfaceCreated(holder.surface)
                             }
 
                             override fun surfaceChanged(
@@ -104,7 +102,7 @@ fun MirrorScreen(
 
                             override fun surfaceDestroyed(holder: SurfaceHolder) {
                                 surface = null
-                                viewModel.detachSurface()
+                                viewModel.onSurfaceDestroyed()
                             }
                         })
                         setOnTouchListener { view, event ->
@@ -182,7 +180,7 @@ private fun MirrorTopActions(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MirrorIconButton(
-            icon = Icons.Outlined.Gamepad,
+            icon = Icons.Outlined.MoreVert,
             contentDescription = if (controlsVisible) "隐藏控制区" else "显示控制区",
             onClick = onToggleControls,
         )

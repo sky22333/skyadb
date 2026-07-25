@@ -53,6 +53,13 @@ class ScrcpyProtocolTest {
     }
 
     @Test
+    fun resetVideo_isSingleTypeByte() {
+        val packet = ScrcpyProtocol.resetVideo()
+        assertEquals(1, packet.size)
+        assertEquals(17, packet[0].toInt())
+    }
+
+    @Test
     fun mapper_ignoresLetterboxAndMapsContent() {
         assertNull(
             MirrorCoordinateMapper.map(

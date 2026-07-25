@@ -64,8 +64,11 @@ class ScrcpyControlClient(
 
     fun sendText(text: String) {
         if (text.isEmpty()) return
-        // 官方 Unicode 方案：SET_CLIPBOARD + paste（非 INJECT_TEXT）。
         send(ScrcpyProtocol.setClipboard(text = text, paste = true))
+    }
+
+    fun resetVideo() {
+        send(ScrcpyProtocol.resetVideo())
     }
 
     fun sendBackOrScreenOn() {

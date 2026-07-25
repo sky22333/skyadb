@@ -2,13 +2,6 @@ package com.sky22333.skyadb.scrcpy
 
 import kotlin.math.roundToInt
 
-data class MirrorViewport(
-    val left: Float,
-    val top: Float,
-    val width: Float,
-    val height: Float,
-)
-
 data class RemotePoint(
     val x: Int,
     val y: Int,
@@ -17,29 +10,6 @@ data class RemotePoint(
 )
 
 object MirrorCoordinateMapper {
-    fun viewport(
-        surfaceWidth: Int,
-        surfaceHeight: Int,
-        videoWidth: Int,
-        videoHeight: Int,
-    ): MirrorViewport? {
-        if (surfaceWidth <= 0 || surfaceHeight <= 0 || videoWidth <= 0 || videoHeight <= 0) {
-            return null
-        }
-        val scale = minOf(
-            surfaceWidth.toFloat() / videoWidth.toFloat(),
-            surfaceHeight.toFloat() / videoHeight.toFloat(),
-        )
-        val width = videoWidth * scale
-        val height = videoHeight * scale
-        return MirrorViewport(
-            left = (surfaceWidth - width) / 2f,
-            top = (surfaceHeight - height) / 2f,
-            width = width,
-            height = height,
-        )
-    }
-
     fun map(
         x: Float,
         y: Float,
@@ -66,4 +36,34 @@ object MirrorCoordinateMapper {
             screenHeight = videoHeight,
         )
     }
+
+    private fun viewport(
+        surfaceWidth: Int,
+        surfaceHeight: Int,
+        videoWidth: Int,
+        videoHeight: Int,
+    ): Viewport? {
+        if (surfaceWidth <= 0 || surfaceHeight <= 0 || videoWidth <= 0 || videoHeight <= 0) {
+            return null
+        }
+        val scale = minOf(
+            surfaceWidth.toFloat() / videoWidth.toFloat(),
+            surfaceHeight.toFloat() / videoHeight.toFloat(),
+        )
+        val width = videoWidth * scale
+        val height = videoHeight * scale
+        return Viewport(
+            left = (surfaceWidth - width) / 2f,
+            top = (surfaceHeight - height) / 2f,
+            width = width,
+            height = height,
+        )
+    }
+
+    private data class Viewport(
+        val left: Float,
+        val top: Float,
+        val width: Float,
+        val height: Float,
+    )
 }

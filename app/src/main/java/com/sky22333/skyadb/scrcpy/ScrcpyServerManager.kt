@@ -23,7 +23,7 @@ class ScrcpyServerManager(
         options: ScrcpyOptions,
         audioEnabled: Boolean,
     ): String {
-        val socketId = scid.toString(16).padStart(8, '0')
+        val socketId = ScrcpyConstants.formatScid(scid)
         return listOf(
             "CLASSPATH=${ScrcpyConstants.RemoteServerPath}",
             "app_process",
@@ -34,7 +34,6 @@ class ScrcpyServerManager(
             "log_level=info",
             "video=true",
             "audio=${if (audioEnabled) "true" else "false"}",
-            // 电视端 Opus 编码器常缺失，AAC 与官方兜底一致且兼容性更好。
             "audio_codec=aac",
             "control=true",
             "tunnel_forward=true",

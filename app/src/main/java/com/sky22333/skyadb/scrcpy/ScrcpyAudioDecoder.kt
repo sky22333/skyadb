@@ -66,7 +66,7 @@ class ScrcpyAudioDecoder(
         runCatching { stream.close() }
     }
 
-    fun release() {
+    private fun release() {
         runCatching { codec?.stop() }
         runCatching { codec?.release() }
         codec = null

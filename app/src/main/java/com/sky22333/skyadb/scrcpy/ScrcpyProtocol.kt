@@ -10,6 +10,8 @@ object ScrcpyProtocol {
     const val CodecH264 = 0x68323634
     const val CodecH265 = 0x68323635
     const val CodecAv1 = 0x00617631
+    const val CodecVp8 = 0x00767038
+    const val CodecVp9 = 0x00767039
     const val CodecOpus = 0x6f707573
     const val CodecAac = 0x00616163
     const val CodecFlac = 0x666c6163
@@ -28,6 +30,7 @@ object ScrcpyProtocol {
     private const val TypeInjectTouchEvent = 2
     private const val TypeBackOrScreenOn = 4
     private const val TypeSetClipboard = 9
+    private const val TypeResetVideo = 17
 
     fun keyEvent(action: Int, keyCode: Int, repeat: Int = 0, metaState: Int = 0): ByteArray {
         return ByteBuffer.allocate(14).order(ByteOrder.BIG_ENDIAN)
@@ -83,6 +86,8 @@ object ScrcpyProtocol {
     fun backOrScreenOn(action: Int = KeyEvent.ACTION_DOWN): ByteArray {
         return byteArrayOf(TypeBackOrScreenOn.toByte(), action.toByte())
     }
+
+    fun resetVideo(): ByteArray = byteArrayOf(TypeResetVideo.toByte())
 
     fun motionAction(action: Int): Int? = when (action) {
         MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> 0

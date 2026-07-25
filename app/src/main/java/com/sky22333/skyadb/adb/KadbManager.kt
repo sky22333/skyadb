@@ -16,6 +16,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -615,27 +617,37 @@ class KadbManager {
             activeKadb = null
 
             runCatching {
-                val control = Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
-                val video = try {
-                    Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
-                } catch (error: Throwable) {
-                    control.close()
-                    throw error
-                }
-                val audio = if (audioEnabled) {
-                    try {
+                coroutineScope {
+                    val controlDeferred = async {
                         Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
+                    }
+                    val videoDeferred = async {
+                        Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
+                    }
+                    val audioDeferred = if (audioEnabled) {
+                        async { Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0) }
+                    } else {
+                        null
+                    }
+                    val control = controlDeferred.await()
+                    val video = try {
+                        videoDeferred.await()
+                    } catch (error: Throwable) {
+                        control.close()
+                        audioDeferred?.cancel()
+                        throw error
+                    }
+                    val audio = try {
+                        audioDeferred?.await()
                     } catch (error: Throwable) {
                         video.close()
                         control.close()
                         throw error
                     }
-                } else {
-                    null
+                    AdbOperationResult.Success(
+                        MirrorConnections(control = control, video = video, audio = audio),
+                    )
                 }
-                AdbOperationResult.Success(
-                    MirrorConnections(control = control, video = video, audio = audio),
-                )
             }.getOrElse { error ->
                 val restored = restoreActiveConnectionLocked()
                 if (!restored) {

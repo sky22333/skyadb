@@ -10,7 +10,7 @@ enum class MirrorQualityPreset(
     ),
     Balanced(
         label = "均衡",
-        options = ScrcpyOptions(maxSize = 1280, maxFps = 30, videoBitRate = 4_000_000),
+        options = ScrcpyOptions(),
     ),
     High(
         label = "高清",

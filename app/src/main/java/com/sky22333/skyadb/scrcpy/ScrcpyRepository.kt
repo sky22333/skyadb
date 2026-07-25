@@ -33,7 +33,7 @@ class ScrcpyRepository(
         qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
         onVideoSize: (Int, Int) -> Unit,
         onStreamError: (Throwable) -> Unit = {},
-    ): AdbOperationResult<ScrcpyDeviceInfo> = withContext(Dispatchers.IO) {
+    ): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         stop()
         val options = qualityPreset.options
         val optionsText = options.diagnosticText()
@@ -66,7 +66,7 @@ class ScrcpyRepository(
                 },
             ).also { session = it }
         }.fold(
-            onSuccess = { AdbOperationResult.Success(it.deviceInfo) },
+            onSuccess = { AdbOperationResult.Success(Unit) },
             onFailure = { error ->
                 stop()
                 DiagnosticLogger.record(
@@ -90,13 +90,7 @@ class ScrcpyRepository(
         runCatching {
             session?.controlClient?.sendTouch(event)
         }.onFailure { error ->
-            DiagnosticLogger.record(
-                module = DiagnosticModule.Mirror,
-                operation = "发送触摸",
-                message = "远程触摸发送失败",
-                suggestion = "镜像连接可能已断开，请重新进入屏幕镜像。",
-                cause = error,
-            )
+            recordControlFailure("发送触摸", "远程触摸发送失败", error)
         }
     }
 
@@ -108,28 +102,26 @@ class ScrcpyRepository(
                 session?.controlClient?.sendKey(keyCode)
             }
         }.onFailure { error ->
-            DiagnosticLogger.record(
-                module = DiagnosticModule.Mirror,
-                operation = "发送按键",
-                message = "远程按键发送失败",
-                suggestion = "镜像连接可能已断开，请重新进入屏幕镜像。",
-                cause = error,
-            )
+            recordControlFailure("发送按键", "远程按键发送失败", error)
         }
     }
 
     fun sendText(text: String) {
         runCatching { session?.controlClient?.sendText(text) }
             .onFailure { error ->
-                DiagnosticLogger.record(
-                    module = DiagnosticModule.Mirror,
-                    operation = "发送文本",
-                    message = "远程文本发送失败",
-                    suggestion = "镜像连接可能已断开，请重新进入屏幕镜像。",
-                    cause = error,
-                )
+                recordControlFailure("发送文本", "远程文本发送失败", error)
             }
     }
+
+    fun setSurface(surface: Surface) {
+        session?.setSurface(surface)
+    }
+
+    fun clearSurface() {
+        session?.clearSurface()
+    }
+
+    fun isRunning(): Boolean = session != null
 
     suspend fun stop() {
         if (!stopping.compareAndSet(false, true)) return
@@ -152,6 +144,16 @@ class ScrcpyRepository(
         } finally {
             stopping.set(false)
         }
+    }
+
+    private fun recordControlFailure(operation: String, message: String, error: Throwable) {
+        DiagnosticLogger.record(
+            module = DiagnosticModule.Mirror,
+            operation = operation,
+            message = message,
+            suggestion = "镜像连接可能已断开，请重新进入屏幕镜像。",
+            cause = error,
+        )
     }
 
     private fun mirrorDiagnosticSuggestion(
