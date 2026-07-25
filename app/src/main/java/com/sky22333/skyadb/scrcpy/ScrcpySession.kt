@@ -7,6 +7,7 @@ import com.flyfishxu.kadb.stream.AdbStream
 import com.sky22333.skyadb.adb.MirrorConnections
 import java.io.EOFException
 import kotlin.random.Random
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,11 +30,18 @@ class ScrcpySession private constructor(
     @Volatile
     private var audioDecoder: ScrcpyAudioDecoder? = null
 
+    @Volatile
+    private var stopping = false
+
     fun start() {
         scope.launch { readServerLogs() }
         scope.launch {
             runCatching { decoder.start() }
-                .onFailure { error -> onError(error, serverLogTail()) }
+                .onFailure { error ->
+                    if (!stopping && error !is CancellationException) {
+                        onError(error, serverLogTail())
+                    }
+                }
         }
         val audioStream = pendingAudioStream ?: return
         scope.launch {
@@ -60,6 +68,7 @@ class ScrcpySession private constructor(
     }
 
     fun stop() {
+        stopping = true
         scope.cancel()
         decoder.stop()
         val audio = audioDecoder

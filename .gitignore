@@ -13,6 +13,5 @@ app/build/
 .tmp/
 .tmp-deps/
 .tmp*/
-.tmp-mr-apk/
 *.apk
 gradle.properties
