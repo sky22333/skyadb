@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -23,10 +25,10 @@ data class AppSettings(
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
 )
 
-enum class ThemeMode(val label: String) {
-    System("系统"),
-    Light("浅色"),
-    Dark("深色"),
+enum class ThemeMode(@param:StringRes val labelRes: Int) {
+    System(R.string.theme_system),
+    Light(R.string.theme_light),
+    Dark(R.string.theme_dark),
 }
 
 class AppSettingsStore(context: Context) {

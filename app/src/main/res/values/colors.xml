@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches Compose light surface to reduce locale-switch flash. -->
+    <color name="window_background">#FFFBFCFF</color>
+</resources>

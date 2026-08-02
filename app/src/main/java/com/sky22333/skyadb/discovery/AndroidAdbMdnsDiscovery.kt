@@ -5,6 +5,8 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import java.util.ArrayDeque
 import java.util.concurrent.Executor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -100,7 +102,7 @@ class AndroidAdbMdnsDiscovery(
             override fun onDiscoveryStopped(serviceType: String) = Unit
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                updateError("自动发现启动失败，可继续使用网段扫描。")
+                updateError(appString(R.string.discovery_start_failed))
                 runCatching { nsdManager.stopServiceDiscovery(this) }
             }
 
@@ -117,7 +119,7 @@ class AndroidAdbMdnsDiscovery(
         runCatching {
             nsdManager.discoverServices(type.nsdType, NsdManager.PROTOCOL_DNS_SD, listener)
         }.onFailure {
-            updateError("自动发现不可用，可继续使用网段扫描。")
+            updateError(appString(R.string.discovery_unavailable))
         }
     }
 
@@ -204,7 +206,7 @@ class AndroidAdbMdnsDiscovery(
         if (host.isNotBlank() && port in 1..65535) {
             addEndpoint(
                 AdbMdnsEndpoint(
-                    name = serviceInfo.serviceName.ifBlank { type.label },
+                    name = serviceInfo.serviceName.ifBlank { appString(type.labelRes) },
                     host = host,
                     port = port,
                     type = type,

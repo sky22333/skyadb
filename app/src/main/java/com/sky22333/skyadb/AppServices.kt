@@ -20,6 +20,9 @@ import com.sky22333.skyadb.usb.UsbOtgActions
 object AppServices {
     private var appContext: Context? = null
 
+    val context: Context
+        get() = requireNotNull(appContext) { "AppServices 尚未初始化 Context" }
+
     val kadbManager: KadbManager by lazy { KadbManager() }
     val fastbootOtgManager: FastbootOtgManager by lazy { FastbootOtgManager() }
     val usbOtgHost: UsbOtgHost by lazy {

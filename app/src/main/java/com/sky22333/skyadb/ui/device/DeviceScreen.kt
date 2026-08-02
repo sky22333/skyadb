@@ -32,13 +32,16 @@ import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
@@ -106,7 +109,7 @@ private fun DeviceContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("设备详情") },
+            title = { Text(stringResource(R.string.device_details_title)) },
             actions = {
                 IconButton(
                     onClick = onRefreshClick,
@@ -121,7 +124,7 @@ private fun DeviceContent(
                     } else {
                         Icon(
                             imageVector = Icons.Outlined.Refresh,
-                            contentDescription = "刷新设备信息",
+                            contentDescription = stringResource(R.string.device_refresh_info_desc),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -153,16 +156,17 @@ private fun DeviceContent(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.Top,
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = uiState.deviceName,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    text = "连接设备后可在下方查看系统信息",
+                                    text = stringResource(R.string.device_connect_hint),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
@@ -173,7 +177,7 @@ private fun DeviceContent(
                 }
             }
 
-            item { SectionHeader(title = "快捷操作") }
+            item { SectionHeader(title = stringResource(R.string.section_quick_actions)) }
             item {
                 QuickActionGrid(
                     sessionKind = uiState.sessionKind,
@@ -192,8 +196,10 @@ private fun DeviceContent(
 
             item {
                 SectionHeader(
-                    title = "系统信息",
-                    description = if (uiState.infoExpanded) "基础信息缺失时会显示为未知" else "点击图标展开查看",
+                    title = stringResource(R.string.section_system_info),
+                    description = stringResource(
+                        if (uiState.infoExpanded) R.string.device_info_expanded_desc else R.string.device_info_collapsed_desc,
+                    ),
                     trailing = {
                         IconButton(
                             onClick = onToggleInfoClick,
@@ -201,7 +207,9 @@ private fun DeviceContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Info,
-                                contentDescription = if (uiState.infoExpanded) "收起系统信息" else "查看系统信息",
+                                contentDescription = stringResource(
+                                    if (uiState.infoExpanded) R.string.device_info_collapse_desc else R.string.device_info_expand_desc,
+                                ),
                                 modifier = Modifier.size(18.dp),
                                 tint = if (uiState.infoExpanded) {
                                     MaterialTheme.colorScheme.primary
@@ -218,13 +226,13 @@ private fun DeviceContent(
                 item {
                     InfoGrid(
                         items = listOf(
-                            "品牌" to uiState.info.brand,
-                            "型号" to uiState.info.model,
-                            "Android 版本" to uiState.info.androidVersion,
+                            stringResource(R.string.device_info_brand) to uiState.info.brand,
+                            stringResource(R.string.device_info_model) to uiState.info.model,
+                            stringResource(R.string.device_info_android_version) to uiState.info.androidVersion,
                             "SDK" to uiState.info.sdk,
                             "ABI" to uiState.info.abi,
-                            "分辨率" to uiState.info.resolution,
-                            "电池" to uiState.info.battery,
+                            stringResource(R.string.device_info_resolution) to uiState.info.resolution,
+                            stringResource(R.string.device_info_battery) to uiState.info.battery,
                         ),
                     )
                 }
@@ -248,7 +256,7 @@ private fun DeviceRefreshStatus(status: OperationStatus) {
             style = MaterialTheme.typography.bodySmall,
         )
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -298,21 +306,22 @@ private fun QuickActionGrid(
     onMirrorClick: () -> Unit,
     onLogsClick: () -> Unit,
 ) {
+    val shellLabel = stringResource(R.string.nav_shell)
     val actions = when (sessionKind) {
         AdbSessionKind.UsbFastboot -> listOf(
-            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
+            QuickActionSpec(shellLabel, Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
         )
         AdbSessionKind.None, AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> listOf(
-            QuickActionSpec("应用管理", Icons.Outlined.Apps, onAppsClick, SharedToolKeys.Apps),
-            QuickActionSpec("本机应用", Icons.Outlined.Apps, onLocalAppsClick, SharedToolKeys.LocalApps),
-            QuickActionSpec("安装 APK", Icons.Outlined.Android, onInstallClick, SharedToolKeys.Install),
-            QuickActionSpec("在线下载", Icons.Outlined.Download, onDownloadClick, SharedToolKeys.Download),
-            QuickActionSpec("文件管理", Icons.Outlined.FolderOpen, onFilesClick, SharedToolKeys.Files),
-            QuickActionSpec("Shell", Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
-            QuickActionSpec("屏幕镜像", Icons.Outlined.Android, onMirrorClick),
-            QuickActionSpec("遥控器", Icons.Outlined.Android, onRemoteClick, SharedToolKeys.Remote),
-            QuickActionSpec("系统日志", Icons.Outlined.Code, onLogsClick, SharedToolKeys.Logs),
-            QuickActionSpec("截图", Icons.Outlined.PhotoCamera, onScreenshotClick, SharedToolKeys.Screenshot),
+            QuickActionSpec(stringResource(R.string.action_apps), Icons.Outlined.Apps, onAppsClick, SharedToolKeys.Apps),
+            QuickActionSpec(stringResource(R.string.nav_local_apps), Icons.Outlined.Apps, onLocalAppsClick, SharedToolKeys.LocalApps),
+            QuickActionSpec(stringResource(R.string.action_install_apk), Icons.Outlined.Android, onInstallClick, SharedToolKeys.Install),
+            QuickActionSpec(stringResource(R.string.action_download_online), Icons.Outlined.Download, onDownloadClick, SharedToolKeys.Download),
+            QuickActionSpec(stringResource(R.string.action_file_manage), Icons.Outlined.FolderOpen, onFilesClick, SharedToolKeys.Files),
+            QuickActionSpec(shellLabel, Icons.Outlined.Code, onShellClick, SharedToolKeys.Shell),
+            QuickActionSpec(stringResource(R.string.action_mirror), Icons.Outlined.Android, onMirrorClick),
+            QuickActionSpec(stringResource(R.string.action_remote), Icons.Outlined.Android, onRemoteClick, SharedToolKeys.Remote),
+            QuickActionSpec(stringResource(R.string.action_system_log), Icons.Outlined.Code, onLogsClick, SharedToolKeys.Logs),
+            QuickActionSpec(stringResource(R.string.nav_screenshot), Icons.Outlined.PhotoCamera, onScreenshotClick, SharedToolKeys.Screenshot),
         )
     }
 

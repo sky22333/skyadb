@@ -4,8 +4,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.files.LocalFileManager
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -41,7 +43,10 @@ class InstallApkViewModel(
             operationStatus = if (name.endsWith(".apk", ignoreCase = true)) {
                 OperationStatus.Idle
             } else {
-                OperationStatus.Failed("文件类型可能不正确", "请选择以 .apk 结尾的安装包文件。")
+                OperationStatus.Failed(
+                    appString(R.string.install_wrong_file_type),
+                    appString(R.string.install_select_apk_hint),
+                )
             },
         )
     }
@@ -51,14 +56,17 @@ class InstallApkViewModel(
         if (uri == null) {
             state.value = state.value.copy(
                 installEnabled = false,
-                operationStatus = OperationStatus.Failed("未选择 APK", "请先选择一个本地 APK 文件。"),
+                operationStatus = OperationStatus.Failed(
+                    appString(R.string.install_no_apk_selected),
+                    appString(R.string.install_select_local_apk_hint),
+                ),
             )
             return
         }
 
         state.value = state.value.copy(
             installEnabled = false,
-            operationStatus = OperationStatus.Running("正在准备 APK 文件"),
+            operationStatus = OperationStatus.Running(appString(R.string.install_preparing)),
         )
 
         viewModelScope.launch {
@@ -68,14 +76,16 @@ class InstallApkViewModel(
                 onSuccess = { file ->
                     try {
                         state.value = state.value.copy(
-                            operationStatus = OperationStatus.Running("正在传输 ${file.name}"),
+                            operationStatus = OperationStatus.Running(
+                                appString(R.string.common_transferring_arg, file.name),
+                            ),
                         )
                         when (
                             val result = adbRepository.install(file) { transferred, total ->
                                 state.value = state.value.copy(
                                     operationStatus = adbTransferRunning(
-                                        transferringLabel = "正在传输 ${file.name}",
-                                        finishingLabel = "正在安装 ${file.name}",
+                                        transferringLabel = appString(R.string.common_transferring_arg, file.name),
+                                        finishingLabel = appString(R.string.common_installing_arg, file.name),
                                         transferred = transferred,
                                         total = total,
                                     ),
@@ -85,7 +95,7 @@ class InstallApkViewModel(
                             is AdbOperationResult.Success -> {
                                 state.value = state.value.copy(
                                     installEnabled = true,
-                                    operationStatus = OperationStatus.Success("APK 安装完成"),
+                                    operationStatus = OperationStatus.Success(appString(R.string.common_apk_install_success)),
                                 )
                             }
                             is AdbOperationResult.Failure -> {
@@ -103,8 +113,8 @@ class InstallApkViewModel(
                     state.value = state.value.copy(
                         installEnabled = true,
                         operationStatus = OperationStatus.Failed(
-                            text = "读取 APK 失败",
-                            suggestion = error.message ?: "请确认文件仍存在，并允许 App 读取该文件。",
+                            text = appString(R.string.install_read_failed),
+                            suggestion = error.message ?: appString(R.string.install_confirm_file_exists),
                         ),
                     )
                 },

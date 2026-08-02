@@ -3,8 +3,10 @@ package com.sky22333.skyadb.ui.logs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -34,7 +36,8 @@ data class SystemLogUiState(
         }
 }
 
-const val LogLevelAll = "全部"
+/** Stable filter sentinel; UI localizes via [R.string.logs_level_all]. */
+const val LogLevelAll = "ALL"
 val LogLineLimits = listOf(100, 300, 1000)
 val LogLevels = listOf(LogLevelAll, "E", "W", "I")
 
@@ -71,7 +74,7 @@ class SystemLogViewModel(
 
         state.value = state.value.copy(
             loading = true,
-            status = OperationStatus.Running("正在读取最近 $limit 行日志"),
+            status = OperationStatus.Running(appString(R.string.logs_reading_recent, limit)),
         )
 
         viewModelScope.launch {
@@ -88,21 +91,23 @@ class SystemLogViewModel(
                         state.value.copy(
                             logs = lines,
                             loading = false,
-                            status = OperationStatus.Success("已读取 ${lines.size} 行日志"),
+                            status = OperationStatus.Success(appString(R.string.logs_read_success, lines.size)),
                         )
                     } else {
                         DiagnosticLogger.record(
                             module = DiagnosticModule.Logs,
                             operation = "读取系统日志",
                             message = "读取系统日志失败",
-                            suggestion = result.data.errorOutput.ifBlank { "请确认目标设备允许读取 logcat。" },
+                            suggestion = result.data.errorOutput.ifBlank {
+                                appString(R.string.logs_confirm_logcat_allowed)
+                            },
                         )
                         state.value.copy(
                             loading = false,
                             status = OperationStatus.Failed(
-                                text = "读取日志失败",
+                                text = appString(R.string.logs_read_failed),
                                 suggestion = result.data.errorOutput.ifBlank {
-                                    "请确认目标设备允许读取 logcat。"
+                                    appString(R.string.logs_confirm_logcat_allowed)
                                 },
                             ),
                         )

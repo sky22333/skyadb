@@ -3,6 +3,8 @@ package com.sky22333.skyadb.discovery
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkAddress
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -18,14 +20,14 @@ class NetworkInfoProvider(
 
         return networkInterfaceAddress()
             ?.let { address ->
-                ScanRangeParser.subnetForLocalAddress(address, sourceLabel = "当前网络")
+                ScanRangeParser.subnetForLocalAddress(address, sourceLabelRes = R.string.discovery_source_current_network)
             }
             ?.let(::listOf)
             .orEmpty()
     }
 
-    fun subnetForHost(host: String, sourceLabel: String): LocalNetwork? {
-        return ScanRangeParser.subnetForHost(host, sourceLabel)
+    fun subnetForHost(host: String, @StringRes sourceLabelRes: Int): LocalNetwork? {
+        return ScanRangeParser.subnetForHost(host, sourceLabelRes)
     }
 
     private fun activeLinkRanges(): List<LocalNetwork> {
@@ -43,7 +45,7 @@ class NetworkInfoProvider(
     private fun LinkAddress.toLocalNetwork(): LocalNetwork? {
         return ScanRangeParser.subnetForLocalAddress(
             address = address.hostAddress.orEmpty(),
-            sourceLabel = "当前网络",
+            sourceLabelRes = R.string.discovery_source_current_network,
         )
     }
 
@@ -56,7 +58,7 @@ class NetworkInfoProvider(
                 .filterIsInstance<Inet4Address>()
                 .map { it.hostAddress.orEmpty() }
                 .firstOrNull { address ->
-                    ScanRangeParser.subnetForLocalAddress(address, sourceLabel = "当前网络") != null
+                    ScanRangeParser.subnetForLocalAddress(address, sourceLabelRes = R.string.discovery_source_current_network) != null
                 }
         }.getOrNull()
     }

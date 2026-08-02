@@ -3,7 +3,9 @@ package com.sky22333.skyadb.ui.device
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
@@ -15,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class DeviceUiState(
-    val deviceName: String = "未选择设备",
+    val deviceName: String = appString(R.string.device_no_device_selected),
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val sessionKind: AdbSessionKind = AdbSessionKind.None,
     val info: DeviceInfo = DeviceInfo(),
@@ -48,7 +50,7 @@ class DeviceViewModel(
                     )
                 } else {
                     state.value = state.value.copy(
-                        deviceName = "未选择设备",
+                        deviceName = appString(R.string.device_no_device_selected),
                         connectionState = ConnectionState.Disconnected,
                         sessionKind = AdbSessionKind.None,
                         info = DeviceInfo(),
@@ -67,7 +69,7 @@ class DeviceViewModel(
     fun refreshDeviceInfo() {
         state.value = state.value.copy(
             refreshing = true,
-            refreshStatus = OperationStatus.Running("正在刷新设备信息"),
+            refreshStatus = OperationStatus.Running(appString(R.string.device_refreshing)),
         )
         viewModelScope.launch {
             when (val result = adbRepository.refreshDeviceInfo()) {
@@ -75,7 +77,7 @@ class DeviceViewModel(
                     state.value = state.value.copy(
                         refreshing = false,
                         info = result.data,
-                        refreshStatus = OperationStatus.Success("设备信息已更新"),
+                        refreshStatus = OperationStatus.Success(appString(R.string.device_refresh_success)),
                     )
                 }
                 is AdbOperationResult.Failure -> {

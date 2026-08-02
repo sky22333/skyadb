@@ -6,8 +6,10 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.adbTransferRunning
 import com.sky22333.skyadb.files.LocalFileManager
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.model.RemoteFileEntry
@@ -73,7 +75,7 @@ data class FileTransferUiState(
                 return active.entries.firstOrNull { it.path in pendingDeletePaths }?.name
                     ?: pendingDeletePaths.first().substringAfterLast('/').substringAfterLast('\\')
             }
-            return "${pendingDeletePaths.size} 项"
+            return appString(R.string.files_items_count, pendingDeletePaths.size)
         }
 }
 
@@ -204,11 +206,11 @@ class FileTransferViewModel(
         val pane = state.value.activePane
         val raw = state.value.jumpInput.trim()
         if (raw.isBlank()) {
-            state.value = state.value.copy(jumpError = "路径不能为空")
+            state.value = state.value.copy(jumpError = appString(R.string.files_path_empty))
             return
         }
         if (pane == FilePaneId.Remote) {
-            val error = DevicePathValidator.pathError(raw)
+            val error = DevicePathValidator.pathError(raw)?.resolve(AppServices.context)
             if (error != null) {
                 state.value = state.value.copy(jumpError = error)
                 return
@@ -229,14 +231,19 @@ class FileTransferViewModel(
     fun createFolder(name: String) {
         val safeName = name.trim()
         if (safeName.isBlank() || safeName.contains('/') || safeName.contains('\\')) {
-            publishStatus(OperationStatus.Failed("无法新建文件夹", "名称不能为空，也不能包含路径分隔符。"))
+            publishStatus(
+                OperationStatus.Failed(
+                    appString(R.string.files_cannot_create_folder),
+                    appString(R.string.files_folder_name_invalid),
+                ),
+            )
             return
         }
         val pane = state.value.activePane
         val parent = state.value.active.path
         state.value = state.value.copy(
             newFolderDialogVisible = false,
-            operationStatus = OperationStatus.Running("正在新建 $safeName"),
+            operationStatus = OperationStatus.Running(appString(R.string.files_creating_folder, safeName)),
         )
         viewModelScope.launch {
             when (pane) {
@@ -246,12 +253,15 @@ class FileTransferViewModel(
                     }
                     result.fold(
                         onSuccess = {
-                            publishStatus(OperationStatus.Success("文件夹已创建"))
+                            publishStatus(OperationStatus.Success(appString(R.string.files_folder_created)))
                             loadPane(FilePaneId.Local, parent)
                         },
                         onFailure = { error ->
                             publishStatus(
-                                OperationStatus.Failed("新建失败", error.message ?: "请确认目录可写。"),
+                                OperationStatus.Failed(
+                                    appString(R.string.files_create_failed),
+                                    error.message ?: appString(R.string.files_confirm_dir_writable),
+                                ),
                             )
                         },
                     )
@@ -259,7 +269,7 @@ class FileTransferViewModel(
                 FilePaneId.Remote -> {
                     when (val result = adbRepository.makeDirectory(buildRemotePath(parent, safeName))) {
                         is AdbOperationResult.Success -> {
-                            publishStatus(OperationStatus.Success("文件夹已创建"))
+                            publishStatus(OperationStatus.Success(appString(R.string.files_folder_created)))
                             loadPane(FilePaneId.Remote, parent)
                         }
                         is AdbOperationResult.Failure -> {
@@ -273,7 +283,12 @@ class FileTransferViewModel(
 
     fun showRenameDialog() {
         val entry = state.value.selectedEntries.singleOrNull() ?: run {
-            publishStatus(OperationStatus.Failed("无法重命名", "请先选中恰好 1 个项目。"))
+            publishStatus(
+                OperationStatus.Failed(
+                    appString(R.string.files_cannot_rename),
+                    appString(R.string.files_select_exactly_one),
+                ),
+            )
             return
         }
         state.value = state.value.copy(
@@ -296,7 +311,7 @@ class FileTransferViewModel(
         val entry = state.value.selectedEntries.singleOrNull() ?: return
         val newName = state.value.renameInput.trim()
         if (newName.isBlank() || newName.contains('/') || newName.contains('\\')) {
-            state.value = state.value.copy(renameError = "名称不能为空，也不能包含路径分隔符")
+            state.value = state.value.copy(renameError = appString(R.string.files_rename_name_invalid))
             return
         }
         if (newName == entry.name) {
@@ -307,7 +322,7 @@ class FileTransferViewModel(
         val parent = state.value.active.path
         state.value = state.value.copy(
             renameDialogVisible = false,
-            operationStatus = OperationStatus.Running("正在重命名"),
+            operationStatus = OperationStatus.Running(appString(R.string.files_renaming)),
         )
         viewModelScope.launch {
             when (pane) {
@@ -317,13 +332,16 @@ class FileTransferViewModel(
                     }
                     result.fold(
                         onSuccess = {
-                            publishStatus(OperationStatus.Success("已重命名为 $newName"))
+                            publishStatus(OperationStatus.Success(appString(R.string.files_renamed_to, newName)))
                             state.value = state.value.copy(selectedPaths = emptySet())
                             loadPane(FilePaneId.Local, parent)
                         },
                         onFailure = { error ->
                             publishStatus(
-                                OperationStatus.Failed("重命名失败", error.message ?: "请确认名称可用。"),
+                                OperationStatus.Failed(
+                                    appString(R.string.error_rename_failed),
+                                    error.message ?: appString(R.string.files_confirm_name_available),
+                                ),
                             )
                         },
                     )
@@ -331,7 +349,7 @@ class FileTransferViewModel(
                 FilePaneId.Remote -> {
                     when (val result = adbRepository.renameFile(entry.path, newName)) {
                         is AdbOperationResult.Success -> {
-                            publishStatus(OperationStatus.Success("已重命名为 $newName"))
+                            publishStatus(OperationStatus.Success(appString(R.string.files_renamed_to, newName)))
                             state.value = state.value.copy(selectedPaths = emptySet())
                             loadPane(FilePaneId.Remote, parent)
                         }
@@ -368,7 +386,7 @@ class FileTransferViewModel(
         state.value = state.value.copy(
             pendingDeletePaths = emptySet(),
             selectedPaths = emptySet(),
-            operationStatus = OperationStatus.Running("正在删除 ${paths.size} 项"),
+            operationStatus = OperationStatus.Running(appString(R.string.files_deleting_count, paths.size)),
         )
         viewModelScope.launch {
             var failed: String? = null
@@ -396,9 +414,9 @@ class FileTransferViewModel(
                 }
             }
             if (failed == null) {
-                publishStatus(OperationStatus.Success("已删除 ${entries.size} 项"))
+                publishStatus(OperationStatus.Success(appString(R.string.files_deleted_count, entries.size)))
             } else {
-                publishStatus(OperationStatus.Failed("删除未完成", failed))
+                publishStatus(OperationStatus.Failed(appString(R.string.files_delete_incomplete), failed))
             }
             loadPane(pane, parentPath)
         }
@@ -408,7 +426,12 @@ class FileTransferViewModel(
         val current = state.value
         val files = current.selectedFiles
         if (files.isEmpty()) {
-            publishStatus(OperationStatus.Failed("未选择文件", "点选一个或多个文件，再传到对面。"))
+            publishStatus(
+                OperationStatus.Failed(
+                    appString(R.string.files_no_file_selected),
+                    appString(R.string.files_select_files_hint),
+                ),
+            )
             return
         }
         transferJob?.cancel()
@@ -420,7 +443,7 @@ class FileTransferViewModel(
                             ensureActive()
                             pushLocalFile(entry, current.remote.path, index + 1, files.size)
                         }
-                        publishStatus(OperationStatus.Success("已上传 ${files.size} 个文件"))
+                        publishStatus(OperationStatus.Success(appString(R.string.files_uploaded_count, files.size)))
                         state.value = state.value.copy(selectedPaths = emptySet())
                         loadPane(FilePaneId.Remote, current.remote.path)
                     }
@@ -429,18 +452,18 @@ class FileTransferViewModel(
                             ensureActive()
                             pullRemoteFile(entry, current.local.path, index + 1, files.size)
                         }
-                        publishStatus(OperationStatus.Success("已下载 ${files.size} 个文件"))
+                        publishStatus(OperationStatus.Success(appString(R.string.files_downloaded_count, files.size)))
                         state.value = state.value.copy(selectedPaths = emptySet())
                         loadPane(FilePaneId.Local, current.local.path)
                     }
                 }
             } catch (_: CancellationException) {
-                publishStatus(OperationStatus.Success("已取消传输"))
+                publishStatus(OperationStatus.Success(appString(R.string.files_transfer_canceled)))
             } catch (error: Throwable) {
                 publishStatus(
                     OperationStatus.Failed(
-                        "传输中断",
-                        error.message ?: "请检查连接与目标路径后重试。",
+                        appString(R.string.files_transfer_interrupted),
+                        error.message ?: appString(R.string.files_check_connection_hint),
                     ),
                 )
             }
@@ -458,14 +481,21 @@ class FileTransferViewModel(
         totalCount: Int,
     ) {
         val localFile = File(entry.path)
-        if (!localFile.isFile) error("本地文件不存在：${entry.name}")
+        if (!localFile.isFile) error(appString(R.string.files_local_file_missing, entry.name))
         val remotePath = buildRemotePath(remoteDir, entry.name)
         state.value = state.value.copy(
-            operationStatus = OperationStatus.Running("上传 $index/$totalCount · ${entry.name}"),
+            operationStatus = OperationStatus.Running(
+                appString(R.string.files_uploading_progress, index, totalCount, entry.name),
+            ),
         )
         when (
             val result = adbRepository.push(localFile, remotePath) { transferred, total ->
-                emitTransferProgress("上传 $index/$totalCount", "完成 $index/$totalCount", transferred, total)
+                emitTransferProgress(
+                    appString(R.string.files_uploading_short, index, totalCount),
+                    appString(R.string.files_upload_finishing, index, totalCount),
+                    transferred,
+                    total,
+                )
             }
         ) {
             is AdbOperationResult.Success -> Unit
@@ -481,7 +511,9 @@ class FileTransferViewModel(
     ) {
         val dest = File(localDir, entry.name)
         state.value = state.value.copy(
-            operationStatus = OperationStatus.Running("下载 $index/$totalCount · ${entry.name}"),
+            operationStatus = OperationStatus.Running(
+                appString(R.string.files_downloading_progress, index, totalCount, entry.name),
+            ),
         )
         withContext(Dispatchers.IO) { dest.parentFile?.mkdirs() }
         when (val result = adbRepository.pull(entry.path, dest)) {
@@ -558,8 +590,8 @@ class FileTransferViewModel(
                                 needsStoragePermission = needsPermission,
                                 operationStatus = if (state.value.activePane == FilePaneId.Local) {
                                     OperationStatus.Failed(
-                                        "无法读取本机目录",
-                                        error.message ?: "请授予存储权限。",
+                                        appString(R.string.files_cannot_read_local_dir),
+                                        error.message ?: appString(R.string.files_grant_storage_permission),
                                     )
                                 } else {
                                     state.value.operationStatus

@@ -1,5 +1,7 @@
 package com.sky22333.skyadb.ui.remote
 
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.AppText
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -16,7 +18,7 @@ class RemoteKeyTest {
         val error = "java.lang.SecurityException: Injecting input events requires INJECT_EVENTS permission"
 
         assertEquals(
-            "目标设备禁止 ADB 按键控制，请检查开发者选项中的安全调试设置。",
+            AppText.Res(R.string.remote_key_control_blocked),
             error.toRemoteInputSuggestion(),
         )
     }

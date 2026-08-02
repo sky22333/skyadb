@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import java.io.File
 import java.io.FileInputStream
 import java.util.Locale
@@ -38,9 +40,9 @@ class LocalAppExporter(
     }
 
     suspend fun exportSingleApk(app: LocalInstalledApp): File = withContext(Dispatchers.IO) {
-        require(app.installable) { "该应用不是可导出的单 APK 安装包" }
+        require(app.installable) { appString(R.string.localapps_not_exportable) }
         val source = File(app.sourcePath)
-        require(source.isFile && source.canRead()) { "无法读取该应用安装包" }
+        require(source.isFile && source.canRead()) { appString(R.string.localapps_cannot_read_apk) }
 
         val targetDir = File(context.cacheDir, "exported-apps")
         targetDir.mkdirs()

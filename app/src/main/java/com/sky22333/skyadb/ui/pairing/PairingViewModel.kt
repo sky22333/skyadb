@@ -3,7 +3,9 @@ package com.sky22333.skyadb.ui.pairing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.discovery.AdbMdnsDiscovery
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -69,7 +71,7 @@ class PairingViewModel(
             pairEnabled = validation.isValid,
             readyToConnect = false,
             connectPort = null,
-            operationStatus = OperationStatus.Success("已填入自动发现的配对地址，请输入 6 位配对码。"),
+            operationStatus = OperationStatus.Success(appString(R.string.pairing_autofill_hint)),
         )
     }
 
@@ -85,8 +87,8 @@ class PairingViewModel(
                 readyToConnect = false,
                 connectPort = null,
                 operationStatus = OperationStatus.Failed(
-                    text = "无法发起配对",
-                    suggestion = "请检查配对 IP、配对端口和 6 位配对码是否正确。",
+                    text = appString(R.string.pairing_cannot_start),
+                    suggestion = appString(R.string.pairing_check_fields),
                 ),
             )
             return
@@ -100,7 +102,9 @@ class PairingViewModel(
             pairEnabled = false,
             readyToConnect = false,
             connectPort = null,
-            operationStatus = OperationStatus.Running("正在配对 ${current.ip}:${current.pairingPort}"),
+            operationStatus = OperationStatus.Running(
+                appString(R.string.pairing_pairing_with, current.ip, current.pairingPort),
+            ),
         )
 
         pairJob = viewModelScope.launch {
@@ -113,7 +117,7 @@ class PairingViewModel(
             ) {
                 is AdbOperationResult.Success -> {
                     state.value = state.value.copy(
-                        operationStatus = OperationStatus.Running("正在查找连接端口…"),
+                        operationStatus = OperationStatus.Running(appString(R.string.pairing_finding_port)),
                     )
                     val connectPort = mdnsDiscovery.findConnectPort(current.ip)
                     state.value = state.value.copy(
@@ -121,11 +125,9 @@ class PairingViewModel(
                         readyToConnect = true,
                         connectPort = connectPort,
                         operationStatus = if (connectPort != null) {
-                            OperationStatus.Success("配对成功，已找到连接端口 $connectPort。")
+                            OperationStatus.Success(appString(R.string.pairing_success_port_found, connectPort))
                         } else {
-                            OperationStatus.Success(
-                                "配对成功。未自动发现连接端口，请确认无线调试页的「IP 地址与端口」后连接。",
-                            )
+                            OperationStatus.Success(appString(R.string.pairing_success_no_port))
                         },
                     )
                 }
@@ -166,12 +168,13 @@ class PairingViewModel(
     }
 
     private fun validateForm(ip: String, pairingPort: String, pairingCode: String): PairingValidationResult {
-        val ipError = NetworkInputValidator.ipv4Error(ip)
-        val portError = NetworkInputValidator.portError(pairingPort, label = "配对端口")
+        val ipError = NetworkInputValidator.ipv4Error(ip)?.let(::appString)
+        val portError = NetworkInputValidator.portError(pairingPort, labelRes = R.string.pairing_port_label)
+            ?.resolve(AppServices.context)
 
         val codeError = when {
             pairingCode.isBlank() -> null
-            pairingCode.length != 6 -> "配对码通常为 6 位数字"
+            pairingCode.length != 6 -> appString(R.string.pairing_code_length_hint)
             else -> null
         }
 

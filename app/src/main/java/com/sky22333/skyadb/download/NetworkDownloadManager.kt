@@ -1,6 +1,9 @@
 package com.sky22333.skyadb.download
 
 import android.content.Context
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
+import com.sky22333.skyadb.validation.DownloadInputValidator
 import java.io.File
 import java.net.URLDecoder
 import java.util.Locale
@@ -10,7 +13,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import com.sky22333.skyadb.validation.DownloadInputValidator
 
 class NetworkDownloadManager(
     private val context: Context? = null,
@@ -39,8 +41,8 @@ class NetworkDownloadManager(
 
         if (!validateUrl(url)) {
             return@withContext DownloadResult.Failure(
-                message = "下载链接无效",
-                suggestion = "请输入以 http:// 或 https:// 开头的下载链接。",
+                message = appString(R.string.download_invalid_url),
+                suggestion = appString(R.string.download_invalid_url_suggestion),
             )
         }
 
@@ -49,8 +51,8 @@ class NetworkDownloadManager(
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     return@withContext DownloadResult.Failure(
-                        message = "下载失败",
-                        suggestion = "服务器返回 ${response.code}，请检查链接是否可访问。",
+                        message = appString(R.string.download_failed),
+                        suggestion = appString(R.string.download_failed_server_code_suggestion, response.code),
                     )
                 }
 
@@ -103,9 +105,9 @@ class NetworkDownloadManager(
                                             progress = progress,
                                             state = DownloadState.Downloading,
                                             message = if (totalBytes > 0L) {
-                                                "已下载 ${(progress * 100).toInt()}%"
+                                                appString(R.string.download_progress_percent, (progress * 100).toInt())
                                             } else {
-                                                "正在下载 ${formatBytes(downloadedBytes)}"
+                                                appString(R.string.download_progress_bytes, formatBytes(downloadedBytes))
                                             },
                                         ),
                                     )
@@ -125,7 +127,7 @@ class NetworkDownloadManager(
                         localPath = targetFile.absolutePath,
                         progress = 1f,
                         state = DownloadState.Downloading,
-                        message = "下载完成",
+                        message = appString(R.string.download_complete),
                     ),
                 )
 
@@ -137,8 +139,8 @@ class NetworkDownloadManager(
         }.getOrElse { error ->
             if (error is CancellationException) throw error
             DownloadResult.Failure(
-                message = "下载失败",
-                suggestion = "请检查网络连接、下载链接和存储空间后重试。",
+                message = appString(R.string.download_failed),
+                suggestion = appString(R.string.download_failed_generic_suggestion),
                 cause = error,
             )
         }

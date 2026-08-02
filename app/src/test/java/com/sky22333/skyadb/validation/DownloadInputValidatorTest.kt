@@ -1,5 +1,6 @@
 package com.sky22333.skyadb.validation
 
+import com.sky22333.skyadb.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -24,7 +25,7 @@ class DownloadInputValidatorTest {
         assertNull(DownloadInputValidator.urlError("https://example.com/app.apk", requireApk = true))
         assertNull(DownloadInputValidator.urlError("https://example.com/app.apk?token=abc", requireApk = true))
         assertEquals(
-            "APK 下载链接建议以 .apk 结尾",
+            R.string.error_url_apk_suffix,
             DownloadInputValidator.urlError("https://example.com/download?id=1", requireApk = true),
         )
     }
@@ -32,7 +33,7 @@ class DownloadInputValidatorTest {
     @Test
     fun urlError_rejectsNonHttpUrl() {
         assertEquals(
-            "请输入以 http:// 或 https:// 开头的链接",
+            R.string.error_url_scheme,
             DownloadInputValidator.urlError("ftp://example.com/file.apk"),
         )
     }

@@ -5,10 +5,11 @@ import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.data.AppSettingsStore
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
-import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
 import com.sky22333.skyadb.scrcpy.MirrorTouchEvent
 import com.sky22333.skyadb.scrcpy.ScrcpyRepository
 import kotlinx.coroutines.CoroutineScope
@@ -24,10 +25,8 @@ import kotlinx.coroutines.launch
 
 data class MirrorUiState(
     val status: OperationStatus = OperationStatus.Idle,
-    val deviceName: String = "屏幕镜像",
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
-    val qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
 )
 
 class MirrorViewModel(
@@ -41,27 +40,48 @@ class MirrorViewModel(
     private val controlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val controlCommands = Channel<ControlCommand>(Channel.UNLIMITED)
     private var started = false
+    private var latestSurface: Surface? = null
 
     init {
         controlScope.launch { processControlCommands() }
-        viewModelScope.launch {
-            settingsStore.settings.collect { settings ->
-                state.value = state.value.copy(qualityPreset = settings.mirrorQualityPreset)
-            }
-        }
     }
 
-    fun start(surface: Surface) {
+    fun onSurfaceCreated(surface: Surface) {
+        latestSurface = surface
+        if (repository.isRunning()) {
+            repository.setSurface(surface)
+            return
+        }
+        if (started) return
+        start(surface)
+    }
+
+    fun onSurfaceDestroyed() {
+        latestSurface = null
+        repository.clearSurface()
+    }
+
+    private fun start(surface: Surface) {
         if (started) return
         started = true
-        state.value = state.value.copy(status = OperationStatus.Running("正在启动屏幕镜像"))
+        state.value = state.value.copy(status = OperationStatus.Running(appString(R.string.mirror_starting)))
         viewModelScope.launch {
             val qualityPreset = settingsStore.settings.first().mirrorQualityPreset
-            if (!started || !surface.isValid) return@launch
-            state.value = state.value.copy(qualityPreset = qualityPreset)
+            if (!started) return@launch
+            val launchSurface = latestSurface?.takeIf { it.isValid } ?: surface
+            if (!launchSurface.isValid) {
+                started = false
+                state.value = state.value.copy(
+                    status = OperationStatus.Failed(
+                        appString(R.string.scrcpy_start_failed),
+                        appString(R.string.mirror_invalid_surface),
+                    ),
+                )
+                return@launch
+            }
             when (
                 val result = repository.start(
-                    surface = surface,
+                    surface = launchSurface,
                     qualityPreset = qualityPreset,
                     onVideoSize = { width, height ->
                         state.value = state.value.copy(videoWidth = width, videoHeight = height)
@@ -70,18 +90,16 @@ class MirrorViewModel(
                         started = false
                         state.value = state.value.copy(
                             status = OperationStatus.Failed(
-                                text = "屏幕镜像已断开",
-                                suggestion = error.message ?: "请重新进入屏幕镜像。",
+                                text = appString(R.string.mirror_disconnected),
+                                suggestion = error.message ?: appString(R.string.mirror_reenter_hint),
                             ),
                         )
                     },
                 )
             ) {
                 is AdbOperationResult.Success -> {
-                    state.value = state.value.copy(
-                        status = OperationStatus.Success("正在镜像"),
-                        deviceName = result.data.name,
-                    )
+                    latestSurface?.takeIf { it.isValid }?.let { repository.setSurface(it) }
+                    state.value = state.value.copy(status = OperationStatus.Success(appString(R.string.mirror_active)))
                 }
                 is AdbOperationResult.Failure -> {
                     started = false
@@ -107,18 +125,16 @@ class MirrorViewModel(
         controlCommands.trySend(ControlCommand.Text(text))
     }
 
-    fun detachSurface() {
-        stop()
-    }
-
     fun stop() {
         started = false
+        latestSurface = null
         state.value = MirrorUiState()
         repository.requestStop()
     }
 
     override fun onCleared() {
         started = false
+        latestSurface = null
         controlCommands.close()
         controlScope.cancel()
         repository.requestStop()

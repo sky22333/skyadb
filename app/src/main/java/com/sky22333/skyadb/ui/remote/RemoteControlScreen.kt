@@ -40,10 +40,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
@@ -79,9 +81,9 @@ private fun RemoteControlContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("虚拟遥控器")
+                    Text(stringResource(R.string.remote_title))
                     Text(
-                        "发送物理按键到目标设备",
+                        stringResource(R.string.remote_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -89,7 +91,7 @@ private fun RemoteControlContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -106,7 +108,7 @@ private fun RemoteControlContent(
         ) {
             item { RemoteStatus(status = uiState.status) }
 
-            item { SectionHeader(title = "常用操作") }
+            item { SectionHeader(title = stringResource(R.string.remote_common_actions)) }
 
             item {
                 KeyGrid(
@@ -121,14 +123,14 @@ private fun RemoteControlContent(
 
             item {
                 SectionHeader(
-                    title = "方向键",
-                    description = "适合电视、盒子和无触控设备",
+                    title = stringResource(R.string.remote_dpad_title),
+                    description = stringResource(R.string.remote_dpad_desc),
                 )
             }
 
             item { DpadCard(onKeyClick = onKeyClick) }
 
-            item { SectionHeader(title = "音量控制") }
+            item { SectionHeader(title = stringResource(R.string.remote_volume_title)) }
 
             item {
                 KeyGrid(
@@ -141,7 +143,7 @@ private fun RemoteControlContent(
                 )
             }
 
-            item { SectionHeader(title = "媒体控制") }
+            item { SectionHeader(title = stringResource(R.string.remote_media_title)) }
 
             item {
                 KeyGrid(
@@ -154,7 +156,7 @@ private fun RemoteControlContent(
                 )
             }
 
-            item { SectionHeader(title = "电源") }
+            item { SectionHeader(title = stringResource(R.string.remote_power_title)) }
 
             item {
                 KeyGrid(
@@ -208,7 +210,7 @@ private fun DpadCard(onKeyClick: (RemoteKey) -> Unit) {
                     shape = RoundedCornerShape(28.dp),
                 ) {
                     Text(
-                        text = RemoteKey.Center.label,
+                        text = stringResource(RemoteKey.Center.labelRes),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
@@ -247,11 +249,11 @@ private fun KeyGrid(
                     ) {
                         Icon(
                             imageVector = action.icon,
-                            contentDescription = action.key.label,
+                            contentDescription = stringResource(action.key.labelRes),
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(action.key.label)
+                        Text(stringResource(action.key.labelRes))
                     }
                 }
 
@@ -276,7 +278,7 @@ private fun RemoteIconButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = key.label,
+            contentDescription = stringResource(key.labelRes),
             modifier = Modifier.size(26.dp),
         )
     }
@@ -298,7 +300,7 @@ private fun RemoteStatus(status: OperationStatus) {
         )
 
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }

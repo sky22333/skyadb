@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,12 +40,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
@@ -85,13 +90,13 @@ fun HomeScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(text = "设备连接") },
+            title = { Text(text = stringResource(R.string.home_title)) },
             actions = {
                 if (uiState.canDisconnect) {
                     IconButton(onClick = viewModel::onDisconnectClicked) {
                         Icon(
                             imageVector = Icons.Outlined.LinkOff,
-                            contentDescription = "断开连接",
+                            contentDescription = stringResource(R.string.action_disconnect),
                         )
                     }
                 }
@@ -170,7 +175,7 @@ private fun UsbOtgConnectCard(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Refresh,
-                            contentDescription = "刷新 USB 设备",
+                            contentDescription = stringResource(R.string.home_refresh_usb_desc),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -178,7 +183,7 @@ private fun UsbOtgConnectCard(
             )
 
             if (attachments.isEmpty()) {
-                EmptyState(title = "未检测到设备")
+                EmptyState(title = stringResource(R.string.home_no_usb_devices))
             } else {
                 attachments.forEach { attachment ->
                     UsbOtgDeviceRow(
@@ -228,7 +233,9 @@ private fun UsbOtgDeviceRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = if (attachment.hasPermission) "已授权" else "待授权",
+                    text = stringResource(
+                        if (attachment.hasPermission) R.string.device_authorized else R.string.device_unauthorized,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -239,7 +246,7 @@ private fun UsbOtgDeviceRow(
             ) {
                 Icon(imageVector = Icons.Outlined.Cable, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = if (connecting) "连接中…" else "连接")
+                Text(text = stringResource(if (connecting) R.string.action_connecting else R.string.action_connect))
             }
         }
     }
@@ -270,13 +277,13 @@ private fun ManualConnectCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "手动连接")
+            SectionHeader(title = stringResource(R.string.home_manual_connect_title))
 
             OutlinedTextField(
                 value = ip,
                 onValueChange = onIpChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("IP 地址") },
+                label = { Text(stringResource(R.string.home_ip_label)) },
                 singleLine = true,
                 placeholder = { Text("192.168.1.86") },
                 isError = ipError != null,
@@ -286,7 +293,7 @@ private fun ManualConnectCard(
                 value = port,
                 onValueChange = onPortChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("端口") },
+                label = { Text(stringResource(R.string.unit_port)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = portError != null,
@@ -302,7 +309,7 @@ private fun ManualConnectCard(
             ) {
                 Icon(imageVector = Icons.Outlined.AddLink, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "连接")
+                Text(text = stringResource(R.string.action_connect))
             }
 
             Row(
@@ -311,7 +318,10 @@ private fun ManualConnectCard(
             ) {
                 TextButton(
                     onClick = onPairingClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Key,
@@ -319,11 +329,19 @@ private fun ManualConnectCard(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("无线配对")
+                    Text(
+                        text = stringResource(R.string.action_wireless_pairing),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Start,
+                    )
                 }
                 TextButton(
                     onClick = onDiscoveryClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Search,
@@ -331,7 +349,12 @@ private fun ManualConnectCard(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("发现设备")
+                    Text(
+                        text = stringResource(R.string.action_discover_devices),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Start,
+                    )
                 }
             }
         }
@@ -397,10 +420,10 @@ private fun RecentDevicesCard(
             modifier = Modifier.padding(AppDimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SectionHeader(title = "最近设备")
+            SectionHeader(title = stringResource(R.string.home_recent_devices_title))
 
             if (devices.isEmpty()) {
-                EmptyState(title = "暂无历史设备")
+                EmptyState(title = stringResource(R.string.home_no_recent_devices))
             } else {
                 devices.forEach { device ->
                     RecentDeviceRow(

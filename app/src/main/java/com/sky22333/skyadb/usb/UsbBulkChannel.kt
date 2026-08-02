@@ -4,6 +4,8 @@ import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
 import java.io.Closeable
 import java.io.IOException
 
@@ -18,7 +20,7 @@ class UsbBulkChannel(
 
     init {
         if (!connection.claimInterface(usbInterface, true)) {
-            throw IOException("无法占用 USB 接口")
+            throw IOException(appString(R.string.usb_claim_interface_failed))
         }
         var input: UsbEndpoint? = null
         var output: UsbEndpoint? = null
@@ -33,7 +35,7 @@ class UsbBulkChannel(
         }
         if (input == null || output == null) {
             connection.releaseInterface(usbInterface)
-            throw IOException("未找到 USB Bulk 端点")
+            throw IOException(appString(R.string.usb_bulk_endpoint_not_found))
         }
         endpointIn = input
         endpointOut = output
@@ -62,7 +64,7 @@ class UsbBulkChannel(
                 ioTimeoutMs,
             )
             if (transferred <= 0) {
-                throw IOException("USB 写入失败：$transferred")
+                throw IOException(appString(R.string.usb_write_failed, transferred))
             }
             written += transferred
         }

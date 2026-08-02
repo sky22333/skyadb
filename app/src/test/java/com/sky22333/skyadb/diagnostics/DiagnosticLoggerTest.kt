@@ -1,7 +1,7 @@
 package com.sky22333.skyadb.diagnostics
 
+import com.sky22333.skyadb.R
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticLoggerTest {
@@ -42,21 +42,17 @@ class DiagnosticLoggerTest {
     }
 
     @Test
-    fun formatter_includesUsefulFields() {
-        val text = DiagnosticFormatter.format(
-            DiagnosticLog(
-                id = 1,
-                timeMillis = 0,
-                module = DiagnosticModule.Files,
-                operation = "删除文件",
-                target = "/sdcard/Pictures/a.png",
-                message = "text file busy",
-                suggestion = "关闭占用文件的应用后重试",
-            ),
-        )
+    fun module_exposesLocalizedLabelResource() {
+        assertEquals(R.string.diagnostic_module_files, DiagnosticModule.Files.labelRes)
+        assertEquals(R.string.diagnostic_module_wifi_adb, DiagnosticModule.WifiAdb.labelRes)
+        assertEquals(R.string.diagnostic_module_app, DiagnosticModule.App.labelRes)
+    }
 
-        assertTrue(text.contains("文件"))
-        assertTrue(text.contains("删除文件"))
-        assertTrue(text.contains("text file busy"))
+    @Test
+    fun formatTime_usesStandardDateTimePattern() {
+        val formatted = DiagnosticFormatter.formatTime(0)
+
+        assertEquals(10, formatted.indexOf(' '))
+        assertEquals(19, formatted.length)
     }
 }

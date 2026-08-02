@@ -4,9 +4,12 @@ import android.content.Context
 import android.view.Surface
 import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.stream.AdbStream
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.MirrorConnections
+import com.sky22333.skyadb.i18n.appString
 import java.io.EOFException
 import kotlin.random.Random
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,38 +22,70 @@ import kotlinx.coroutines.withContext
 class ScrcpySession private constructor(
     private val serverStream: AdbStream,
     private val controlStream: AdbStream,
-    private val audioDecoder: ScrcpyAudioDecoder?,
-    val deviceInfo: ScrcpyDeviceInfo,
+    private val pendingAudioStream: AdbStream?,
     val controlClient: ScrcpyControlClient,
     private val decoder: ScrcpyVideoDecoder,
     private val scope: CoroutineScope,
     private val logLines: ArrayDeque<String>,
     private val onError: (Throwable, String) -> Unit,
 ) {
+    @Volatile
+    private var audioDecoder: ScrcpyAudioDecoder? = null
+
+    @Volatile
+    private var stopping = false
+
     fun start() {
         scope.launch { readServerLogs() }
         scope.launch {
             runCatching { decoder.start() }
-                .onFailure { error -> onError(error, serverLogTail(maxLines = 20)) }
+                .onFailure { error ->
+                    if (!stopping && error !is CancellationException) {
+                        onError(error, serverLogTail())
+                    }
+                }
         }
-        val audio = audioDecoder ?: return
+        val audioStream = pendingAudioStream ?: return
         scope.launch {
-            runCatching { audio.start() }
-            // 音频失败不影响画面（对齐官方 soft-fail）。
+            runCatching {
+                val audioCodecId = audioStream.source.readInt()
+                ScrcpyAudioDecoder(audioStream, audioCodecId).also {
+                    audioDecoder = it
+                    it.start()
+                }
+            }.onFailure {
+                runCatching { audioStream.close() }
+            }
         }
     }
 
+    fun setSurface(surface: Surface) {
+        decoder.setSurface(surface)
+        // RESET_VIDEO 走 ADB socket，必须在 IO 线程。
+        scope.launch { controlClient.resetVideo() }
+    }
+
+    fun clearSurface() {
+        decoder.clearSurface()
+    }
+
     fun stop() {
+        stopping = true
         scope.cancel()
         decoder.stop()
-        audioDecoder?.stop()
+        val audio = audioDecoder
+        if (audio != null) {
+            audio.stop()
+        } else {
+            runCatching { pendingAudioStream?.close() }
+        }
         runCatching { controlStream.close() }
         runCatching { serverStream.close() }
     }
 
-    fun serverLogTail(maxLines: Int = 80): String {
+    private fun serverLogTail(): String {
         return synchronized(logLines) {
-            logLines.takeLast(maxLines.coerceAtLeast(1)).joinToString("\n")
+            logLines.takeLast(ServerLogTailLines).joinToString("\n")
         }
     }
 
@@ -71,6 +106,8 @@ class ScrcpySession private constructor(
     }
 
     companion object {
+        private const val ServerLogTailLines = 20
+
         suspend fun start(
             context: Context,
             connections: MirrorConnections,
@@ -83,18 +120,17 @@ class ScrcpySession private constructor(
             val controlKadb = connections.control
             val videoKadb = connections.video
             val audioKadb = connections.audio
-            require(!audioEnabled || audioKadb != null) { "启用音频时需要 audio 连接" }
+            require(!audioEnabled || audioKadb != null) { appString(R.string.scrcpy_audio_requires_connection) }
 
             val serverManager = ScrcpyServerManager(context)
             val logs = ArrayDeque<String>()
             serverManager.pushServer(controlKadb)
             val scid = generateScid()
-            val socketName = "scrcpy_${scid.toString(16).padStart(8, '0')}"
+            val socketName = "scrcpy_${ScrcpyConstants.formatScid(scid)}"
             val serverStream = controlKadb.open(
                 "shell:${serverManager.buildStartCommand(scid, options, audioEnabled)} 2>&1",
             )
 
-            delay(200)
             // 官方顺序：video → audio → control；dummy byte 仅第一路。
             val videoStream = openLocalAbstractWithRetry(videoKadb, socketName, expectDummyByte = true)
             val audioStream = if (audioEnabled && audioKadb != null) {
@@ -104,7 +140,8 @@ class ScrcpySession private constructor(
             }
             val controlStream = openLocalAbstractWithRetry(controlKadb, socketName, expectDummyByte = false)
 
-            val name = readDeviceName(videoStream)
+            // 协议握手：必须消费设备名与 codec id，再进入 demux。
+            skipDeviceName(videoStream)
             val videoCodecId = videoStream.source.readInt()
             val controlClient = ScrcpyControlClient(controlStream)
             val videoDecoder = ScrcpyVideoDecoder(
@@ -117,21 +154,10 @@ class ScrcpySession private constructor(
                 },
             )
 
-            val audioDecoder = audioStream?.let { stream ->
-                runCatching {
-                    val audioCodecId = stream.source.readInt()
-                    ScrcpyAudioDecoder(stream, audioCodecId)
-                }.getOrElse {
-                    runCatching { stream.close() }
-                    null
-                }
-            }
-
             ScrcpySession(
                 serverStream = serverStream,
                 controlStream = controlStream,
-                audioDecoder = audioDecoder,
-                deviceInfo = ScrcpyDeviceInfo(name = name, codecId = videoCodecId),
+                pendingAudioStream = audioStream,
                 controlClient = controlClient,
                 decoder = videoDecoder,
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -163,13 +189,11 @@ class ScrcpySession private constructor(
                     delay(ScrcpyConstants.ConnectRetryDelayMillis)
                 }
             }
-            throw IllegalStateException("无法连接 scrcpy socket：$socketName", lastError)
+            throw IllegalStateException(appString(R.string.scrcpy_socket_connect_failed, socketName), lastError)
         }
 
-        private fun readDeviceName(stream: AdbStream): String {
-            val bytes = stream.source.readByteArray(ScrcpyProtocol.DeviceNameLength.toLong())
-            val length = bytes.indexOf(0).takeIf { it >= 0 } ?: bytes.size
-            return bytes.copyOf(length).toString(Charsets.UTF_8).ifBlank { "Android 设备" }
+        private fun skipDeviceName(stream: AdbStream) {
+            stream.source.skip(ScrcpyProtocol.DeviceNameLength.toLong())
         }
     }
 }

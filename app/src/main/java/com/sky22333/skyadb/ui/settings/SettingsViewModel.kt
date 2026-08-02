@@ -3,11 +3,14 @@ package com.sky22333.skyadb.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.data.RecentDeviceStore
 import com.sky22333.skyadb.data.ThemeMode
 import com.sky22333.skyadb.discovery.NetworkInfoProvider
 import com.sky22333.skyadb.discovery.ScanRangeParser
+import com.sky22333.skyadb.i18n.AppLanguage
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +25,7 @@ data class SettingsUiState(
     val scanRanges: String = "",
     val themeMode: ThemeMode = ThemeMode.System,
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
+    val language: AppLanguage = AppLanguage.FollowSystem,
     val defaultPortError: String? = null,
     val connectionTimeoutError: String? = null,
     val commandTimeoutError: String? = null,
@@ -33,7 +37,7 @@ class SettingsViewModel(
     private val recentDeviceStore: RecentDeviceStore = AppServices.recentDeviceStore,
     private val networkInfoProvider: NetworkInfoProvider = AppServices.networkInfoProvider,
 ) : ViewModel() {
-    private val state = MutableStateFlow(SettingsUiState())
+    private val state = MutableStateFlow(SettingsUiState(language = AppLanguage.current()))
     val uiState: StateFlow<SettingsUiState> = state.asStateFlow()
     private var defaultScanRangeSaved = false
 
@@ -63,7 +67,7 @@ class SettingsViewModel(
 
     fun onDefaultPortChanged(value: String) {
         val filtered = value.filter { it.isDigit() }.take(5)
-        val error = NetworkInputValidator.portError(filtered)
+        val error = NetworkInputValidator.portError(filtered)?.resolve(AppServices.context)
         state.value = state.value.copy(defaultPort = filtered, defaultPortError = error)
         val port = filtered.toIntOrNull()
         if (port != null && error == null) {
@@ -103,7 +107,7 @@ class SettingsViewModel(
         val normalized = value
             .lineSequence()
             .joinToString("\n") { line -> line.trim().take(32) }
-        val error = ScanRangeParser.validationError(normalized)
+        val error = ScanRangeParser.validationError(normalized)?.resolve(AppServices.context)
         state.value = state.value.copy(scanRanges = normalized, scanRangesError = error)
         if (error == null) {
             viewModelScope.launch {
@@ -126,6 +130,11 @@ class SettingsViewModel(
         }
     }
 
+    fun onLanguageSelected(language: AppLanguage) {
+        state.value = state.value.copy(language = language)
+        AppLanguage.apply(language)
+    }
+
     fun onClearRecentDevicesClicked() {
         viewModelScope.launch {
             recentDeviceStore.clear()
@@ -140,8 +149,8 @@ class SettingsViewModel(
         val filtered = value.filter { it.isDigit() }.take(3)
         val seconds = filtered.toIntOrNull()
         val error = when {
-            filtered.isBlank() -> "请输入超时时间"
-            seconds == null || seconds !in 1..300 -> "范围应为 1-300 秒"
+            filtered.isBlank() -> appString(R.string.settings_timeout_required)
+            seconds == null || seconds !in 1..300 -> appString(R.string.settings_timeout_range)
             else -> null
         }
         onState(filtered, error)

@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.ui.components.AppTopBar
@@ -175,7 +177,9 @@ private fun FileManagerContent(
 ) {
     val transferring = uiState.operationStatus is OperationStatus.Running
     val active = uiState.active
-    val sideLabel = if (uiState.activePane == FilePaneId.Local) "本机" else "对端"
+    val sideLabel = stringResource(
+        if (uiState.activePane == FilePaneId.Local) R.string.files_side_local else R.string.files_side_remote,
+    )
     val selectedCount = uiState.selectedPaths.size
     val titleKey = remember(uiState.activePane, active.path, active.entries.size, selectedCount) {
         listOf(sideLabel, active.path, active.entries.size.toString(), selectedCount.toString())
@@ -208,7 +212,11 @@ private fun FileManagerContent(
                         ),
                     ) {
                         Text(
-                            text = if (selected > 0) "$side · 已选 $selected" else "$side · $count 项",
+                            text = if (selected > 0) {
+                                stringResource(R.string.files_title_selected_format, side, selected)
+                            } else {
+                                stringResource(R.string.files_title_count_format, side, count.toInt())
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -224,23 +232,23 @@ private fun FileManagerContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 if (transferring) {
                     IconButton(onClick = onCancelTransfer) {
-                        Icon(Icons.Outlined.Close, contentDescription = "取消传输")
+                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.files_cancel_transfer_desc))
                     }
                 } else {
                     IconButton(
                         onClick = onRenameClick,
                         enabled = selectedCount == 1,
                     ) {
-                        Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = "重命名")
+                        Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = stringResource(R.string.action_rename))
                     }
                     IconButton(onClick = onRefreshClick) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = "刷新")
+                        Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
                 }
             },
@@ -375,7 +383,7 @@ private fun StatusFooter(status: OperationStatus) {
     ) {
         val text = when (status) {
             is OperationStatus.Running -> status.text
-            is OperationStatus.Failed -> "${status.text}：${status.suggestion}"
+            is OperationStatus.Failed -> stringResource(R.string.device_status_error_format, status.text, status.suggestion)
             is OperationStatus.Success -> status.text
             OperationStatus.Idle -> ""
         }
@@ -407,13 +415,13 @@ private fun PermissionBanner(onRequestStoragePermission: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "需要「所有文件访问」权限",
+            text = stringResource(R.string.files_permission_required),
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
         TextButton(onClick = onRequestStoragePermission) {
-            Text("授权")
+            Text(stringResource(R.string.action_authorize))
         }
     }
 }
@@ -452,10 +460,10 @@ private fun FileBottomBar(
             .height(BottomBarHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BottomBarIcon(Icons.Outlined.ArrowUpward, "上级", enabled && canGoUp, onGoUpClick)
-        BottomBarIcon(Icons.Outlined.Sync, "同步对面路径", enabled, onSyncClick)
-        BottomBarIcon(Icons.Outlined.SwapHoriz, "传到对面", enabled, onTransferClick)
-        BottomBarIcon(Icons.Outlined.CreateNewFolder, "新建文件夹", enabled, onNewFolderClick)
+        BottomBarIcon(Icons.Outlined.ArrowUpward, stringResource(R.string.files_nav_up_desc), enabled && canGoUp, onGoUpClick)
+        BottomBarIcon(Icons.Outlined.Sync, stringResource(R.string.files_sync_path_desc), enabled, onSyncClick)
+        BottomBarIcon(Icons.Outlined.SwapHoriz, stringResource(R.string.files_transfer_to_other_desc), enabled, onTransferClick)
+        BottomBarIcon(Icons.Outlined.CreateNewFolder, stringResource(R.string.files_new_folder_desc), enabled, onNewFolderClick)
     }
 }
 
@@ -527,7 +535,7 @@ private fun FilePane(
                     if (pane.entries.isEmpty()) {
                         item(key = "$paneId-empty", contentType = "empty") {
                             Text(
-                                text = pane.error ?: "空目录",
+                                text = pane.error ?: stringResource(R.string.files_empty_dir),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .combinedClickable(
@@ -619,8 +627,9 @@ private fun FileRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val meta = remember(entry.isDirectory, entry.sizeBytes) {
-        if (entry.isDirectory) "文件夹" else formatBytes(entry.sizeBytes)
+    val folderLabel = stringResource(R.string.files_dir_meta)
+    val meta = remember(entry.isDirectory, entry.sizeBytes, folderLabel) {
+        if (entry.isDirectory) folderLabel else formatBytes(entry.sizeBytes)
     }
 
     Row(
@@ -683,10 +692,10 @@ private fun DeleteConfirmDialog(
     if (label == null) return
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("删除 $label？") },
-        text = { Text("确认删除选中项？此操作可能不可恢复。") },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("删除") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        title = { Text(stringResource(R.string.files_delete_title_format, label)) },
+        text = { Text(stringResource(R.string.files_delete_confirm_message)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_delete)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -702,19 +711,19 @@ private fun RenameDialog(
     if (!visible) return
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("重命名") },
+        title = { Text(stringResource(R.string.action_rename)) },
         text = {
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                label = { Text("新名称") },
+                label = { Text(stringResource(R.string.files_new_name_label)) },
                 singleLine = true,
                 isError = error != null,
                 supportingText = error?.let { { Text(it) } },
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("确定") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -728,17 +737,17 @@ private fun NewFolderDialog(
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("新建文件夹") },
+        title = { Text(stringResource(R.string.files_new_folder_desc)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("文件夹名称") },
+                label = { Text(stringResource(R.string.files_folder_name_label)) },
                 singleLine = true,
             )
         },
-        confirmButton = { TextButton(onClick = { onCreate(name) }) { Text("创建") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        confirmButton = { TextButton(onClick = { onCreate(name) }) { Text(stringResource(R.string.action_create)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -755,19 +764,23 @@ private fun JumpPathDialog(
     if (!visible) return
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isRemote) "跳转对端路径" else "跳转本机路径") },
+        title = {
+            Text(
+                stringResource(if (isRemote) R.string.files_jump_remote_title else R.string.files_jump_local_title),
+            )
+        },
         text = {
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                label = { Text("路径") },
+                label = { Text(stringResource(R.string.files_path_label)) },
                 singleLine = true,
                 isError = error != null,
                 supportingText = error?.let { { Text(it) } },
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("确定") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 

@@ -1,5 +1,7 @@
 package com.sky22333.skyadb.discovery
 
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.AppText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -28,7 +30,10 @@ class ScanRangeParserTest {
 
     @Test
     fun subnetForLocalAddress_excludesOwnAddressFromDefaultScanHosts() {
-        val range = ScanRangeParser.subnetForLocalAddress("192.168.1.23", sourceLabel = "当前网络")
+        val range = ScanRangeParser.subnetForLocalAddress(
+            "192.168.1.23",
+            sourceLabelRes = R.string.discovery_source_current_network,
+        )
 
         requireNotNull(range)
         assertEquals("192.168.1.0/24", range.subnetLabel)
@@ -42,9 +47,12 @@ class ScanRangeParserTest {
 
     @Test
     fun validationError_reportsInvalidRangeAndTooManyEntries() {
-        assertEquals("格式错误或范围过大：192.168.1.1/23", ScanRangeParser.validationError("192.168.1.1/23"))
         assertEquals(
-            "最多配置 6 个网段",
+            AppText.Res(R.string.scan_range_error_invalid, "192.168.1.1/23"),
+            ScanRangeParser.validationError("192.168.1.1/23"),
+        )
+        assertEquals(
+            AppText.Res(R.string.scan_range_error_too_many, 6),
             ScanRangeParser.validationError(
                 "192.168.1.1,192.168.2.1,192.168.3.1,192.168.4.1,192.168.5.1,192.168.6.1,192.168.7.1",
             ),

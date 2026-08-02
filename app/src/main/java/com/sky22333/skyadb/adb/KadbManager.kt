@@ -3,6 +3,9 @@ package com.sky22333.skyadb.adb
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import com.flyfishxu.kadb.Kadb
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.apps.AppDisplayEnricher
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.DeviceInfo
@@ -15,6 +18,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -73,8 +78,8 @@ class KadbManager {
             val probe = kadb.shell("echo kadb_ready")
             if (probe.exitCode != 0) {
                 return AdbOperationResult.Failure(
-                    message = "连接失败",
-                    suggestion = "设备已响应但命令执行失败，请确认目标设备已允许无线调试授权。",
+                    message = appString(R.string.kadb_connect_failed),
+                    suggestion = appString(R.string.kadb_connect_failed_probe_suggestion),
                 )
             }
             activeKadb = kadb
@@ -83,8 +88,8 @@ class KadbManager {
             AdbOperationResult.Success(endpoint)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "无法连接到设备",
-                suggestion = "请确认设备与本机处于同一网络、ADB 端口正确，并已允许调试授权。",
+                message = appString(R.string.kadb_cannot_connect_device),
+                suggestion = appString(R.string.kadb_cannot_connect_suggestion),
                 cause = error,
             )
         }
@@ -100,13 +105,13 @@ class KadbManager {
             disconnectAdbOnlyLocked()
             val adbInterface = AndroidUsbInterface.findAdbInterface(device)
                 ?: return@withLock AdbOperationResult.Failure(
-                    message = "未找到 ADB 接口",
-                    suggestion = "请确认目标设备已开启 USB 调试，且当前不是 Fastboot 模式。",
+                    message = appString(R.string.kadb_adb_interface_not_found),
+                    suggestion = appString(R.string.kadb_adb_interface_suggestion),
                 )
             val connection = usbManager.openDevice(device)
                 ?: return@withLock AdbOperationResult.Failure(
-                    message = "无法打开 USB 设备",
-                    suggestion = "请重新插拔 OTG 线，并在系统弹窗中允许 USB 访问。",
+                    message = appString(R.string.usb_cannot_open_device),
+                    suggestion = appString(R.string.usb_replug_allow_access_suggestion),
                 )
 
             var bridgeOwned = false
@@ -138,8 +143,8 @@ class KadbManager {
                     runCatching { connection.close() }
                 }
                 AdbOperationResult.Failure(
-                    message = "USB OTG 连接失败",
-                    suggestion = "请确认目标设备已允许 USB 调试授权，并重新插拔 OTG 线。",
+                    message = appString(R.string.kadb_usb_otg_connect_failed),
+                    suggestion = appString(R.string.kadb_usb_otg_connect_suggestion),
                     cause = error,
                 )
             }
@@ -157,8 +162,8 @@ class KadbManager {
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "无线调试配对失败",
-                suggestion = "请确认配对码未过期，配对 IP 和配对端口来自目标设备的配对窗口。",
+                message = appString(R.string.kadb_pair_failed),
+                suggestion = appString(R.string.kadb_pair_failed_suggestion),
                 cause = error,
             )
         }
@@ -166,8 +171,8 @@ class KadbManager {
 
     suspend fun shell(command: String): AdbOperationResult<ShellCommandResult> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先在首页连接设备，再执行 Shell 命令。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_shell_suggestion),
         )
 
         runCatching {
@@ -182,8 +187,8 @@ class KadbManager {
             )
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "命令执行失败",
-                suggestion = "请检查命令是否正确，或确认设备仍保持连接。",
+                message = appString(R.string.kadb_command_failed),
+                suggestion = appString(R.string.kadb_command_failed_suggestion),
                 cause = error,
             )
         }
@@ -191,16 +196,17 @@ class KadbManager {
 
     suspend fun fetchDeviceInfo(): AdbOperationResult<DeviceInfo> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再查看设备详情。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_device_info_suggestion),
         )
 
         runCatching {
-            val brand = kadb.shell("getprop ro.product.brand").output.trim().ifBlank { "未知" }
-            val model = kadb.shell("getprop ro.product.model").output.trim().ifBlank { "未知" }
-            val androidVersion = kadb.shell("getprop ro.build.version.release").output.trim().ifBlank { "未知" }
-            val sdk = kadb.shell("getprop ro.build.version.sdk").output.trim().ifBlank { "未知" }
-            val abi = kadb.shell("getprop ro.product.cpu.abi").output.trim().ifBlank { "未知" }
+            val unknown = appString(R.string.unknown)
+            val brand = kadb.shell("getprop ro.product.brand").output.trim().ifBlank { unknown }
+            val model = kadb.shell("getprop ro.product.model").output.trim().ifBlank { unknown }
+            val androidVersion = kadb.shell("getprop ro.build.version.release").output.trim().ifBlank { unknown }
+            val sdk = kadb.shell("getprop ro.build.version.sdk").output.trim().ifBlank { unknown }
+            val abi = kadb.shell("getprop ro.product.cpu.abi").output.trim().ifBlank { unknown }
             val resolution = parseResolution(kadb.shell("wm size").output)
             val battery = parseBatteryLevel(kadb.shell("dumpsys battery").output)
 
@@ -217,8 +223,8 @@ class KadbManager {
             )
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "读取设备信息失败",
-                suggestion = "请确认设备仍在线，并允许执行 ADB 命令。",
+                message = appString(R.string.kadb_read_device_info_failed),
+                suggestion = appString(R.string.kadb_read_device_info_suggestion),
                 cause = error,
             )
         }
@@ -229,8 +235,8 @@ class KadbManager {
         onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
     ): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再安装 APK。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_install_suggestion),
         )
 
         runCatching {
@@ -246,10 +252,10 @@ class KadbManager {
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "APK 安装失败",
+                message = appString(R.string.kadb_apk_install_failed),
                 suggestion = adbFailureSuggestion(
                     error = error,
-                    fallback = "请确认 APK 文件完整、设备存储空间充足，并允许安装该应用。",
+                    fallback = appString(R.string.kadb_apk_install_fallback_suggestion),
                 ),
                 cause = error,
             )
@@ -258,8 +264,8 @@ class KadbManager {
 
     suspend fun uninstall(packageName: String): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再卸载应用。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_uninstall_suggestion),
         )
 
         runCatching {
@@ -267,8 +273,8 @@ class KadbManager {
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "应用卸载失败",
-                suggestion = "请确认包名正确，且该应用允许被当前用户卸载。",
+                message = appString(R.string.kadb_app_uninstall_failed),
+                suggestion = appString(R.string.kadb_app_uninstall_suggestion),
                 cause = error,
             )
         }
@@ -282,8 +288,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = "停止应用失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认包名正确，且设备允许停止该应用。" },
+                        message = appString(R.string.kadb_app_stop_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_app_stop_suggestion) },
                     )
                 }
             }
@@ -299,8 +305,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = "启动应用失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认包名正确，且目标应用存在可启动入口。" },
+                        message = appString(R.string.kadb_app_launch_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_app_launch_suggestion) },
                     )
                 }
             }
@@ -321,8 +327,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = if (enabled) "启用应用失败" else "冻结应用失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认包名正确，且设备允许修改该应用状态。" },
+                        message = appString(if (enabled) R.string.kadb_app_enable_failed else R.string.kadb_app_disable_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_app_toggle_suggestion) },
                     )
                 }
             }
@@ -336,21 +342,21 @@ class KadbManager {
         }
         if (pathResult.exitCode != 0) {
             return@withContext AdbOperationResult.Failure(
-                message = "导出 APK 失败",
-                suggestion = pathResult.errorOutput.ifBlank { "请确认应用存在，并保持设备连接。" },
+                message = appString(R.string.kadb_apk_export_failed),
+                suggestion = pathResult.errorOutput.ifBlank { appString(R.string.kadb_apk_export_check_exist_suggestion) },
             )
         }
 
         val apkPath = parseApkPaths(pathResult.output).singleOrNull() ?: return@withContext AdbOperationResult.Failure(
-            message = "导出 APK 失败",
-            suggestion = "仅支持导出单 APK 应用，请确认应用存在且不是拆分安装包。",
+            message = appString(R.string.kadb_apk_export_failed),
+            suggestion = appString(R.string.kadb_apk_export_single_only_suggestion),
         )
 
         localFile.parentFile?.mkdirs()
         when (val pullResult = pull(apkPath, localFile)) {
             is AdbOperationResult.Success -> AdbOperationResult.Success(localFile)
             is AdbOperationResult.Failure -> AdbOperationResult.Failure(
-                message = "导出 APK 失败",
+                message = appString(R.string.kadb_apk_export_failed),
                 suggestion = pullResult.suggestion,
                 cause = pullResult.cause,
             )
@@ -359,8 +365,8 @@ class KadbManager {
 
     suspend fun listApps(): AdbOperationResult<List<AppInfo>> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再查看应用列表。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_list_apps_suggestion),
         )
 
         runCatching {
@@ -374,8 +380,8 @@ class KadbManager {
             )
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "读取应用列表失败",
-                suggestion = "请确认设备仍在线，并允许执行 pm list packages 命令。",
+                message = appString(R.string.kadb_list_apps_failed),
+                suggestion = appString(R.string.kadb_list_apps_suggestion),
                 cause = error,
             )
         }
@@ -391,8 +397,8 @@ class KadbManager {
                     AdbOperationResult.Success(RemoteFileListParser.parse(result.data.output, path))
                 } else {
                     AdbOperationResult.Failure(
-                        message = "读取目录失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认设备路径存在，并且当前用户有权限读取。" },
+                        message = appString(R.string.kadb_list_dir_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_list_dir_suggestion) },
                     )
                 }
             }
@@ -407,8 +413,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = "新建文件夹失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认目标路径可写，且文件夹名称未被占用。" },
+                        message = appString(R.string.kadb_mkdir_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_mkdir_suggestion) },
                     )
                 }
             }
@@ -424,8 +430,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = "删除失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认路径存在，目录为空，并且当前用户有权限删除。" },
+                        message = appString(R.string.error_delete_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_delete_suggestion) },
                     )
                 }
             }
@@ -442,8 +448,8 @@ class KadbManager {
                     AdbOperationResult.Success(Unit)
                 } else {
                     AdbOperationResult.Failure(
-                        message = "重命名失败",
-                        suggestion = result.data.errorOutput.ifBlank { "请确认名称合法，且目标路径未被占用。" },
+                        message = appString(R.string.error_rename_failed),
+                        suggestion = result.data.errorOutput.ifBlank { appString(R.string.kadb_rename_suggestion) },
                     )
                 }
             }
@@ -456,8 +462,8 @@ class KadbManager {
         onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
     ): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再推送文件。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_push_suggestion),
         )
 
         runCatching {
@@ -478,10 +484,10 @@ class KadbManager {
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "文件推送失败",
+                message = appString(R.string.kadb_push_failed),
                 suggestion = adbFailureSuggestion(
                     error = error,
-                    fallback = "请确认本地文件存在，目标路径可写，并保持设备连接。",
+                    fallback = appString(R.string.kadb_push_fallback_suggestion),
                 ),
                 cause = error,
             )
@@ -490,8 +496,8 @@ class KadbManager {
 
     suspend fun pull(remotePath: String, localFile: File): AdbOperationResult<Unit> = withContext(Dispatchers.IO) {
         val kadb = activeKadb ?: return@withContext AdbOperationResult.Failure(
-            message = "未连接设备",
-            suggestion = "请先连接设备，再拉取文件。",
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_pull_suggestion),
         )
 
         runCatching {
@@ -499,8 +505,8 @@ class KadbManager {
             AdbOperationResult.Success(Unit)
         }.getOrElse { error ->
             AdbOperationResult.Failure(
-                message = "文件拉取失败",
-                suggestion = "请确认设备路径存在，本机保存位置可写，并保持设备连接。",
+                message = appString(R.string.kadb_pull_failed),
+                suggestion = appString(R.string.kadb_pull_suggestion),
                 cause = error,
             )
         }
@@ -513,8 +519,8 @@ class KadbManager {
             is AdbOperationResult.Success -> {
                 if (captureResult.data.exitCode != 0) {
                     return@withContext AdbOperationResult.Failure(
-                        message = "截图失败",
-                        suggestion = captureResult.data.errorOutput.ifBlank { "请确认设备允许执行 screencap 命令。" },
+                        message = appString(R.string.kadb_screenshot_failed),
+                        suggestion = captureResult.data.errorOutput.ifBlank { appString(R.string.kadb_screenshot_suggestion) },
                     )
                 }
                 localFile.parentFile?.mkdirs()
@@ -600,52 +606,62 @@ class KadbManager {
         sessionMutex.withLock {
             if (sessionKind == AdbSessionKind.UsbAdb) {
                 return@withLock AdbOperationResult.Failure(
-                    message = "USB OTG 暂不支持屏幕镜像",
-                    suggestion = "屏幕镜像需要多路并行 ADB 连接，当前 USB OTG 仅支持单通道。请改用 Wi-Fi ADB 连接后再试。",
+                    message = appString(R.string.kadb_mirror_usb_unsupported),
+                    suggestion = appString(R.string.kadb_mirror_usb_unsupported_suggestion),
                 )
             }
             val endpoint = parseWifiEndpoint(activeEndpoint.orEmpty())
                 ?: return@withLock AdbOperationResult.Failure(
-                    message = "未连接设备",
-                    suggestion = "请先连接设备，再启动屏幕镜像。",
+                    message = appString(R.string.kadb_not_connected),
+                    suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
                 )
 
             activeKadb?.close()
             activeKadb = null
 
             runCatching {
-                val control = Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
-                val video = try {
-                    Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
-                } catch (error: Throwable) {
-                    control.close()
-                    throw error
-                }
-                val audio = if (audioEnabled) {
-                    try {
+                coroutineScope {
+                    val controlDeferred = async {
                         Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
+                    }
+                    val videoDeferred = async {
+                        Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0)
+                    }
+                    val audioDeferred = if (audioEnabled) {
+                        async { Kadb.create(endpoint.host, endpoint.port, lastConnectTimeoutMillis, 0) }
+                    } else {
+                        null
+                    }
+                    val control = controlDeferred.await()
+                    val video = try {
+                        videoDeferred.await()
+                    } catch (error: Throwable) {
+                        control.close()
+                        audioDeferred?.cancel()
+                        throw error
+                    }
+                    val audio = try {
+                        audioDeferred?.await()
                     } catch (error: Throwable) {
                         video.close()
                         control.close()
                         throw error
                     }
-                } else {
-                    null
+                    AdbOperationResult.Success(
+                        MirrorConnections(control = control, video = video, audio = audio),
+                    )
                 }
-                AdbOperationResult.Success(
-                    MirrorConnections(control = control, video = video, audio = audio),
-                )
             }.getOrElse { error ->
                 val restored = restoreActiveConnectionLocked()
                 if (!restored) {
                     disconnectLocked()
                 }
                 AdbOperationResult.Failure(
-                    message = "屏幕镜像连接失败",
+                    message = appString(R.string.kadb_mirror_connect_failed),
                     suggestion = if (restored) {
-                        "请确认设备仍在线，并重新尝试进入屏幕镜像。"
+                        appString(R.string.kadb_mirror_restored_suggestion)
                     } else {
-                        "镜像连接失败，且无法恢复原会话，请重新连接设备。"
+                        appString(R.string.kadb_mirror_not_restored_suggestion)
                     },
                     cause = error,
                 )
@@ -692,7 +708,7 @@ class KadbManager {
             ?.substringAfter(":")
             ?.trim()
             ?.ifBlank { null }
-            ?: "未知"
+            ?: appString(R.string.unknown)
     }
 
     private fun parseBatteryLevel(output: String): String {
@@ -702,7 +718,7 @@ class KadbManager {
             ?.substringAfter(":")
             ?.trim()
 
-        return if (level.isNullOrBlank()) "未知" else "$level%"
+        return if (level.isNullOrBlank()) appString(R.string.unknown) else "$level%"
     }
 
     private fun parsePackageList(output: String, isSystem: Boolean): List<AppInfo> {
@@ -710,7 +726,7 @@ class KadbManager {
             .map { packageName ->
                 AppInfo(
                     packageName = packageName,
-                    label = packageName.substringAfterLast('.'),
+                    label = AppDisplayEnricher.fallbackLabel(packageName),
                     isSystem = isSystem,
                 )
             }
@@ -761,7 +777,6 @@ class KadbManager {
     }
 
     private companion object {
-        /** 0644，与 Kadb 默认推送权限一致。 */
         const val DefaultPushMode = 420
     }
 }

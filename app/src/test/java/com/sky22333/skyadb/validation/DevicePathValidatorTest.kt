@@ -1,5 +1,7 @@
 package com.sky22333.skyadb.validation
 
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.AppText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -13,7 +15,13 @@ class DevicePathValidatorTest {
 
     @Test
     fun pathError_rejectsRelativePath() {
-        assertEquals("设备路径需要以 / 开头", DevicePathValidator.pathError("sdcard/Download/file.txt"))
-        assertEquals("目标路径需要以 / 开头", DevicePathValidator.pathError("sdcard/Download/", label = "目标路径"))
+        assertEquals(
+            AppText.Res(R.string.error_device_path_prefix, AppText.Res(R.string.unit_device_path)),
+            DevicePathValidator.pathError("sdcard/Download/file.txt"),
+        )
+        assertEquals(
+            AppText.Res(R.string.error_device_path_prefix, AppText.Res(R.string.download_target_path_label)),
+            DevicePathValidator.pathError("sdcard/Download/", labelRes = R.string.download_target_path_label),
+        )
     }
 }

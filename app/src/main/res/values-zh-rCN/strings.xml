@@ -1,0 +1,722 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">sky adb</string>
+
+    <!-- Language -->
+    <string name="language_follow_system">系统</string>
+    <string name="language_chinese">中文</string>
+    <string name="language_english">English</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_desc">默认跟随系统，也可手动选择</string>
+
+    <!-- Theme -->
+    <string name="theme_system">系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <!-- Mirror quality -->
+    <string name="mirror_quality_smooth">流畅</string>
+    <string name="mirror_quality_balanced">均衡</string>
+    <string name="mirror_quality_high">高清</string>
+
+    <!-- Navigation / common -->
+    <string name="nav_devices">设备</string>
+    <string name="nav_details">详情</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_pairing">配对</string>
+    <string name="nav_discovery">扫描</string>
+    <string name="nav_apps">应用</string>
+    <string name="nav_local_apps">本机应用</string>
+    <string name="nav_download">下载</string>
+    <string name="nav_install">安装</string>
+    <string name="nav_files">文件</string>
+    <string name="nav_screenshot">截图</string>
+    <string name="nav_shell">Shell</string>
+    <string name="action_back">返回</string>
+    <string name="unit_port">端口</string>
+    <string name="unit_seconds">秒</string>
+    <string name="unknown">未知</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_default_port_title">默认端口</string>
+    <string name="settings_default_port_desc">默认连接端口</string>
+    <string name="settings_connection_timeout_title">连接超时</string>
+    <string name="settings_connection_timeout_desc">建立连接等待时间</string>
+    <string name="settings_command_timeout_title">命令超时</string>
+    <string name="settings_command_timeout_desc">ADB 命令等待时间</string>
+    <string name="settings_scan_ranges_title">扫描网段</string>
+    <string name="settings_scan_ranges_desc">可选，自定义发现范围</string>
+    <string name="settings_scan_ranges_placeholder">例如 10.43.180.0/24</string>
+    <string name="settings_mirror_quality_title">镜像画质</string>
+    <string name="settings_mirror_quality_desc">下次启动镜像生效</string>
+    <string name="settings_theme_mode_title">主题模式</string>
+    <string name="settings_theme_mode_desc">选择应用外观</string>
+    <string name="settings_diagnostics_title">诊断日志</string>
+    <string name="settings_diagnostics_desc">查看最近错误</string>
+    <string name="settings_clear_recent_devices_title">清理最近设备</string>
+    <string name="settings_clear_recent_devices_desc">移除连接历史</string>
+    <string name="settings_project_url_title">项目地址</string>
+
+    <!-- Home screen -->
+    <string name="home_title">设备连接</string>
+    <string name="action_disconnect">断开连接</string>
+    <string name="home_refresh_usb_desc">刷新 USB 设备</string>
+    <string name="home_no_usb_devices">未检测到设备</string>
+    <string name="device_authorized">已授权</string>
+    <string name="device_unauthorized">待授权</string>
+    <string name="action_connecting">连接中\u2026</string>
+    <string name="action_connect">连接</string>
+    <string name="home_manual_connect_title">手动连接</string>
+    <string name="home_ip_label">IP 地址</string>
+    <string name="action_wireless_pairing">无线配对</string>
+    <string name="action_discover_devices">发现设备</string>
+    <string name="home_recent_devices_title">最近设备</string>
+    <string name="home_no_recent_devices">暂无历史设备</string>
+
+    <!-- Device screen -->
+    <string name="device_details_title">设备详情</string>
+    <string name="device_refresh_info_desc">刷新设备信息</string>
+    <string name="device_connect_hint">连接设备后可在下方查看系统信息</string>
+    <string name="section_quick_actions">快捷操作</string>
+    <string name="section_system_info">系统信息</string>
+    <string name="device_info_expanded_desc">基础信息缺失时会显示为未知</string>
+    <string name="device_info_collapsed_desc">点击图标展开查看</string>
+    <string name="device_info_collapse_desc">收起系统信息</string>
+    <string name="device_info_expand_desc">查看系统信息</string>
+    <string name="device_info_brand">品牌</string>
+    <string name="device_info_model">型号</string>
+    <string name="device_info_android_version">Android 版本</string>
+    <string name="device_info_resolution">分辨率</string>
+    <string name="device_info_battery">电池</string>
+    <string name="device_status_error_format">%1$s：%2$s</string>
+    <string name="action_apps">应用管理</string>
+    <string name="action_install_apk">安装 APK</string>
+    <string name="action_download_online">在线下载</string>
+    <string name="action_file_manage">文件管理</string>
+    <string name="action_mirror">屏幕镜像</string>
+    <string name="action_remote">遥控器</string>
+    <string name="action_system_log">系统日志</string>
+
+    <!-- Apps screen -->
+    <string name="apps_title">应用管理</string>
+    <string name="apps_subtitle">查看、启动、停止或卸载应用</string>
+    <string name="apps_refresh_list_desc">刷新应用列表</string>
+    <string name="apps_search_label">搜索应用</string>
+    <string name="apps_search_placeholder">输入包名或应用名</string>
+    <string name="apps_list_title">应用列表</string>
+    <string name="apps_list_desc_format">共 %1$d 个，分类和搜索在本地即时过滤</string>
+    <string name="apps_empty_title">暂无应用</string>
+    <string name="apps_empty_message">连接设备并刷新后，应用会显示在这里。</string>
+    <string name="apps_confirm_uninstall_title">确认卸载应用？</string>
+    <string name="apps_confirm_enable_title">确认启用应用？</string>
+    <string name="apps_confirm_freeze_title">确认冻结应用？</string>
+    <string name="apps_uninstall_message_format">将从目标设备卸载 %1$s。</string>
+    <string name="apps_enable_message_format">将恢复 %1$s 的可用状态。</string>
+    <string name="apps_freeze_system_warning">冻结系统应用可能影响桌面、设置或播放功能。</string>
+    <string name="apps_freeze_message_format">冻结后 %1$s 将无法启动。</string>
+    <string name="action_uninstall">卸载</string>
+    <string name="action_enable">启用</string>
+    <string name="action_freeze">冻结</string>
+    <string name="action_cancel">取消</string>
+    <string name="apps_action_menu_desc">应用操作</string>
+    <string name="action_launch">启动</string>
+    <string name="action_stop">停止</string>
+    <string name="action_export">导出</string>
+    <string name="app_status_system_frozen">系统冻结</string>
+    <string name="app_status_frozen">已冻结</string>
+    <string name="app_status_system">系统</string>
+    <string name="app_status_user">用户</string>
+
+    <!-- Local apps screen -->
+    <string name="local_apps_title">本机应用</string>
+    <string name="local_apps_subtitle">导出单 APK 用户应用并安装到目标设备</string>
+    <string name="local_apps_refresh_desc">刷新本机应用</string>
+    <string name="local_apps_search_label">搜索本机应用</string>
+    <string name="local_apps_search_placeholder">输入应用名或包名</string>
+    <string name="local_apps_user_apps_title">用户应用</string>
+    <string name="local_apps_list_desc_format">共 %1$d 个，当前仅支持可启动的单 APK 应用</string>
+    <string name="local_apps_empty_title">暂无可显示应用</string>
+    <string name="local_apps_empty_message">没有读取到用户应用，或当前搜索没有结果。</string>
+    <string name="local_apps_install_unsupported">暂不支持</string>
+    <string name="local_apps_unknown_size">未知大小</string>
+
+    <!-- Install APK screen -->
+    <string name="install_apk_title">安装 APK</string>
+    <string name="install_apk_subtitle">选择本机 APK 并安装到已连接设备</string>
+    <string name="install_apk_local_title">本地 APK</string>
+    <string name="install_apk_local_desc">安装前请确认目标设备已连接</string>
+    <string name="install_apk_no_file_selected">尚未选择文件</string>
+    <string name="action_pick_apk">选择 APK</string>
+
+    <!-- Online download screen -->
+    <string name="online_download_title">在线下载</string>
+    <string name="online_download_task_title">下载任务</string>
+    <string name="online_download_url_label">下载链接</string>
+    <string name="online_download_target_path_label">设备目标目录</string>
+    <string name="action_start">开始</string>
+    <string name="online_download_task_status_title">任务状态</string>
+    <string name="online_download_no_task">暂无任务</string>
+    <string name="online_download_status_format">状态：%1$s</string>
+    <string name="online_download_target_format">目标：%1$s</string>
+
+    <!-- File transfer screen -->
+    <string name="files_side_local">本机</string>
+    <string name="files_side_remote">对端</string>
+    <string name="files_title_selected_format">%1$s · 已选 %2$d</string>
+    <string name="files_title_count_format">%1$s · %2$d 项</string>
+    <string name="files_cancel_transfer_desc">取消传输</string>
+    <string name="action_rename">重命名</string>
+    <string name="action_refresh">刷新</string>
+    <string name="files_permission_required">需要「所有文件访问」权限</string>
+    <string name="action_authorize">授权</string>
+    <string name="files_nav_up_desc">上级</string>
+    <string name="files_sync_path_desc">同步对面路径</string>
+    <string name="files_transfer_to_other_desc">传到对面</string>
+    <string name="files_new_folder_desc">新建文件夹</string>
+    <string name="files_empty_dir">空目录</string>
+    <string name="files_dir_meta">文件夹</string>
+    <string name="files_delete_title_format">删除 %1$s？</string>
+    <string name="files_delete_confirm_message">确认删除选中项？此操作可能不可恢复。</string>
+    <string name="action_delete">删除</string>
+    <string name="files_new_name_label">新名称</string>
+    <string name="action_confirm">确定</string>
+    <string name="files_folder_name_label">文件夹名称</string>
+    <string name="action_create">创建</string>
+    <string name="files_jump_remote_title">跳转对端路径</string>
+    <string name="files_jump_local_title">跳转本机路径</string>
+    <string name="files_path_label">路径</string>
+
+    <!-- Screenshot screen -->
+    <string name="screenshot_title">设备截图</string>
+    <string name="screenshot_subtitle">截图先显示预览，需要时再保存</string>
+    <string name="screenshot_task_title">截图任务</string>
+    <string name="screenshot_task_desc">截图会先保存到缓存，再由你选择保存位置</string>
+    <string name="screenshot_no_screenshot_yet">尚未生成截图</string>
+    <string name="action_save">保存</string>
+    <string name="action_clear_preview">清除预览</string>
+    <string name="screenshot_preview_failed">预览加载失败</string>
+    <string name="screenshot_preview_desc">截图预览</string>
+
+    <!-- Shell screen -->
+    <string name="shell_title">Shell 命令</string>
+    <string name="shell_command_input_title">命令输入</string>
+    <string name="shell_command_label">Shell 命令</string>
+    <string name="shell_command_placeholder">例如 getprop ro.product.model</string>
+    <string name="action_execute">执行命令</string>
+    <string name="shell_output_title">输出结果</string>
+    <string name="shell_no_output">暂无输出</string>
+    <string name="shell_history_title">历史命令</string>
+    <string name="shell_no_history">暂无历史命令</string>
+
+    <!-- Remote control screen -->
+    <string name="remote_title">虚拟遥控器</string>
+    <string name="remote_subtitle">发送物理按键到目标设备</string>
+    <string name="remote_common_actions">常用操作</string>
+    <string name="remote_dpad_title">方向键</string>
+    <string name="remote_dpad_desc">适合电视、盒子和无触控设备</string>
+    <string name="remote_volume_title">音量控制</string>
+    <string name="remote_media_title">媒体控制</string>
+    <string name="remote_power_title">电源</string>
+
+    <!-- Mirror screen -->
+    <string name="mirror_hide_controls_desc">隐藏控制区</string>
+    <string name="mirror_show_controls_desc">显示控制区</string>
+    <string name="mirror_close_desc">关闭镜像</string>
+    <string name="mirror_recent_tasks_desc">最近任务</string>
+    <string name="mirror_volume_down_desc">音量减</string>
+    <string name="mirror_volume_up_desc">音量加</string>
+    <string name="mirror_send_text">发送文本</string>
+
+    <!-- System log screen -->
+    <string name="syslog_title">系统日志</string>
+    <string name="syslog_subtitle">按需读取目标设备最近日志</string>
+    <string name="syslog_copy_desc">复制日志</string>
+    <string name="syslog_clear_desc">清空日志</string>
+    <string name="syslog_refresh_desc">刷新日志</string>
+    <string name="syslog_content_title">日志内容</string>
+    <string name="syslog_content_desc_format">显示 %1$d / %2$d 行</string>
+    <string name="syslog_empty_title">暂无日志</string>
+    <string name="syslog_empty_message">点击右上角刷新读取最近日志。</string>
+    <string name="syslog_keyword_label">关键词</string>
+    <string name="syslog_clip_label">系统日志</string>
+    <string name="syslog_copied_toast">已复制当前日志</string>
+
+    <!-- Diagnostic log screen -->
+    <string name="diagnostics_subtitle">仅保留本次运行的错误信息</string>
+    <string name="diagnostics_clip_label">诊断日志</string>
+    <string name="diagnostics_copied_toast">已复制诊断日志</string>
+    <string name="diagnostics_recent_errors_title">最近错误</string>
+    <string name="diagnostics_count_format">%1$d 条</string>
+    <string name="diagnostics_empty_title">暂无诊断日志</string>
+    <string name="diagnostics_empty_message">连接或功能执行失败时，会自动记录到这里。</string>
+
+    <!-- Pairing screen -->
+    <string name="pairing_guide_title">使用说明</string>
+    <string name="action_collapse">收起</string>
+    <string name="action_expand">展开</string>
+    <string name="pairing_guide_step1">目标设备开启无线调试，选择配对码配对。</string>
+    <string name="pairing_guide_step2">填写配对窗口中的 IP、临时端口和 6 位配对码。</string>
+    <string name="pairing_guide_step3">配对成功后点「去连接」，确认地址后连接。</string>
+    <string name="pairing_info_title">配对信息</string>
+    <string name="pairing_ip_label">配对 IP</string>
+    <string name="pairing_port_label">配对端口</string>
+    <string name="pairing_code_label">配对码</string>
+    <string name="action_go_connect">去连接</string>
+    <string name="action_start_pairing">开始配对</string>
+
+    <!-- Device discovery screen -->
+    <string name="discovery_title">局域网发现</string>
+    <string name="discovery_refresh_network_desc">刷新网络</string>
+    <string name="discovery_auto_discovery_title">自动发现</string>
+    <string name="discovery_results_title">发现结果</string>
+    <string name="discovery_searching">正在查找设备</string>
+    <string name="discovery_no_results">暂无发现</string>
+    <string name="discovery_mdns_error_suffix_format">%1$s 可改用下方网段扫描。</string>
+    <string name="discovery_mdns_found_format">发现 %1$d 个服务</string>
+    <string name="discovery_mdns_running">正在自动发现…</string>
+    <string name="discovery_mdns_none_found">未发现设备</string>
+    <string name="discovery_scan_range_title">扫描范围</string>
+    <string name="discovery_scan_progress_format">已扫描 %1$d / %2$d，发现 %3$d 个</string>
+    <string name="action_start_scan">开始扫描</string>
+    <string name="action_use">使用</string>
+    <string name="discovery_connect_wifi_first">请先连接 WiFi 或局域网</string>
+    <string name="discovery_network_with_source">%1$s（%2$s）</string>
+    <string name="discovery_scan_range_format">%1$s，端口 %2$s</string>
+
+    <!-- Shared errors (managers/repositories) -->
+    <string name="error_delete_failed">删除失败</string>
+    <string name="error_rename_failed">重命名失败</string>
+    <string name="usb_cannot_open_device">无法打开 USB 设备</string>
+    <string name="usb_replug_allow_access_suggestion">请重新插拔 OTG 线，并在系统弹窗中允许 USB 访问。</string>
+    <string name="fastboot_connect_via_usb_otg_suggestion">请先在首页通过 USB OTG 连接处于 Fastboot 模式的设备。</string>
+
+    <!-- KadbManager -->
+    <string name="kadb_not_connected">未连接设备</string>
+    <string name="kadb_connect_before_shell_suggestion">请先在首页连接设备，再执行 Shell 命令。</string>
+    <string name="kadb_connect_before_device_info_suggestion">请先连接设备，再查看设备详情。</string>
+    <string name="kadb_connect_before_install_suggestion">请先连接设备，再安装 APK。</string>
+    <string name="kadb_connect_before_uninstall_suggestion">请先连接设备，再卸载应用。</string>
+    <string name="kadb_connect_before_list_apps_suggestion">请先连接设备，再查看应用列表。</string>
+    <string name="kadb_connect_before_push_suggestion">请先连接设备，再推送文件。</string>
+    <string name="kadb_connect_before_pull_suggestion">请先连接设备，再拉取文件。</string>
+    <string name="kadb_connect_before_mirror_suggestion">请先连接设备，再启动屏幕镜像。</string>
+    <string name="kadb_connect_failed">连接失败</string>
+    <string name="kadb_connect_failed_probe_suggestion">设备已响应但命令执行失败，请确认目标设备已允许无线调试授权。</string>
+    <string name="kadb_cannot_connect_device">无法连接到设备</string>
+    <string name="kadb_cannot_connect_suggestion">请确认设备与本机处于同一网络、ADB 端口正确，并已允许调试授权。</string>
+    <string name="kadb_adb_interface_not_found">未找到 ADB 接口</string>
+    <string name="kadb_adb_interface_suggestion">请确认目标设备已开启 USB 调试，且当前不是 Fastboot 模式。</string>
+    <string name="kadb_usb_otg_connect_failed">USB OTG 连接失败</string>
+    <string name="kadb_usb_otg_connect_suggestion">请确认目标设备已允许 USB 调试授权，并重新插拔 OTG 线。</string>
+    <string name="kadb_pair_failed">无线调试配对失败</string>
+    <string name="kadb_pair_failed_suggestion">请确认配对码未过期，配对 IP 和配对端口来自目标设备的配对窗口。</string>
+    <string name="kadb_command_failed">命令执行失败</string>
+    <string name="kadb_command_failed_suggestion">请检查命令是否正确，或确认设备仍保持连接。</string>
+    <string name="kadb_read_device_info_failed">读取设备信息失败</string>
+    <string name="kadb_read_device_info_suggestion">请确认设备仍在线，并允许执行 ADB 命令。</string>
+    <string name="kadb_apk_install_failed">APK 安装失败</string>
+    <string name="kadb_apk_install_fallback_suggestion">请确认 APK 文件完整、设备存储空间充足，并允许安装该应用。</string>
+    <string name="kadb_app_uninstall_failed">应用卸载失败</string>
+    <string name="kadb_app_uninstall_suggestion">请确认包名正确，且该应用允许被当前用户卸载。</string>
+    <string name="kadb_app_stop_failed">停止应用失败</string>
+    <string name="kadb_app_stop_suggestion">请确认包名正确，且设备允许停止该应用。</string>
+    <string name="kadb_app_launch_failed">启动应用失败</string>
+    <string name="kadb_app_launch_suggestion">请确认包名正确，且目标应用存在可启动入口。</string>
+    <string name="kadb_app_enable_failed">启用应用失败</string>
+    <string name="kadb_app_disable_failed">冻结应用失败</string>
+    <string name="kadb_app_toggle_suggestion">请确认包名正确，且设备允许修改该应用状态。</string>
+    <string name="kadb_apk_export_failed">导出 APK 失败</string>
+    <string name="kadb_apk_export_check_exist_suggestion">请确认应用存在，并保持设备连接。</string>
+    <string name="kadb_apk_export_single_only_suggestion">仅支持导出单 APK 应用，请确认应用存在且不是拆分安装包。</string>
+    <string name="kadb_list_apps_failed">读取应用列表失败</string>
+    <string name="kadb_list_apps_suggestion">请确认设备仍在线，并允许执行 pm list packages 命令。</string>
+    <string name="kadb_list_dir_failed">读取目录失败</string>
+    <string name="kadb_list_dir_suggestion">请确认设备路径存在，并且当前用户有权限读取。</string>
+    <string name="kadb_mkdir_failed">新建文件夹失败</string>
+    <string name="kadb_mkdir_suggestion">请确认目标路径可写，且文件夹名称未被占用。</string>
+    <string name="kadb_delete_suggestion">请确认路径存在，目录为空，并且当前用户有权限删除。</string>
+    <string name="kadb_rename_suggestion">请确认名称合法，且目标路径未被占用。</string>
+    <string name="kadb_push_failed">文件推送失败</string>
+    <string name="kadb_push_fallback_suggestion">请确认本地文件存在，目标路径可写，并保持设备连接。</string>
+    <string name="kadb_pull_failed">文件拉取失败</string>
+    <string name="kadb_pull_suggestion">请确认设备路径存在，本机保存位置可写，并保持设备连接。</string>
+    <string name="kadb_screenshot_failed">截图失败</string>
+    <string name="kadb_screenshot_suggestion">请确认设备允许执行 screencap 命令。</string>
+    <string name="kadb_mirror_usb_unsupported">USB OTG 暂不支持屏幕镜像</string>
+    <string name="kadb_mirror_usb_unsupported_suggestion">屏幕镜像需要多路并行 ADB 连接，当前 USB OTG 仅支持单通道。请改用 Wi-Fi ADB 连接后再试。</string>
+    <string name="kadb_mirror_connect_failed">屏幕镜像连接失败</string>
+    <string name="kadb_mirror_restored_suggestion">请确认设备仍在线，并重新尝试进入屏幕镜像。</string>
+    <string name="kadb_mirror_not_restored_suggestion">镜像连接失败，且无法恢复原会话，请重新连接设备。</string>
+
+    <!-- FastbootOtgManager -->
+    <string name="fastboot_interface_not_found">未找到 Fastboot 接口</string>
+    <string name="fastboot_interface_suggestion">请确认目标设备已进入 Bootloader / Fastboot 模式。</string>
+    <string name="fastboot_connect_failed">Fastboot 连接失败</string>
+    <string name="fastboot_connect_failed_suggestion">请确认目标设备处于 Fastboot 模式，OTG 线稳固，并已授权 USB 访问。</string>
+    <string name="fastboot_not_connected">未连接 Fastboot 设备</string>
+    <string name="fastboot_command_empty">Fastboot 命令为空</string>
+    <string name="fastboot_command_empty_suggestion">请输入有效的 Fastboot 命令，例如 getvar:product。</string>
+    <string name="fastboot_command_failed">Fastboot 命令执行失败</string>
+    <string name="fastboot_command_failed_suggestion">请确认命令格式正确，且设备仍处于 Fastboot 模式。</string>
+    <string name="fastboot_invalid_response_error">未收到有效的 Fastboot 响应（%1$s）</string>
+
+    <!-- AdbRepository -->
+    <string name="repo_usb_device_disconnected">USB 设备已断开</string>
+    <string name="repo_usb_device_disconnected_suggestion">请重新插拔 OTG 线，并在首页刷新 USB 设备列表。</string>
+    <string name="repo_usb_permission_missing">尚未获得 USB 权限</string>
+    <string name="repo_usb_permission_missing_suggestion">请在系统弹窗中允许 sky adb 访问该 USB 设备。</string>
+    <string name="repo_usb_mode_unknown">无法识别 USB 设备模式</string>
+    <string name="repo_usb_mode_unknown_suggestion">请确认目标设备处于 ADB 或 Fastboot 模式。</string>
+    <string name="repo_not_fastboot">当前不是 Fastboot 连接</string>
+    <string name="repo_fastboot_no_device_info">Fastboot 模式无法读取设备详情</string>
+    <string name="repo_fastboot_no_device_info_suggestion">请先重启到系统并通过 USB ADB 连接，或执行 Fastboot 命令获取变量。</string>
+    <string name="repo_fastboot_no_shell">Fastboot 模式不支持 Shell</string>
+    <string name="repo_fastboot_no_shell_suggestion">当前设备处于 Fastboot 模式，请使用 getvar、reboot 等 Fastboot 命令。</string>
+    <string name="repo_device_name_android">Android 设备</string>
+    <string name="repo_device_name_usb">USB 设备</string>
+    <string name="repo_device_name_fastboot">Fastboot 设备</string>
+    <string name="repo_status_just_connected">刚刚连接</string>
+    <string name="repo_status_fastboot_connected">Fastboot 已连接</string>
+
+    <!-- Scrcpy mirroring -->
+    <string name="scrcpy_video_stream_error">屏幕镜像视频流异常</string>
+    <string name="scrcpy_start_failed">屏幕镜像启动失败</string>
+    <string name="scrcpy_start_failed_fallback_suggestion">请查看设置里的诊断日志。</string>
+    <string name="scrcpy_stop_release_failed">释放屏幕镜像资源失败</string>
+    <string name="scrcpy_stop_release_failed_suggestion">如果再次启动异常，请重新连接设备。</string>
+    <string name="scrcpy_control_disconnected_suggestion">镜像连接可能已断开，请重新进入屏幕镜像。</string>
+    <string name="scrcpy_send_touch_failed">远程触摸发送失败</string>
+    <string name="scrcpy_send_key_failed">远程按键发送失败</string>
+    <string name="scrcpy_send_text_failed">远程文本发送失败</string>
+    <string name="scrcpy_mirror_diagnostic_template">当前画质：%1$s。启动参数：%2$s。请重新进入屏幕镜像；如果持续失败，请切换到流畅画质。</string>
+    <string name="scrcpy_mirror_diagnostic_with_log">%1$s\nscrcpy server 日志：\n%2$s</string>
+    <string name="scrcpy_audio_requires_connection">启用音频时需要 audio 连接</string>
+    <string name="scrcpy_socket_connect_failed">无法连接 scrcpy socket：%1$s</string>
+    <string name="scrcpy_unsupported_codec">不支持的视频编码：0x%1$s</string>
+
+    <!-- UsbBulkChannel -->
+    <string name="usb_claim_interface_failed">无法占用 USB 接口</string>
+    <string name="usb_bulk_endpoint_not_found">未找到 USB Bulk 端点</string>
+    <string name="usb_write_failed">USB 写入失败：%1$s</string>
+
+    <!-- LocalFileManager -->
+    <string name="files_dir_not_exist">目录不存在</string>
+    <string name="files_not_a_directory">不是目录</string>
+    <string name="files_list_dir_permission">无法读取目录，请授予「所有文件访问」权限</string>
+    <string name="files_name_exists">已存在同名项目</string>
+    <string name="files_mkdir_failed">创建文件夹失败</string>
+    <string name="files_target_not_exist">目标不存在</string>
+    <string name="files_rename_name_empty">名称不能为空</string>
+    <string name="files_name_no_separator">名称不能包含路径分隔符</string>
+    <string name="files_cannot_read_picked">无法读取选择的文件</string>
+    <string name="files_cannot_write_save_location">无法写入选择的保存位置</string>
+
+    <!-- LocalAppExporter -->
+    <string name="localapps_not_exportable">该应用不是可导出的单 APK 安装包</string>
+    <string name="localapps_cannot_read_apk">无法读取该应用安装包</string>
+
+    <!-- NetworkDownloadManager -->
+    <string name="download_invalid_url">下载链接无效</string>
+    <string name="download_invalid_url_suggestion">请输入以 http:// 或 https:// 开头的下载链接。</string>
+    <string name="download_failed">下载失败</string>
+    <string name="download_failed_server_code_suggestion">服务器返回 %1$s，请检查链接是否可访问。</string>
+    <string name="download_failed_generic_suggestion">请检查网络连接、下载链接和存储空间后重试。</string>
+    <string name="download_progress_percent">已下载 %1$d%%</string>
+    <string name="download_progress_bytes">正在下载 %1$s</string>
+    <string name="download_complete">下载完成</string>
+
+    <!-- AndroidAdbMdnsDiscovery -->
+    <string name="discovery_start_failed">自动发现启动失败，可继续使用网段扫描。</string>
+    <string name="discovery_unavailable">自动发现不可用，可继续使用网段扫描。</string>
+
+    <!-- Device type / connection state labels -->
+    <string name="device_type_phone">手机</string>
+    <string name="device_type_tablet">平板</string>
+    <string name="device_type_tv">电视</string>
+    <string name="device_type_box">盒子</string>
+    <string name="device_type_unknown">未知设备</string>
+    <string name="connection_state_disconnected">未连接</string>
+    <string name="connection_state_connecting">连接中</string>
+    <string name="connection_state_connected">已连接</string>
+    <string name="connection_state_failed">连接失败</string>
+    <string name="connection_state_offline">离线</string>
+
+    <!-- Download task states -->
+    <string name="download_state_waiting">等待下载</string>
+    <string name="download_state_downloading">下载中</string>
+    <string name="download_state_pushing">推送中</string>
+    <string name="download_state_installing">安装中</string>
+    <string name="download_state_success">已完成</string>
+    <string name="download_state_failed">失败</string>
+    <string name="download_state_canceled">已取消</string>
+    <string name="download_target_path_label">目标路径</string>
+
+    <!-- LAN discovery: ADB probe states -->
+    <string name="adb_probe_port_closed_label">未开放</string>
+    <string name="adb_probe_port_closed_desc">目标端口未响应</string>
+    <string name="adb_probe_not_adb_label">非 ADB</string>
+    <string name="adb_probe_not_adb_desc">端口开放，但未响应 ADB 握手</string>
+    <string name="adb_probe_port_open_label">端口开放</string>
+    <string name="adb_probe_port_open_desc">端口可连接，可尝试使用 ADB 连接确认</string>
+    <string name="adb_probe_unauthorized_label">需要授权</string>
+    <string name="adb_probe_unauthorized_desc">发现 ADB 服务，需要在目标设备确认授权</string>
+    <string name="adb_probe_available_label">可连接</string>
+    <string name="adb_probe_available_desc">发现可响应的 ADB 服务</string>
+    <string name="adb_probe_secure_label">无线调试</string>
+    <string name="adb_probe_secure_desc">发现 Android 11+ 无线调试安全握手端口</string>
+    <string name="adb_probe_failed_label">探测失败</string>
+    <string name="adb_probe_failed_desc">探测过程异常，可重试扫描</string>
+
+    <!-- LAN discovery: subnet source labels -->
+    <string name="discovery_source_current_network">当前网络</string>
+    <string name="discovery_source_manual_config">手动配置</string>
+    <string name="discovery_source_recent_device">最近设备</string>
+
+    <!-- mDNS discovery service types -->
+    <string name="mdns_service_pairing_label">无线调试配对</string>
+    <string name="mdns_service_pairing_action">配对</string>
+    <string name="mdns_service_pairing_desc">输入目标设备显示的 6 位配对码后完成配对</string>
+    <string name="mdns_service_connect_label">无线调试连接</string>
+    <string name="mdns_service_connect_action">连接</string>
+    <string name="mdns_service_connect_desc">已配对设备可使用此端口连接</string>
+    <string name="mdns_service_legacy_label">传统 WiFi ADB</string>
+    <string name="mdns_service_legacy_desc">适用于已开启 adb tcpip 的设备</string>
+
+    <!-- Scan range validation -->
+    <string name="scan_range_error_too_many">最多配置 %1$d 个网段</string>
+    <string name="scan_range_error_invalid">格式错误或范围过大：%1$s</string>
+
+    <!-- Input validation -->
+    <string name="error_ipv4_invalid">请输入正确的 IPv4 地址</string>
+    <string name="error_port_not_number">%1$s只能填写数字</string>
+    <string name="error_port_out_of_range">%1$s范围应为 1-65535</string>
+    <string name="error_url_scheme">请输入以 http:// 或 https:// 开头的链接</string>
+    <string name="error_url_apk_suffix">APK 下载链接建议以 .apk 结尾</string>
+    <string name="error_device_path_prefix">%1$s需要以 / 开头</string>
+    <string name="unit_device_path">设备路径</string>
+
+    <!-- Diagnostic modules -->
+    <string name="diagnostic_module_app">应用</string>
+    <string name="diagnostic_module_wifi_adb">Wi-Fi ADB</string>
+    <string name="diagnostic_module_usb_otg">USB OTG</string>
+    <string name="diagnostic_module_fastboot">Fastboot</string>
+    <string name="diagnostic_module_pairing">无线配对</string>
+    <string name="diagnostic_module_discovery">设备发现</string>
+    <string name="diagnostic_module_files">文件</string>
+    <string name="diagnostic_module_apps">应用管理</string>
+    <string name="diagnostic_module_install">安装</string>
+    <string name="diagnostic_module_shell">Shell</string>
+    <string name="diagnostic_module_screenshot">截图</string>
+    <string name="diagnostic_module_logs">系统日志</string>
+    <string name="diagnostic_module_remote">遥控器</string>
+    <string name="diagnostic_module_mirror">屏幕镜像</string>
+    <string name="diagnostic_module_download">下载</string>
+    <string name="diagnostic_module_settings">设置</string>
+
+    <!-- Diagnostic log formatting -->
+    <string name="diagnostic_format_empty">暂无诊断日志</string>
+    <string name="diagnostic_format_time">时间：%1$s</string>
+    <string name="diagnostic_format_module">模块：%1$s</string>
+    <string name="diagnostic_format_operation">操作：%1$s</string>
+    <string name="diagnostic_format_target">目标：%1$s</string>
+    <string name="diagnostic_format_reason">原因：%1$s</string>
+    <string name="diagnostic_format_suggestion">建议：%1$s</string>
+    <string name="diagnostic_format_error">异常：</string>
+
+    <!-- ViewModel operation status: Device -->
+    <string name="device_no_device_selected">未选择设备</string>
+    <string name="device_refreshing">正在刷新设备信息</string>
+    <string name="device_refresh_success">设备信息已更新</string>
+
+    <!-- ViewModel operation status: Settings -->
+    <string name="settings_timeout_required">请输入超时时间</string>
+    <string name="settings_timeout_range">范围应为 1-300 秒</string>
+
+    <!-- ViewModel operation status: Mirror -->
+    <string name="mirror_starting">正在启动屏幕镜像</string>
+    <string name="mirror_invalid_surface">画面表面无效，请重新进入屏幕镜像。</string>
+    <string name="mirror_disconnected">屏幕镜像已断开</string>
+    <string name="mirror_reenter_hint">请重新进入屏幕镜像。</string>
+    <string name="mirror_active">正在镜像</string>
+
+    <!-- ViewModel operation status: Shell -->
+    <string name="shell_cannot_execute">无法执行命令</string>
+    <string name="shell_enter_command_hint">请先输入 Shell 命令。</string>
+    <string name="shell_executing">正在执行：%1$s</string>
+    <string name="shell_command_no_output">命令执行完成，无输出。</string>
+    <string name="shell_execute_success">命令执行完成，退出码 %1$d</string>
+
+    <!-- ViewModel operation status: Pairing -->
+    <string name="pairing_autofill_hint">已填入自动发现的配对地址，请输入 6 位配对码。</string>
+    <string name="pairing_cannot_start">无法发起配对</string>
+    <string name="pairing_check_fields">请检查配对 IP、配对端口和 6 位配对码是否正确。</string>
+    <string name="pairing_pairing_with">正在配对 %1$s:%2$s</string>
+    <string name="pairing_finding_port">正在查找连接端口\u2026</string>
+    <string name="pairing_success_port_found">配对成功，已找到连接端口 %1$d。</string>
+    <string name="pairing_success_no_port">配对成功。未自动发现连接端口，请确认无线调试页的「IP 地址与端口」后连接。</string>
+    <string name="pairing_code_length_hint">配对码通常为 6 位数字</string>
+
+    <!-- ViewModel operation status: Screenshot -->
+    <string name="screenshot_capturing">正在截取设备屏幕</string>
+    <string name="screenshot_captured_choose_location">截图已生成，请选择保存位置</string>
+    <string name="screenshot_cannot_save">无法保存截图</string>
+    <string name="screenshot_finish_capture_hint">请先完成截图并选择保存位置。</string>
+    <string name="screenshot_saving">正在保存截图</string>
+    <string name="screenshot_cannot_open_location">无法打开保存位置</string>
+    <string name="screenshot_saved">截图已保存</string>
+    <string name="screenshot_save_failed">保存截图失败</string>
+    <string name="screenshot_confirm_writable">请确认保存位置可写。</string>
+
+    <!-- ViewModel operation status: System log -->
+    <string name="logs_level_all">全部</string>
+    <string name="logs_reading_recent">正在读取最近 %1$d 行日志</string>
+    <string name="logs_read_success">已读取 %1$d 行日志</string>
+    <string name="logs_read_failed">读取日志失败</string>
+    <string name="logs_confirm_logcat_allowed">请确认目标设备允许读取 logcat。</string>
+
+    <!-- ViewModel operation status: Install APK -->
+    <string name="install_wrong_file_type">文件类型可能不正确</string>
+    <string name="install_select_apk_hint">请选择以 .apk 结尾的安装包文件。</string>
+    <string name="install_no_apk_selected">未选择 APK</string>
+    <string name="install_select_local_apk_hint">请先选择一个本地 APK 文件。</string>
+    <string name="install_preparing">正在准备 APK 文件</string>
+    <string name="install_read_failed">读取 APK 失败</string>
+    <string name="install_confirm_file_exists">请确认文件仍存在，并允许 App 读取该文件。</string>
+
+    <!-- ViewModel operation status: Home -->
+    <string name="home_usb_permission_denied">USB 授权被拒绝</string>
+    <string name="home_usb_permission_hint">请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。</string>
+    <string name="home_autofill_discovered">已填入发现的地址，请确认后连接。</string>
+    <string name="home_pairing_success_ip_filled">配对成功，已填入 IP。请确认连接端口（无线调试页的「IP 地址与端口」）后连接。</string>
+    <string name="home_disconnected">已断开连接</string>
+    <string name="home_cannot_connect">无法发起连接</string>
+    <string name="home_check_ip_port">请先检查 IP 地址和端口是否正确。</string>
+    <string name="home_connecting">正在连接 %1$s:%2$s</string>
+    <string name="home_connect_success">设备连接成功：%1$s</string>
+    <string name="home_waiting_usb_permission">等待 USB 授权\u2026</string>
+    <string name="home_usb_otg_connecting">正在通过 USB OTG 连接 %1$s 设备\u2026</string>
+    <string name="home_usb_connect_success">USB 连接成功：%1$s</string>
+
+    <!-- ViewModel operation status: Device discovery -->
+    <string name="discovery_cannot_scan_lan">无法扫描局域网</string>
+    <string name="discovery_connect_wifi_hint">请连接 WiFi 或局域网后重试。</string>
+    <string name="discovery_preparing_scan">正在准备扫描 %1$d 个候选网段</string>
+    <string name="discovery_scanning">正在扫描 %1$d 个候选网段</string>
+    <string name="discovery_scan_complete">扫描完成，发现 %1$d 个 ADB 设备</string>
+    <string name="discovery_scan_stopped">扫描已停止</string>
+    <string name="discovery_retry_later_hint">可以稍后重新扫描。</string>
+    <string name="discovery_scan_canceled">扫描已取消</string>
+
+    <!-- ViewModel operation status: Apps -->
+    <string name="apps_filter_all">全部</string>
+    <string name="apps_filter_user">用户应用</string>
+    <string name="apps_filter_system">系统应用</string>
+    <string name="apps_loading_list">正在读取应用列表</string>
+    <string name="apps_loaded_count">已读取 %1$d 个应用</string>
+    <string name="apps_launching">正在启动 %1$s</string>
+    <string name="apps_stopping">正在停止 %1$s</string>
+    <string name="apps_uninstalling">正在卸载 %1$s</string>
+    <string name="apps_enabling">正在启用 %1$s</string>
+    <string name="apps_disabling">正在冻结 %1$s</string>
+    <string name="apps_operation_complete">操作完成</string>
+    <string name="apps_export_complete">APK 导出完成</string>
+    <string name="apps_save_apk_failed">保存 APK 失败</string>
+    <string name="apps_save_apk_hint">请确认保存位置可写，并保持应用前台运行。</string>
+
+    <!-- ViewModel operation status: Local apps -->
+    <string name="localapps_loading">正在读取本机应用</string>
+    <string name="localapps_loaded_count">已读取 %1$d 个可启动用户应用</string>
+    <string name="localapps_op_read">读取本机应用</string>
+    <string name="localapps_read_failed">读取本机应用失败</string>
+    <string name="localapps_confirm_read_permission">请确认系统允许读取已安装应用列表。</string>
+    <string name="localapps_unsupported_app">暂不支持该应用</string>
+    <string name="localapps_split_apk_hint">该应用可能是拆分安装包，当前仅支持单 APK 用户应用。</string>
+    <string name="localapps_op_export">导出本机应用</string>
+    <string name="localapps_export_failed">导出应用失败</string>
+    <string name="localapps_export_failed_hint">该应用安装包无法读取或已被系统限制。</string>
+    <string name="localapps_install_success">%1$s 安装完成</string>
+    <string name="localapps_op_install">安装本机应用</string>
+    <string name="localapps_install_failed">安装应用失败</string>
+    <string name="localapps_install_failed_hint">请确认目标设备仍保持连接，并允许安装该应用。</string>
+
+    <!-- ViewModel operation status: shared transfer/install labels -->
+    <string name="common_transferring_arg">正在传输 %1$s</string>
+    <string name="common_installing_arg">正在安装 %1$s</string>
+    <string name="common_exporting_arg">正在导出 %1$s</string>
+    <string name="common_apk_install_success">APK 安装完成</string>
+
+    <!-- ViewModel operation status: Remote control -->
+    <string name="remote_key_power">电源</string>
+    <string name="remote_key_wakeup">唤醒</string>
+    <string name="remote_key_sleep">息屏</string>
+    <string name="remote_key_home">主页</string>
+    <string name="remote_key_back">返回</string>
+    <string name="remote_key_menu">菜单</string>
+    <string name="remote_key_up">上</string>
+    <string name="remote_key_down">下</string>
+    <string name="remote_key_left">左</string>
+    <string name="remote_key_right">右</string>
+    <string name="remote_key_center">确认</string>
+    <string name="remote_key_volume_up">音量+</string>
+    <string name="remote_key_volume_down">音量-</string>
+    <string name="remote_key_mute">静音</string>
+    <string name="remote_key_play_pause">播放/暂停</string>
+    <string name="remote_key_previous">上一首</string>
+    <string name="remote_key_next">下一首</string>
+    <string name="remote_sending">正在发送 %1$s</string>
+    <string name="remote_sent">已发送：%1$s</string>
+    <string name="remote_send_failed">按键发送失败</string>
+    <string name="remote_key_control_blocked">目标设备禁止 ADB 按键控制，请检查开发者选项中的安全调试设置。</string>
+    <string name="remote_confirm_connected">请确认目标设备仍保持连接。</string>
+
+    <!-- ViewModel operation status: Online download -->
+    <string name="download_mode_install_apk">下载 APK 并安装</string>
+    <string name="download_mode_push_file">下载文件并推送</string>
+    <string name="download_cannot_start">无法开始下载</string>
+    <string name="download_check_url_path">请先检查下载链接和目标路径。</string>
+    <string name="download_preparing">正在准备下载</string>
+    <string name="download_waiting_filename">等待获取文件名\u2026</string>
+    <string name="download_op_download">下载文件</string>
+    <string name="download_canceled">下载已取消</string>
+    <string name="download_canceled_hint">可以修改链接或目标路径后重新开始。</string>
+    <string name="download_complete_installing_apk">下载完成，正在安装 APK</string>
+    <string name="download_complete_pushing">下载完成，正在推送文件</string>
+    <string name="download_pushing_file">正在推送文件</string>
+    <string name="download_finishing_push">正在完成推送</string>
+    <string name="download_push_complete">文件推送完成</string>
+    <string name="download_pushed_to">文件已推送到 %1$s</string>
+
+    <!-- ViewModel operation status: File transfer -->
+    <string name="files_items_count">%1$d 项</string>
+    <string name="files_path_empty">路径不能为空</string>
+    <string name="files_cannot_create_folder">无法新建文件夹</string>
+    <string name="files_folder_name_invalid">名称不能为空，也不能包含路径分隔符。</string>
+    <string name="files_creating_folder">正在新建 %1$s</string>
+    <string name="files_folder_created">文件夹已创建</string>
+    <string name="files_create_failed">新建失败</string>
+    <string name="files_confirm_dir_writable">请确认目录可写。</string>
+    <string name="files_cannot_rename">无法重命名</string>
+    <string name="files_select_exactly_one">请先选中恰好 1 个项目。</string>
+    <string name="files_rename_name_invalid">名称不能为空，也不能包含路径分隔符</string>
+    <string name="files_renaming">正在重命名</string>
+    <string name="files_renamed_to">已重命名为 %1$s</string>
+    <string name="files_confirm_name_available">请确认名称可用。</string>
+    <string name="files_deleting_count">正在删除 %1$d 项</string>
+    <string name="files_deleted_count">已删除 %1$d 项</string>
+    <string name="files_delete_incomplete">删除未完成</string>
+    <string name="files_no_file_selected">未选择文件</string>
+    <string name="files_select_files_hint">点选一个或多个文件，再传到对面。</string>
+    <string name="files_uploaded_count">已上传 %1$d 个文件</string>
+    <string name="files_downloaded_count">已下载 %1$d 个文件</string>
+    <string name="files_transfer_canceled">已取消传输</string>
+    <string name="files_transfer_interrupted">传输中断</string>
+    <string name="files_check_connection_hint">请检查连接与目标路径后重试。</string>
+    <string name="files_local_file_missing">本地文件不存在：%1$s</string>
+    <string name="files_uploading_progress">上传 %1$d/%2$d \u00b7 %3$s</string>
+    <string name="files_uploading_short">上传 %1$d/%2$d</string>
+    <string name="files_upload_finishing">完成 %1$d/%2$d</string>
+    <string name="files_downloading_progress">下载 %1$d/%2$d \u00b7 %3$s</string>
+    <string name="files_cannot_read_local_dir">无法读取本机目录</string>
+    <string name="files_grant_storage_permission">请授予存储权限。</string>
+</resources>

@@ -1,4 +1,722 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">sky adb</string>
+
+    <!-- Language -->
+    <string name="language_follow_system">System</string>
+    <string name="language_chinese">Chinese</string>
+    <string name="language_english">English</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">Follow system or choose manually</string>
+
+    <!-- Theme -->
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Mirror quality -->
+    <string name="mirror_quality_smooth">Smooth</string>
+    <string name="mirror_quality_balanced">Balanced</string>
+    <string name="mirror_quality_high">High</string>
+
+    <!-- Navigation / common -->
+    <string name="nav_devices">Devices</string>
+    <string name="nav_details">Details</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_pairing">Pairing</string>
+    <string name="nav_discovery">Scan</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_local_apps">Local apps</string>
+    <string name="nav_download">Download</string>
+    <string name="nav_install">Install</string>
+    <string name="nav_files">Files</string>
+    <string name="nav_screenshot">Screenshot</string>
+    <string name="nav_shell">Shell</string>
+    <string name="action_back">Back</string>
+    <string name="unit_port">Port</string>
+    <string name="unit_seconds">sec</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_default_port_title">Default port</string>
+    <string name="settings_default_port_desc">Default connection port</string>
+    <string name="settings_connection_timeout_title">Connection timeout</string>
+    <string name="settings_connection_timeout_desc">Wait time to establish a connection</string>
+    <string name="settings_command_timeout_title">Command timeout</string>
+    <string name="settings_command_timeout_desc">Wait time for ADB commands</string>
+    <string name="settings_scan_ranges_title">Scan ranges</string>
+    <string name="settings_scan_ranges_desc">Optional, customize discovery range</string>
+    <string name="settings_scan_ranges_placeholder">e.g. 10.43.180.0/24</string>
+    <string name="settings_mirror_quality_title">Mirror quality</string>
+    <string name="settings_mirror_quality_desc">Applies the next time mirroring starts</string>
+    <string name="settings_theme_mode_title">Theme mode</string>
+    <string name="settings_theme_mode_desc">Choose the app appearance</string>
+    <string name="settings_diagnostics_title">Diagnostic log</string>
+    <string name="settings_diagnostics_desc">View recent errors</string>
+    <string name="settings_clear_recent_devices_title">Clear recent devices</string>
+    <string name="settings_clear_recent_devices_desc">Remove connection history</string>
+    <string name="settings_project_url_title">Project URL</string>
+
+    <!-- Home screen -->
+    <string name="home_title">Device connection</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="home_refresh_usb_desc">Refresh USB devices</string>
+    <string name="home_no_usb_devices">No devices detected</string>
+    <string name="device_authorized">Authorized</string>
+    <string name="device_unauthorized">Pending authorization</string>
+    <string name="action_connecting">Connecting\u2026</string>
+    <string name="action_connect">Connect</string>
+    <string name="home_manual_connect_title">Manual connection</string>
+    <string name="home_ip_label">IP address</string>
+    <string name="action_wireless_pairing">Pair</string>
+    <string name="action_discover_devices">Discover</string>
+    <string name="home_recent_devices_title">Recent devices</string>
+    <string name="home_no_recent_devices">No device history</string>
+
+    <!-- Device screen -->
+    <string name="device_details_title">Device details</string>
+    <string name="device_refresh_info_desc">Refresh device info</string>
+    <string name="device_connect_hint">Connect a device to view system info</string>
+    <string name="section_quick_actions">Quick actions</string>
+    <string name="section_system_info">System info</string>
+    <string name="device_info_expanded_desc">Missing basic info is shown as Unknown</string>
+    <string name="device_info_collapsed_desc">Tap the icon to expand</string>
+    <string name="device_info_collapse_desc">Collapse system info</string>
+    <string name="device_info_expand_desc">View system info</string>
+    <string name="device_info_brand">Brand</string>
+    <string name="device_info_model">Model</string>
+    <string name="device_info_android_version">Android version</string>
+    <string name="device_info_resolution">Resolution</string>
+    <string name="device_info_battery">Battery</string>
+    <string name="device_status_error_format">%1$s: %2$s</string>
+    <string name="action_apps">App manager</string>
+    <string name="action_install_apk">Install APK</string>
+    <string name="action_download_online">Online download</string>
+    <string name="action_file_manage">File manager</string>
+    <string name="action_mirror">Screen mirror</string>
+    <string name="action_remote">Remote control</string>
+    <string name="action_system_log">System log</string>
+
+    <!-- Apps screen -->
+    <string name="apps_title">App manager</string>
+    <string name="apps_subtitle">View, launch, stop, or uninstall apps</string>
+    <string name="apps_refresh_list_desc">Refresh app list</string>
+    <string name="apps_search_label">Search apps</string>
+    <string name="apps_search_placeholder">Enter package name or app name</string>
+    <string name="apps_list_title">App list</string>
+    <string name="apps_list_desc_format">%1$d total, filtered locally by category and search</string>
+    <string name="apps_empty_title">No apps</string>
+    <string name="apps_empty_message">Connect a device and refresh to see apps here.</string>
+    <string name="apps_confirm_uninstall_title">Uninstall this app?</string>
+    <string name="apps_confirm_enable_title">Enable this app?</string>
+    <string name="apps_confirm_freeze_title">Freeze this app?</string>
+    <string name="apps_uninstall_message_format">%1$s will be uninstalled from the target device.</string>
+    <string name="apps_enable_message_format">%1$s will be restored to an available state.</string>
+    <string name="apps_freeze_system_warning">Freezing a system app may affect the launcher, settings, or playback.</string>
+    <string name="apps_freeze_message_format">%1$s will no longer be able to launch once frozen.</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="action_enable">Enable</string>
+    <string name="action_freeze">Freeze</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="apps_action_menu_desc">App actions</string>
+    <string name="action_launch">Launch</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_export">Export</string>
+    <string name="app_status_system_frozen">System frozen</string>
+    <string name="app_status_frozen">Frozen</string>
+    <string name="app_status_system">System</string>
+    <string name="app_status_user">User</string>
+
+    <!-- Local apps screen -->
+    <string name="local_apps_title">Local apps</string>
+    <string name="local_apps_subtitle">Export a single-APK user app and install it on the target device</string>
+    <string name="local_apps_refresh_desc">Refresh local apps</string>
+    <string name="local_apps_search_label">Search local apps</string>
+    <string name="local_apps_search_placeholder">Enter app name or package name</string>
+    <string name="local_apps_user_apps_title">User apps</string>
+    <string name="local_apps_list_desc_format">%1$d total, only launchable single-APK apps are supported</string>
+    <string name="local_apps_empty_title">No apps to show</string>
+    <string name="local_apps_empty_message">No user apps were found, or the current search has no results.</string>
+    <string name="local_apps_install_unsupported">Unsupported</string>
+    <string name="local_apps_unknown_size">Unknown size</string>
+
+    <!-- Install APK screen -->
+    <string name="install_apk_title">Install APK</string>
+    <string name="install_apk_subtitle">Choose a local APK and install it on the connected device</string>
+    <string name="install_apk_local_title">Local APK</string>
+    <string name="install_apk_local_desc">Make sure the target device is connected before installing</string>
+    <string name="install_apk_no_file_selected">No file selected</string>
+    <string name="action_pick_apk">Choose APK</string>
+
+    <!-- Online download screen -->
+    <string name="online_download_title">Online download</string>
+    <string name="online_download_task_title">Download task</string>
+    <string name="online_download_url_label">Download URL</string>
+    <string name="online_download_target_path_label">Device target directory</string>
+    <string name="action_start">Start</string>
+    <string name="online_download_task_status_title">Task status</string>
+    <string name="online_download_no_task">No task yet</string>
+    <string name="online_download_status_format">Status: %1$s</string>
+    <string name="online_download_target_format">Target: %1$s</string>
+
+    <!-- File transfer screen -->
+    <string name="files_side_local">Local</string>
+    <string name="files_side_remote">Remote</string>
+    <string name="files_title_selected_format">%1$s \u00b7 %2$d selected</string>
+    <string name="files_title_count_format">%1$s \u00b7 %2$d items</string>
+    <string name="files_cancel_transfer_desc">Cancel transfer</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="files_permission_required">\"All files access\" permission is required</string>
+    <string name="action_authorize">Authorize</string>
+    <string name="files_nav_up_desc">Up</string>
+    <string name="files_sync_path_desc">Sync path from other pane</string>
+    <string name="files_transfer_to_other_desc">Transfer to other pane</string>
+    <string name="files_new_folder_desc">New folder</string>
+    <string name="files_empty_dir">Empty directory</string>
+    <string name="files_dir_meta">Folder</string>
+    <string name="files_delete_title_format">Delete %1$s?</string>
+    <string name="files_delete_confirm_message">Confirm deleting the selected item? This action may not be reversible.</string>
+    <string name="action_delete">Delete</string>
+    <string name="files_new_name_label">New name</string>
+    <string name="action_confirm">OK</string>
+    <string name="files_folder_name_label">Folder name</string>
+    <string name="action_create">Create</string>
+    <string name="files_jump_remote_title">Jump to remote path</string>
+    <string name="files_jump_local_title">Jump to local path</string>
+    <string name="files_path_label">Path</string>
+
+    <!-- Screenshot screen -->
+    <string name="screenshot_title">Device screenshot</string>
+    <string name="screenshot_subtitle">The screenshot is previewed first, then saved when needed</string>
+    <string name="screenshot_task_title">Screenshot task</string>
+    <string name="screenshot_task_desc">The screenshot is cached first; you then choose where to save it</string>
+    <string name="screenshot_no_screenshot_yet">No screenshot yet</string>
+    <string name="action_save">Save</string>
+    <string name="action_clear_preview">Clear preview</string>
+    <string name="screenshot_preview_failed">Failed to load the preview</string>
+    <string name="screenshot_preview_desc">Screenshot preview</string>
+
+    <!-- Shell screen -->
+    <string name="shell_title">Shell command</string>
+    <string name="shell_command_input_title">Command input</string>
+    <string name="shell_command_label">Shell command</string>
+    <string name="shell_command_placeholder">e.g. getprop ro.product.model</string>
+    <string name="action_execute">Execute</string>
+    <string name="shell_output_title">Output</string>
+    <string name="shell_no_output">No output yet</string>
+    <string name="shell_history_title">Command history</string>
+    <string name="shell_no_history">No command history</string>
+
+    <!-- Remote control screen -->
+    <string name="remote_title">Virtual remote</string>
+    <string name="remote_subtitle">Send physical key events to the target device</string>
+    <string name="remote_common_actions">Common actions</string>
+    <string name="remote_dpad_title">D-pad</string>
+    <string name="remote_dpad_desc">Suited for TVs, boxes, and touch-free devices</string>
+    <string name="remote_volume_title">Volume control</string>
+    <string name="remote_media_title">Media control</string>
+    <string name="remote_power_title">Power</string>
+
+    <!-- Mirror screen -->
+    <string name="mirror_hide_controls_desc">Hide controls</string>
+    <string name="mirror_show_controls_desc">Show controls</string>
+    <string name="mirror_close_desc">Close mirroring</string>
+    <string name="mirror_recent_tasks_desc">Recent tasks</string>
+    <string name="mirror_volume_down_desc">Volume down</string>
+    <string name="mirror_volume_up_desc">Volume up</string>
+    <string name="mirror_send_text">Send text</string>
+
+    <!-- System log screen -->
+    <string name="syslog_title">System log</string>
+    <string name="syslog_subtitle">Read recent logs from the target device on demand</string>
+    <string name="syslog_copy_desc">Copy logs</string>
+    <string name="syslog_clear_desc">Clear logs</string>
+    <string name="syslog_refresh_desc">Refresh logs</string>
+    <string name="syslog_content_title">Log content</string>
+    <string name="syslog_content_desc_format">Showing %1$d / %2$d lines</string>
+    <string name="syslog_empty_title">No logs</string>
+    <string name="syslog_empty_message">Tap refresh in the top right to read recent logs.</string>
+    <string name="syslog_keyword_label">Keyword</string>
+    <string name="syslog_clip_label">System log</string>
+    <string name="syslog_copied_toast">Current log copied</string>
+
+    <!-- Diagnostic log screen -->
+    <string name="diagnostics_subtitle">Only errors from the current run are kept</string>
+    <string name="diagnostics_clip_label">Diagnostic log</string>
+    <string name="diagnostics_copied_toast">Diagnostic log copied</string>
+    <string name="diagnostics_recent_errors_title">Recent errors</string>
+    <string name="diagnostics_count_format">%1$d items</string>
+    <string name="diagnostics_empty_title">No diagnostic logs</string>
+    <string name="diagnostics_empty_message">Connection or feature failures are automatically recorded here.</string>
+
+    <!-- Pairing screen -->
+    <string name="pairing_guide_title">Instructions</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_expand">Expand</string>
+    <string name="pairing_guide_step1">Enable wireless debugging on the target device and choose pairing code pairing.</string>
+    <string name="pairing_guide_step2">Enter the IP, temporary port, and 6-digit pairing code from the pairing dialog.</string>
+    <string name="pairing_guide_step3">After pairing succeeds, tap \"Go connect\" and confirm the address to connect.</string>
+    <string name="pairing_info_title">Pairing info</string>
+    <string name="pairing_ip_label">Pairing IP</string>
+    <string name="pairing_port_label">Pairing port</string>
+    <string name="pairing_code_label">Pairing code</string>
+    <string name="action_go_connect">Go connect</string>
+    <string name="action_start_pairing">Start pairing</string>
+
+    <!-- Device discovery screen -->
+    <string name="discovery_title">LAN discovery</string>
+    <string name="discovery_refresh_network_desc">Refresh network</string>
+    <string name="discovery_auto_discovery_title">Automatic discovery</string>
+    <string name="discovery_results_title">Discovery results</string>
+    <string name="discovery_searching">Searching for devices</string>
+    <string name="discovery_no_results">Nothing found yet</string>
+    <string name="discovery_mdns_error_suffix_format">%1$s You can use subnet scanning below instead.</string>
+    <string name="discovery_mdns_found_format">%1$d services found</string>
+    <string name="discovery_mdns_running">Discovering automatically\u2026</string>
+    <string name="discovery_mdns_none_found">No devices found</string>
+    <string name="discovery_scan_range_title">Scan range</string>
+    <string name="discovery_scan_progress_format">Scanned %1$d / %2$d, %3$d found</string>
+    <string name="action_start_scan">Start scan</string>
+    <string name="action_use">Use</string>
+    <string name="discovery_connect_wifi_first">Connect to Wi-Fi or a LAN first</string>
+    <string name="discovery_network_with_source">%1$s (%2$s)</string>
+    <string name="discovery_scan_range_format">%1$s, port %2$s</string>
+
+    <!-- Shared errors (managers/repositories) -->
+    <string name="error_delete_failed">Deletion failed</string>
+    <string name="error_rename_failed">Rename failed</string>
+    <string name="usb_cannot_open_device">Unable to open the USB device</string>
+    <string name="usb_replug_allow_access_suggestion">Reconnect the OTG cable and allow USB access in the system dialog.</string>
+    <string name="fastboot_connect_via_usb_otg_suggestion">Connect a device in Fastboot mode via USB OTG on the home screen first.</string>
+
+    <!-- KadbManager -->
+    <string name="kadb_not_connected">No device connected</string>
+    <string name="kadb_connect_before_shell_suggestion">Connect a device on the home screen first, then run the shell command.</string>
+    <string name="kadb_connect_before_device_info_suggestion">Connect a device first, then view device details.</string>
+    <string name="kadb_connect_before_install_suggestion">Connect a device first, then install the APK.</string>
+    <string name="kadb_connect_before_uninstall_suggestion">Connect a device first, then uninstall the app.</string>
+    <string name="kadb_connect_before_list_apps_suggestion">Connect a device first, then view the app list.</string>
+    <string name="kadb_connect_before_push_suggestion">Connect a device first, then push the file.</string>
+    <string name="kadb_connect_before_pull_suggestion">Connect a device first, then pull the file.</string>
+    <string name="kadb_connect_before_mirror_suggestion">Connect a device first, then start screen mirroring.</string>
+    <string name="kadb_connect_failed">Connection failed</string>
+    <string name="kadb_connect_failed_probe_suggestion">The device responded but the command failed. Make sure wireless debugging is authorized on the target device.</string>
+    <string name="kadb_cannot_connect_device">Unable to connect to the device</string>
+    <string name="kadb_cannot_connect_suggestion">Make sure the device is on the same network, the ADB port is correct, and debugging is authorized.</string>
+    <string name="kadb_adb_interface_not_found">ADB interface not found</string>
+    <string name="kadb_adb_interface_suggestion">Make sure USB debugging is enabled on the target device and it isn\'t in Fastboot mode.</string>
+    <string name="kadb_usb_otg_connect_failed">USB OTG connection failed</string>
+    <string name="kadb_usb_otg_connect_suggestion">Make sure USB debugging is authorized on the target device, then reconnect the OTG cable.</string>
+    <string name="kadb_pair_failed">Wireless debugging pairing failed</string>
+    <string name="kadb_pair_failed_suggestion">Make sure the pairing code hasn\'t expired, and the pairing IP and port match the pairing dialog on the target device.</string>
+    <string name="kadb_command_failed">Command execution failed</string>
+    <string name="kadb_command_failed_suggestion">Check that the command is correct, or make sure the device is still connected.</string>
+    <string name="kadb_read_device_info_failed">Failed to read device info</string>
+    <string name="kadb_read_device_info_suggestion">Make sure the device is still online and allows ADB commands.</string>
+    <string name="kadb_apk_install_failed">APK installation failed</string>
+    <string name="kadb_apk_install_fallback_suggestion">Make sure the APK file is complete, the device has enough storage, and installing the app is allowed.</string>
+    <string name="kadb_app_uninstall_failed">App uninstallation failed</string>
+    <string name="kadb_app_uninstall_suggestion">Make sure the package name is correct and the app can be uninstalled by the current user.</string>
+    <string name="kadb_app_stop_failed">Failed to stop the app</string>
+    <string name="kadb_app_stop_suggestion">Make sure the package name is correct and the device allows stopping this app.</string>
+    <string name="kadb_app_launch_failed">Failed to launch the app</string>
+    <string name="kadb_app_launch_suggestion">Make sure the package name is correct and the app has a launchable entry point.</string>
+    <string name="kadb_app_enable_failed">Failed to enable the app</string>
+    <string name="kadb_app_disable_failed">Failed to disable the app</string>
+    <string name="kadb_app_toggle_suggestion">Make sure the package name is correct and the device allows changing this app\'s state.</string>
+    <string name="kadb_apk_export_failed">Failed to export the APK</string>
+    <string name="kadb_apk_export_check_exist_suggestion">Make sure the app exists and the device stays connected.</string>
+    <string name="kadb_apk_export_single_only_suggestion">Only single-APK apps can be exported. Make sure the app exists and isn\'t a split package.</string>
+    <string name="kadb_list_apps_failed">Failed to read the app list</string>
+    <string name="kadb_list_apps_suggestion">Make sure the device is still online and allows the pm list packages command.</string>
+    <string name="kadb_list_dir_failed">Failed to read the directory</string>
+    <string name="kadb_list_dir_suggestion">Make sure the device path exists and the current user has read permission.</string>
+    <string name="kadb_mkdir_failed">Failed to create the folder</string>
+    <string name="kadb_mkdir_suggestion">Make sure the target path is writable and the folder name isn\'t already used.</string>
+    <string name="kadb_delete_suggestion">Make sure the path exists, the directory is empty, and the current user has delete permission.</string>
+    <string name="kadb_rename_suggestion">Make sure the name is valid and the target path isn\'t already used.</string>
+    <string name="kadb_push_failed">File push failed</string>
+    <string name="kadb_push_fallback_suggestion">Make sure the local file exists, the target path is writable, and the device stays connected.</string>
+    <string name="kadb_pull_failed">File pull failed</string>
+    <string name="kadb_pull_suggestion">Make sure the device path exists, the local save location is writable, and the device stays connected.</string>
+    <string name="kadb_screenshot_failed">Screenshot failed</string>
+    <string name="kadb_screenshot_suggestion">Make sure the device allows the screencap command.</string>
+    <string name="kadb_mirror_usb_unsupported">Screen mirroring isn\'t supported over USB OTG yet</string>
+    <string name="kadb_mirror_usb_unsupported_suggestion">Screen mirroring needs multiple parallel ADB connections, but USB OTG only supports a single channel. Please use Wi-Fi ADB instead.</string>
+    <string name="kadb_mirror_connect_failed">Screen mirroring connection failed</string>
+    <string name="kadb_mirror_restored_suggestion">Make sure the device is still online, then try entering screen mirroring again.</string>
+    <string name="kadb_mirror_not_restored_suggestion">Mirroring connection failed and the previous session couldn\'t be restored. Please reconnect the device.</string>
+
+    <!-- FastbootOtgManager -->
+    <string name="fastboot_interface_not_found">Fastboot interface not found</string>
+    <string name="fastboot_interface_suggestion">Make sure the target device has entered Bootloader/Fastboot mode.</string>
+    <string name="fastboot_connect_failed">Fastboot connection failed</string>
+    <string name="fastboot_connect_failed_suggestion">Make sure the target device is in Fastboot mode, the OTG cable is secure, and USB access is authorized.</string>
+    <string name="fastboot_not_connected">No Fastboot device connected</string>
+    <string name="fastboot_command_empty">Fastboot command is empty</string>
+    <string name="fastboot_command_empty_suggestion">Enter a valid Fastboot command, e.g. getvar:product.</string>
+    <string name="fastboot_command_failed">Fastboot command execution failed</string>
+    <string name="fastboot_command_failed_suggestion">Make sure the command format is correct and the device is still in Fastboot mode.</string>
+    <string name="fastboot_invalid_response_error">Did not receive a valid Fastboot response (%1$s)</string>
+
+    <!-- AdbRepository -->
+    <string name="repo_usb_device_disconnected">USB device disconnected</string>
+    <string name="repo_usb_device_disconnected_suggestion">Reconnect the OTG cable and refresh the USB device list on the home screen.</string>
+    <string name="repo_usb_permission_missing">USB permission not granted</string>
+    <string name="repo_usb_permission_missing_suggestion">Allow sky adb to access this USB device in the system dialog.</string>
+    <string name="repo_usb_mode_unknown">Unable to detect the USB device mode</string>
+    <string name="repo_usb_mode_unknown_suggestion">Make sure the target device is in ADB or Fastboot mode.</string>
+    <string name="repo_not_fastboot">Not currently a Fastboot connection</string>
+    <string name="repo_fastboot_no_device_info">Device details aren\'t available in Fastboot mode</string>
+    <string name="repo_fastboot_no_device_info_suggestion">Reboot into the system and connect via USB ADB, or use a Fastboot command to read variables.</string>
+    <string name="repo_fastboot_no_shell">Shell isn\'t supported in Fastboot mode</string>
+    <string name="repo_fastboot_no_shell_suggestion">The device is in Fastboot mode. Use Fastboot commands like getvar or reboot.</string>
+    <string name="repo_device_name_android">Android device</string>
+    <string name="repo_device_name_usb">USB device</string>
+    <string name="repo_device_name_fastboot">Fastboot device</string>
+    <string name="repo_status_just_connected">Just connected</string>
+    <string name="repo_status_fastboot_connected">Fastboot connected</string>
+
+    <!-- Scrcpy mirroring -->
+    <string name="scrcpy_video_stream_error">Screen mirroring video stream error</string>
+    <string name="scrcpy_start_failed">Failed to start screen mirroring</string>
+    <string name="scrcpy_start_failed_fallback_suggestion">Check the diagnostic logs in Settings.</string>
+    <string name="scrcpy_stop_release_failed">Failed to release screen mirroring resources</string>
+    <string name="scrcpy_stop_release_failed_suggestion">If starting again fails, reconnect the device.</string>
+    <string name="scrcpy_control_disconnected_suggestion">The mirroring connection may have dropped. Please re-enter screen mirroring.</string>
+    <string name="scrcpy_send_touch_failed">Failed to send the remote touch event</string>
+    <string name="scrcpy_send_key_failed">Failed to send the remote key event</string>
+    <string name="scrcpy_send_text_failed">Failed to send the remote text</string>
+    <string name="scrcpy_mirror_diagnostic_template">Current quality: %1$s. Start parameters: %2$s. Please re-enter screen mirroring; if it keeps failing, switch to the smooth quality preset.</string>
+    <string name="scrcpy_mirror_diagnostic_with_log">%1$s\nscrcpy server log:\n%2$s</string>
+    <string name="scrcpy_audio_requires_connection">An audio connection is required when audio is enabled</string>
+    <string name="scrcpy_socket_connect_failed">Unable to connect to the scrcpy socket: %1$s</string>
+    <string name="scrcpy_unsupported_codec">Unsupported video codec: 0x%1$s</string>
+
+    <!-- UsbBulkChannel -->
+    <string name="usb_claim_interface_failed">Unable to claim the USB interface</string>
+    <string name="usb_bulk_endpoint_not_found">USB bulk endpoint not found</string>
+    <string name="usb_write_failed">USB write failed: %1$s</string>
+
+    <!-- LocalFileManager -->
+    <string name="files_dir_not_exist">The directory doesn\'t exist</string>
+    <string name="files_not_a_directory">This isn\'t a directory</string>
+    <string name="files_list_dir_permission">Unable to read the directory. Please grant \"All files access\" permission.</string>
+    <string name="files_name_exists">An item with this name already exists</string>
+    <string name="files_mkdir_failed">Failed to create the folder</string>
+    <string name="files_target_not_exist">The target doesn\'t exist</string>
+    <string name="files_rename_name_empty">The name can\'t be empty</string>
+    <string name="files_name_no_separator">The name can\'t contain a path separator</string>
+    <string name="files_cannot_read_picked">Unable to read the selected file</string>
+    <string name="files_cannot_write_save_location">Unable to write to the selected save location</string>
+
+    <!-- LocalAppExporter -->
+    <string name="localapps_not_exportable">This app isn\'t a single-APK package that can be exported</string>
+    <string name="localapps_cannot_read_apk">Unable to read this app\'s installation package</string>
+
+    <!-- NetworkDownloadManager -->
+    <string name="download_invalid_url">Invalid download link</string>
+    <string name="download_invalid_url_suggestion">Enter a download link starting with http:// or https://.</string>
+    <string name="download_failed">Download failed</string>
+    <string name="download_failed_server_code_suggestion">The server returned %1$s. Check whether the link is accessible.</string>
+    <string name="download_failed_generic_suggestion">Check your network connection, the download link, and available storage, then try again.</string>
+    <string name="download_progress_percent">Downloaded %1$d%%</string>
+    <string name="download_progress_bytes">Downloading %1$s</string>
+    <string name="download_complete">Download complete</string>
+
+    <!-- AndroidAdbMdnsDiscovery -->
+    <string name="discovery_start_failed">Automatic discovery failed to start. You can continue using subnet scanning.</string>
+    <string name="discovery_unavailable">Automatic discovery isn\'t available. You can continue using subnet scanning.</string>
+
+    <!-- Device type / connection state labels -->
+    <string name="device_type_phone">Phone</string>
+    <string name="device_type_tablet">Tablet</string>
+    <string name="device_type_tv">TV</string>
+    <string name="device_type_box">Box</string>
+    <string name="device_type_unknown">Unknown device</string>
+    <string name="connection_state_disconnected">Disconnected</string>
+    <string name="connection_state_connecting">Connecting</string>
+    <string name="connection_state_connected">Connected</string>
+    <string name="connection_state_failed">Failed</string>
+    <string name="connection_state_offline">Offline</string>
+
+    <!-- Download task states -->
+    <string name="download_state_waiting">Waiting</string>
+    <string name="download_state_downloading">Downloading</string>
+    <string name="download_state_pushing">Pushing</string>
+    <string name="download_state_installing">Installing</string>
+    <string name="download_state_success">Completed</string>
+    <string name="download_state_failed">Failed</string>
+    <string name="download_state_canceled">Canceled</string>
+    <string name="download_target_path_label">Target path</string>
+
+    <!-- LAN discovery: ADB probe states -->
+    <string name="adb_probe_port_closed_label">Closed</string>
+    <string name="adb_probe_port_closed_desc">Target port did not respond</string>
+    <string name="adb_probe_not_adb_label">Not ADB</string>
+    <string name="adb_probe_not_adb_desc">Port is open but did not respond to the ADB handshake</string>
+    <string name="adb_probe_port_open_label">Port open</string>
+    <string name="adb_probe_port_open_desc">Port is reachable; try connecting via ADB to confirm</string>
+    <string name="adb_probe_unauthorized_label">Needs authorization</string>
+    <string name="adb_probe_unauthorized_desc">Found an ADB service; confirm authorization on the target device</string>
+    <string name="adb_probe_available_label">Connectable</string>
+    <string name="adb_probe_available_desc">Found a responsive ADB service</string>
+    <string name="adb_probe_secure_label">Wireless debugging</string>
+    <string name="adb_probe_secure_desc">Found the Android 11+ wireless debugging secure handshake port</string>
+    <string name="adb_probe_failed_label">Probe failed</string>
+    <string name="adb_probe_failed_desc">Probe error; you can retry the scan</string>
+
+    <!-- LAN discovery: subnet source labels -->
+    <string name="discovery_source_current_network">Current network</string>
+    <string name="discovery_source_manual_config">Manual config</string>
+    <string name="discovery_source_recent_device">Recent device</string>
+
+    <!-- mDNS discovery service types -->
+    <string name="mdns_service_pairing_label">Wireless debugging pairing</string>
+    <string name="mdns_service_pairing_action">Pair</string>
+    <string name="mdns_service_pairing_desc">Enter the 6-digit pairing code shown on the target device to finish pairing</string>
+    <string name="mdns_service_connect_label">Wireless debugging connect</string>
+    <string name="mdns_service_connect_action">Connect</string>
+    <string name="mdns_service_connect_desc">Paired devices can connect using this port</string>
+    <string name="mdns_service_legacy_label">Legacy Wi-Fi ADB</string>
+    <string name="mdns_service_legacy_desc">For devices with adb tcpip already enabled</string>
+
+    <!-- Scan range validation -->
+    <string name="scan_range_error_too_many">You can configure up to %1$d subnets</string>
+    <string name="scan_range_error_invalid">Invalid format or range too large: %1$s</string>
+
+    <!-- Input validation -->
+    <string name="error_ipv4_invalid">Please enter a valid IPv4 address</string>
+    <string name="error_port_not_number">%1$s must be numeric</string>
+    <string name="error_port_out_of_range">%1$s must be between 1-65535</string>
+    <string name="error_url_scheme">Please enter a link starting with http:// or https://</string>
+    <string name="error_url_apk_suffix">APK download links should end with .apk</string>
+    <string name="error_device_path_prefix">%1$s must start with /</string>
+    <string name="unit_device_path">Device path</string>
+
+    <!-- Diagnostic modules -->
+    <string name="diagnostic_module_app">App</string>
+    <string name="diagnostic_module_wifi_adb">Wi-Fi ADB</string>
+    <string name="diagnostic_module_usb_otg">USB OTG</string>
+    <string name="diagnostic_module_fastboot">Fastboot</string>
+    <string name="diagnostic_module_pairing">Wireless pairing</string>
+    <string name="diagnostic_module_discovery">Device discovery</string>
+    <string name="diagnostic_module_files">Files</string>
+    <string name="diagnostic_module_apps">App management</string>
+    <string name="diagnostic_module_install">Install</string>
+    <string name="diagnostic_module_shell">Shell</string>
+    <string name="diagnostic_module_screenshot">Screenshot</string>
+    <string name="diagnostic_module_logs">System logs</string>
+    <string name="diagnostic_module_remote">Remote control</string>
+    <string name="diagnostic_module_mirror">Screen mirror</string>
+    <string name="diagnostic_module_download">Download</string>
+    <string name="diagnostic_module_settings">Settings</string>
+
+    <!-- Diagnostic log formatting -->
+    <string name="diagnostic_format_empty">No diagnostic logs</string>
+    <string name="diagnostic_format_time">Time: %1$s</string>
+    <string name="diagnostic_format_module">Module: %1$s</string>
+    <string name="diagnostic_format_operation">Operation: %1$s</string>
+    <string name="diagnostic_format_target">Target: %1$s</string>
+    <string name="diagnostic_format_reason">Reason: %1$s</string>
+    <string name="diagnostic_format_suggestion">Suggestion: %1$s</string>
+    <string name="diagnostic_format_error">Error: </string>
+
+    <!-- ViewModel operation status: Device -->
+    <string name="device_no_device_selected">No device selected</string>
+    <string name="device_refreshing">Refreshing device info</string>
+    <string name="device_refresh_success">Device info updated</string>
+
+    <!-- ViewModel operation status: Settings -->
+    <string name="settings_timeout_required">Enter a timeout value</string>
+    <string name="settings_timeout_range">Must be between 1-300 seconds</string>
+
+    <!-- ViewModel operation status: Mirror -->
+    <string name="mirror_starting">Starting screen mirroring</string>
+    <string name="mirror_invalid_surface">The display surface is invalid. Please re-enter screen mirroring.</string>
+    <string name="mirror_disconnected">Screen mirroring disconnected</string>
+    <string name="mirror_reenter_hint">Please re-enter screen mirroring.</string>
+    <string name="mirror_active">Mirroring</string>
+
+    <!-- ViewModel operation status: Shell -->
+    <string name="shell_cannot_execute">Cannot execute command</string>
+    <string name="shell_enter_command_hint">Please enter a shell command first.</string>
+    <string name="shell_executing">Executing: %1$s</string>
+    <string name="shell_command_no_output">Command completed with no output.</string>
+    <string name="shell_execute_success">Command completed, exit code %1$d</string>
+
+    <!-- ViewModel operation status: Pairing -->
+    <string name="pairing_autofill_hint">Filled in the auto-discovered pairing address. Please enter the 6-digit pairing code.</string>
+    <string name="pairing_cannot_start">Cannot start pairing</string>
+    <string name="pairing_check_fields">Check that the pairing IP, pairing port, and 6-digit pairing code are correct.</string>
+    <string name="pairing_pairing_with">Pairing with %1$s:%2$s</string>
+    <string name="pairing_finding_port">Finding connect port\u2026</string>
+    <string name="pairing_success_port_found">Paired successfully, found connect port %1$d.</string>
+    <string name="pairing_success_no_port">Paired successfully. No connect port was auto-discovered; please confirm the \"IP address &amp; port\" on the wireless debugging page before connecting.</string>
+    <string name="pairing_code_length_hint">The pairing code is usually 6 digits</string>
+
+    <!-- ViewModel operation status: Screenshot -->
+    <string name="screenshot_capturing">Capturing device screen</string>
+    <string name="screenshot_captured_choose_location">Screenshot captured, choose a save location</string>
+    <string name="screenshot_cannot_save">Cannot save screenshot</string>
+    <string name="screenshot_finish_capture_hint">Please finish capturing and choose a save location first.</string>
+    <string name="screenshot_saving">Saving screenshot</string>
+    <string name="screenshot_cannot_open_location">Cannot open the save location</string>
+    <string name="screenshot_saved">Screenshot saved</string>
+    <string name="screenshot_save_failed">Failed to save screenshot</string>
+    <string name="screenshot_confirm_writable">Please make sure the save location is writable.</string>
+
+    <!-- ViewModel operation status: System log -->
+    <string name="logs_level_all">All</string>
+    <string name="logs_reading_recent">Reading the last %1$d lines of logs</string>
+    <string name="logs_read_success">Read %1$d lines of logs</string>
+    <string name="logs_read_failed">Failed to read logs</string>
+    <string name="logs_confirm_logcat_allowed">Please confirm the target device allows reading logcat.</string>
+
+    <!-- ViewModel operation status: Install APK -->
+    <string name="install_wrong_file_type">File type may be incorrect</string>
+    <string name="install_select_apk_hint">Please choose an installation package ending in .apk.</string>
+    <string name="install_no_apk_selected">No APK selected</string>
+    <string name="install_select_local_apk_hint">Please choose a local APK file first.</string>
+    <string name="install_preparing">Preparing APK file</string>
+    <string name="install_read_failed">Failed to read APK</string>
+    <string name="install_confirm_file_exists">Please confirm the file still exists and the app is allowed to read it.</string>
+
+    <!-- ViewModel operation status: Home -->
+    <string name="home_usb_permission_denied">USB permission denied</string>
+    <string name="home_usb_permission_hint">Please allow sky adb to access this USB device in the system dialog, then retry.</string>
+    <string name="home_autofill_discovered">Filled in the discovered address. Please confirm before connecting.</string>
+    <string name="home_pairing_success_ip_filled">Paired successfully, IP filled in. Confirm the connect port (\"IP address &amp; port\" on the wireless debugging page) before connecting.</string>
+    <string name="home_disconnected">Disconnected</string>
+    <string name="home_cannot_connect">Cannot start connection</string>
+    <string name="home_check_ip_port">Please check that the IP address and port are correct.</string>
+    <string name="home_connecting">Connecting to %1$s:%2$s</string>
+    <string name="home_connect_success">Device connected: %1$s</string>
+    <string name="home_waiting_usb_permission">Waiting for USB permission\u2026</string>
+    <string name="home_usb_otg_connecting">Connecting to %1$s device via USB OTG\u2026</string>
+    <string name="home_usb_connect_success">USB connected: %1$s</string>
+
+    <!-- ViewModel operation status: Device discovery -->
+    <string name="discovery_cannot_scan_lan">Cannot scan the LAN</string>
+    <string name="discovery_connect_wifi_hint">Please connect to Wi-Fi or a LAN, then retry.</string>
+    <string name="discovery_preparing_scan">Preparing to scan %1$d candidate subnets</string>
+    <string name="discovery_scanning">Scanning %1$d candidate subnets</string>
+    <string name="discovery_scan_complete">Scan complete, found %1$d ADB device(s)</string>
+    <string name="discovery_scan_stopped">Scan stopped</string>
+    <string name="discovery_retry_later_hint">You can scan again later.</string>
+    <string name="discovery_scan_canceled">Scan canceled</string>
+
+    <!-- ViewModel operation status: Apps -->
+    <string name="apps_filter_all">All</string>
+    <string name="apps_filter_user">User apps</string>
+    <string name="apps_filter_system">System apps</string>
+    <string name="apps_loading_list">Loading app list</string>
+    <string name="apps_loaded_count">Loaded %1$d apps</string>
+    <string name="apps_launching">Launching %1$s</string>
+    <string name="apps_stopping">Stopping %1$s</string>
+    <string name="apps_uninstalling">Uninstalling %1$s</string>
+    <string name="apps_enabling">Enabling %1$s</string>
+    <string name="apps_disabling">Freezing %1$s</string>
+    <string name="apps_operation_complete">Operation complete</string>
+    <string name="apps_export_complete">APK export complete</string>
+    <string name="apps_save_apk_failed">Failed to save APK</string>
+    <string name="apps_save_apk_hint">Please confirm the save location is writable and keep the app running in the foreground.</string>
+
+    <!-- ViewModel operation status: Local apps -->
+    <string name="localapps_loading">Loading local apps</string>
+    <string name="localapps_loaded_count">Loaded %1$d launchable user apps</string>
+    <string name="localapps_op_read">Read local apps</string>
+    <string name="localapps_read_failed">Failed to read local apps</string>
+    <string name="localapps_confirm_read_permission">Please confirm the system allows reading the installed app list.</string>
+    <string name="localapps_unsupported_app">This app isn\'t supported yet</string>
+    <string name="localapps_split_apk_hint">This app may be a split package. Only single-APK user apps are currently supported.</string>
+    <string name="localapps_op_export">Export local app</string>
+    <string name="localapps_export_failed">Failed to export app</string>
+    <string name="localapps_export_failed_hint">The app\'s installation package could not be read, or the system has restricted it.</string>
+    <string name="localapps_install_success">%1$s installed</string>
+    <string name="localapps_op_install">Install local app</string>
+    <string name="localapps_install_failed">Failed to install app</string>
+    <string name="localapps_install_failed_hint">Please confirm the target device is still connected and installing this app is allowed.</string>
+
+    <!-- ViewModel operation status: shared transfer/install labels -->
+    <string name="common_transferring_arg">Transferring %1$s</string>
+    <string name="common_installing_arg">Installing %1$s</string>
+    <string name="common_exporting_arg">Exporting %1$s</string>
+    <string name="common_apk_install_success">APK installed</string>
+
+    <!-- ViewModel operation status: Remote control -->
+    <string name="remote_key_power">Power</string>
+    <string name="remote_key_wakeup">Wake up</string>
+    <string name="remote_key_sleep">Sleep</string>
+    <string name="remote_key_home">Home</string>
+    <string name="remote_key_back">Back</string>
+    <string name="remote_key_menu">Menu</string>
+    <string name="remote_key_up">Up</string>
+    <string name="remote_key_down">Down</string>
+    <string name="remote_key_left">Left</string>
+    <string name="remote_key_right">Right</string>
+    <string name="remote_key_center">OK</string>
+    <string name="remote_key_volume_up">Volume+</string>
+    <string name="remote_key_volume_down">Volume-</string>
+    <string name="remote_key_mute">Mute</string>
+    <string name="remote_key_play_pause">Play/Pause</string>
+    <string name="remote_key_previous">Previous</string>
+    <string name="remote_key_next">Next</string>
+    <string name="remote_sending">Sending %1$s</string>
+    <string name="remote_sent">Sent: %1$s</string>
+    <string name="remote_send_failed">Failed to send key</string>
+    <string name="remote_key_control_blocked">The target device blocks ADB key control. Check the secure debugging setting in developer options.</string>
+    <string name="remote_confirm_connected">Please confirm the target device is still connected.</string>
+
+    <!-- ViewModel operation status: Online download -->
+    <string name="download_mode_install_apk">Download APK and install</string>
+    <string name="download_mode_push_file">Download file and push</string>
+    <string name="download_cannot_start">Cannot start download</string>
+    <string name="download_check_url_path">Please check the download link and target path.</string>
+    <string name="download_preparing">Preparing download</string>
+    <string name="download_waiting_filename">Waiting for file name\u2026</string>
+    <string name="download_op_download">Download file</string>
+    <string name="download_canceled">Download canceled</string>
+    <string name="download_canceled_hint">You can change the link or target path and start again.</string>
+    <string name="download_complete_installing_apk">Download complete, installing APK</string>
+    <string name="download_complete_pushing">Download complete, pushing file</string>
+    <string name="download_pushing_file">Pushing file</string>
+    <string name="download_finishing_push">Finishing push</string>
+    <string name="download_push_complete">File push complete</string>
+    <string name="download_pushed_to">File pushed to %1$s</string>
+
+    <!-- ViewModel operation status: File transfer -->
+    <string name="files_items_count">%1$d item(s)</string>
+    <string name="files_path_empty">Path cannot be empty</string>
+    <string name="files_cannot_create_folder">Cannot create folder</string>
+    <string name="files_folder_name_invalid">Name cannot be empty and cannot contain a path separator.</string>
+    <string name="files_creating_folder">Creating %1$s</string>
+    <string name="files_folder_created">Folder created</string>
+    <string name="files_create_failed">Create failed</string>
+    <string name="files_confirm_dir_writable">Please confirm the directory is writable.</string>
+    <string name="files_cannot_rename">Cannot rename</string>
+    <string name="files_select_exactly_one">Please select exactly 1 item first.</string>
+    <string name="files_rename_name_invalid">Name cannot be empty and cannot contain a path separator</string>
+    <string name="files_renaming">Renaming</string>
+    <string name="files_renamed_to">Renamed to %1$s</string>
+    <string name="files_confirm_name_available">Please confirm the name is available.</string>
+    <string name="files_deleting_count">Deleting %1$d item(s)</string>
+    <string name="files_deleted_count">Deleted %1$d item(s)</string>
+    <string name="files_delete_incomplete">Delete incomplete</string>
+    <string name="files_no_file_selected">No file selected</string>
+    <string name="files_select_files_hint">Select one or more files, then transfer to the other side.</string>
+    <string name="files_uploaded_count">Uploaded %1$d file(s)</string>
+    <string name="files_downloaded_count">Downloaded %1$d file(s)</string>
+    <string name="files_transfer_canceled">Transfer canceled</string>
+    <string name="files_transfer_interrupted">Transfer interrupted</string>
+    <string name="files_check_connection_hint">Please check the connection and target path, then retry.</string>
+    <string name="files_local_file_missing">Local file does not exist: %1$s</string>
+    <string name="files_uploading_progress">Uploading %1$d/%2$d \u00b7 %3$s</string>
+    <string name="files_uploading_short">Uploading %1$d/%2$d</string>
+    <string name="files_upload_finishing">Finishing %1$d/%2$d</string>
+    <string name="files_downloading_progress">Downloading %1$d/%2$d \u00b7 %3$s</string>
+    <string name="files_cannot_read_local_dir">Cannot read local directory</string>
+    <string name="files_grant_storage_permission">Please grant storage permission.</string>
 </resources>

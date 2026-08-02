@@ -21,21 +21,25 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.data.ThemeMode
+import com.sky22333.skyadb.i18n.AppLanguage
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
 import com.sky22333.skyadb.ui.components.SettingBlock
 import com.sky22333.skyadb.ui.components.SettingGroupCard
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
+import com.sky22333.skyadb.R
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -55,6 +59,7 @@ fun SettingsScreen(
         onScanRangesChanged = viewModel::onScanRangesChanged,
         onThemeModeSelected = viewModel::onThemeModeSelected,
         onMirrorQualityPresetSelected = viewModel::onMirrorQualityPresetSelected,
+        onLanguageSelected = viewModel::onLanguageSelected,
         onClearRecentDevicesClicked = viewModel::onClearRecentDevicesClicked,
         onDiagnosticsClick = onDiagnosticsClick,
     )
@@ -71,13 +76,14 @@ private fun SettingsContent(
     onScanRangesChanged: (String) -> Unit,
     onThemeModeSelected: (ThemeMode) -> Unit,
     onMirrorQualityPresetSelected: (MirrorQualityPreset) -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit,
     onClearRecentDevicesClicked: () -> Unit,
     onDiagnosticsClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text("设置") })
+        TopAppBar(title = { Text(stringResource(R.string.settings_title)) })
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -93,59 +99,59 @@ private fun SettingsContent(
                 SettingGroupCard {
                     SettingBlock(
                         icon = Icons.Outlined.SettingsEthernet,
-                        title = "默认端口",
-                        description = "默认连接端口",
+                        title = stringResource(R.string.settings_default_port_title),
+                        description = stringResource(R.string.settings_default_port_desc),
                     ) {
                         OutlinedTextField(
                             modifier = Modifier.fillMaxWidth(),
                             value = uiState.defaultPort,
                             onValueChange = onDefaultPortChanged,
                             singleLine = true,
-                            suffix = { Text("端口") },
+                            suffix = { Text(stringResource(R.string.unit_port)) },
                             isError = uiState.defaultPortError != null,
                             supportingText = uiState.defaultPortError?.let { { Text(it) } },
                         )
                     }
                     SettingBlock(
                         icon = Icons.Outlined.Schedule,
-                        title = "连接超时",
-                        description = "建立连接等待时间",
+                        title = stringResource(R.string.settings_connection_timeout_title),
+                        description = stringResource(R.string.settings_connection_timeout_desc),
                     ) {
                         OutlinedTextField(
                             modifier = Modifier.fillMaxWidth(),
                             value = uiState.connectionTimeoutSeconds,
                             onValueChange = onConnectionTimeoutChanged,
                             singleLine = true,
-                            suffix = { Text("秒") },
+                            suffix = { Text(stringResource(R.string.unit_seconds)) },
                             isError = uiState.connectionTimeoutError != null,
                             supportingText = uiState.connectionTimeoutError?.let { { Text(it) } },
                         )
                     }
                     SettingBlock(
                         icon = Icons.Outlined.Schedule,
-                        title = "命令超时",
-                        description = "ADB 命令等待时间",
+                        title = stringResource(R.string.settings_command_timeout_title),
+                        description = stringResource(R.string.settings_command_timeout_desc),
                     ) {
                         OutlinedTextField(
                             modifier = Modifier.fillMaxWidth(),
                             value = uiState.commandTimeoutSeconds,
                             onValueChange = onCommandTimeoutChanged,
                             singleLine = true,
-                            suffix = { Text("秒") },
+                            suffix = { Text(stringResource(R.string.unit_seconds)) },
                             isError = uiState.commandTimeoutError != null,
                             supportingText = uiState.commandTimeoutError?.let { { Text(it) } },
                         )
                     }
                     SettingBlock(
                         icon = Icons.Outlined.SettingsEthernet,
-                        title = "扫描网段",
-                        description = "可选，自定义发现范围",
+                        title = stringResource(R.string.settings_scan_ranges_title),
+                        description = stringResource(R.string.settings_scan_ranges_desc),
                     ) {
                         OutlinedTextField(
                             modifier = Modifier.fillMaxWidth(),
                             value = uiState.scanRanges,
                             onValueChange = onScanRangesChanged,
-                            placeholder = { Text("例如 10.43.180.0/24") },
+                            placeholder = { Text(stringResource(R.string.settings_scan_ranges_placeholder)) },
                             minLines = 1,
                             maxLines = 4,
                             isError = uiState.scanRangesError != null,
@@ -159,8 +165,8 @@ private fun SettingsContent(
                 SettingGroupCard {
                     SettingBlock(
                         icon = Icons.Outlined.Tune,
-                        title = "镜像画质",
-                        description = "下次启动镜像生效",
+                        title = stringResource(R.string.settings_mirror_quality_title),
+                        description = stringResource(R.string.settings_mirror_quality_desc),
                     ) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -170,7 +176,7 @@ private fun SettingsContent(
                                 FilterChip(
                                     selected = uiState.mirrorQualityPreset == preset,
                                     onClick = { onMirrorQualityPresetSelected(preset) },
-                                    label = { Text(preset.label) },
+                                    label = { Text(stringResource(preset.labelRes)) },
                                 )
                             }
                         }
@@ -182,8 +188,8 @@ private fun SettingsContent(
                 SettingGroupCard {
                     SettingBlock(
                         icon = Icons.Outlined.DarkMode,
-                        title = "主题模式",
-                        description = "选择应用外观",
+                        title = stringResource(R.string.settings_theme_mode_title),
+                        description = stringResource(R.string.settings_theme_mode_desc),
                     ) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -193,7 +199,30 @@ private fun SettingsContent(
                                 FilterChip(
                                     selected = uiState.themeMode == mode,
                                     onClick = { onThemeModeSelected(mode) },
-                                    label = { Text(mode.label) },
+                                    label = { Text(stringResource(mode.labelRes)) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                SettingGroupCard {
+                    SettingBlock(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.settings_language),
+                        description = stringResource(R.string.settings_language_desc),
+                    ) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AppLanguage.entries.forEach { language ->
+                                FilterChip(
+                                    selected = uiState.language == language,
+                                    onClick = { onLanguageSelected(language) },
+                                    label = { Text(stringResource(language.labelRes)) },
                                 )
                             }
                         }
@@ -205,14 +234,14 @@ private fun SettingsContent(
                 SettingGroupCard {
                     SettingBlock(
                         icon = Icons.Outlined.BugReport,
-                        title = "诊断日志",
-                        description = "查看最近错误",
+                        title = stringResource(R.string.settings_diagnostics_title),
+                        description = stringResource(R.string.settings_diagnostics_desc),
                         onClick = onDiagnosticsClick,
                     )
                     SettingBlock(
                         icon = Icons.Outlined.CleaningServices,
-                        title = "清理最近设备",
-                        description = "移除连接历史",
+                        title = stringResource(R.string.settings_clear_recent_devices_title),
+                        description = stringResource(R.string.settings_clear_recent_devices_desc),
                         onClick = onClearRecentDevicesClicked,
                     )
                 }
@@ -222,7 +251,7 @@ private fun SettingsContent(
                 SettingGroupCard {
                     SettingBlock(
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        title = "项目地址",
+                        title = stringResource(R.string.settings_project_url_title),
                         description = "sky22333/skyadb",
                         onClick = { uriHandler.openUri(ProjectUrl) },
                     )
@@ -246,6 +275,7 @@ private fun SettingsContentPreview() {
             onScanRangesChanged = {},
             onThemeModeSelected = {},
             onMirrorQualityPresetSelected = {},
+            onLanguageSelected = {},
             onClearRecentDevicesClicked = {},
             onDiagnosticsClick = {},
         )

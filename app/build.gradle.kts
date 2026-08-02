@@ -60,6 +60,7 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation)

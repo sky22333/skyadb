@@ -40,10 +40,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
@@ -97,9 +99,9 @@ private fun ScreenshotContent(
         TopAppBar(
             title = {
                 Column {
-                    Text("设备截图")
+                    Text(stringResource(R.string.screenshot_title))
                     Text(
-                        "截图先显示预览，需要时再保存",
+                        stringResource(R.string.screenshot_subtitle),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -107,7 +109,7 @@ private fun ScreenshotContent(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回")
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -132,9 +134,12 @@ private fun ScreenshotContent(
                     modifier = Modifier.padding(AppDimens.CardPadding),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    SectionHeader(title = "截图任务", description = "截图会先保存到缓存，再由你选择保存位置")
+                    SectionHeader(
+                        title = stringResource(R.string.screenshot_task_title),
+                        description = stringResource(R.string.screenshot_task_desc),
+                    )
                     Text(
-                        text = uiState.latestFileName ?: "尚未生成截图",
+                        text = uiState.latestFileName ?: stringResource(R.string.screenshot_no_screenshot_yet),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     if (uiState.latestLocalPath != null) {
@@ -145,7 +150,7 @@ private fun ScreenshotContent(
                         Button(onClick = onCaptureClick, modifier = Modifier.weight(1f)) {
                             Icon(imageVector = Icons.Outlined.PhotoCamera, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("截图")
+                            Text(stringResource(R.string.nav_screenshot))
                         }
                         OutlinedButton(
                             onClick = onSaveClick,
@@ -154,7 +159,7 @@ private fun ScreenshotContent(
                         ) {
                             Icon(imageVector = Icons.Outlined.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("保存")
+                            Text(stringResource(R.string.action_save))
                         }
                     }
                     OutlinedButton(
@@ -164,7 +169,7 @@ private fun ScreenshotContent(
                     ) {
                         Icon(imageVector = Icons.Outlined.DeleteSweep, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("清除预览")
+                        Text(stringResource(R.string.action_clear_preview))
                     }
                 }
             }
@@ -182,7 +187,7 @@ private fun ScreenshotStatus(status: OperationStatus) {
         }
         is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
         is OperationStatus.Failed -> Text(
-            text = "${status.text}：${status.suggestion}",
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
             color = MaterialTheme.colorScheme.error,
         )
     }
@@ -211,7 +216,7 @@ private fun ScreenshotContentPreview() {
 private fun ScreenshotPreview(preview: ImageBitmap?) {
     if (preview == null) {
         Text(
-            text = "预览加载失败",
+            text = stringResource(R.string.screenshot_preview_failed),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -224,7 +229,7 @@ private fun ScreenshotPreview(preview: ImageBitmap?) {
     ) {
         Image(
             bitmap = preview,
-            contentDescription = "截图预览",
+            contentDescription = stringResource(R.string.screenshot_preview_desc),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),

@@ -1,11 +1,14 @@
 package com.sky22333.skyadb.model
 
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.i18n.appString
+
 data class DeviceInfo(
-    val brand: String = "未知",
-    val model: String = "未知",
-    val androidVersion: String = "未知",
-    val sdk: String = "未知",
-    val abi: String = "未知",
-    val resolution: String = "未知",
-    val battery: String = "未知",
+    val brand: String = appString(R.string.unknown),
+    val model: String = appString(R.string.unknown),
+    val androidVersion: String = appString(R.string.unknown),
+    val sdk: String = appString(R.string.unknown),
+    val abi: String = appString(R.string.unknown),
+    val resolution: String = appString(R.string.unknown),
+    val battery: String = appString(R.string.unknown),
 )

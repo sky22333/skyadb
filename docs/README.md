@@ -23,7 +23,7 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 - 截图：调用目标设备 `screencap`，拉取截图到本机缓存并预览，需要时再由用户选择保存位置。
 - 系统日志：读取目标设备最近系统日志，支持复制日志内容，便于排查目标设备问题。
 - 虚拟遥控器：模拟返回、主页、最近任务、方向键、确认、音量、静音、媒体控制等常用按键。
-- 屏幕镜像：基于官方 `scrcpy-server-v4.0`、Kadb `localabstract` 流、`SurfaceView` 和 `MediaCodec` 实现画面预览与远程触控；镜像页支持控制区显示/隐藏，画面按远端视频比例居中显示。
+- 屏幕镜像：基于官方 `scrcpy-server-v4.1`、Kadb `localabstract` 流、`SurfaceView` 和 `MediaCodec` 实现画面预览与远程触控；支持音频转发与中文输入；镜像页支持控制区显示/隐藏，画面按远端视频比例居中显示。
 - Shell：执行单条 Shell 命令并展示输出、错误输出和退出码。
 - 局域网发现：优先通过 Android NSD / mDNS 自动发现 ADB 服务，支持 `_adb._tcp.`、`_adb-tls-pairing._tcp.`、`_adb-tls-connect._tcp.`；自动发现无结果时，保留 TCP 网段扫描和 ADB 协议轻握手确认作为兜底。
 - 诊断日志：仅记录错误和异常信息，覆盖 WiFi ADB、配对、应用、文件、截图、系统日志、遥控器、屏幕镜像等功能，支持复制排查。
@@ -41,7 +41,7 @@ sky adb 是一款运行在 Android 手机上的全中文 ADB 管理工具。它�
 - DataStore Preferences
 - Kadb 2.1.3
 - kadb 2.1.3（mDNS 使用平台 NsdManager）
-- scrcpy-server 4.0
+- scrcpy-server 4.1
 - OkHttp 5.3.2
 - Timber
 - JUnit
@@ -65,7 +65,7 @@ skyadb/
 │   ├── build.gradle.kts                   # Android App 配置、版本号、签名、依赖
 │   └── src/main/
 │       ├── AndroidManifest.xml            # 权限、应用入口、图标、应用名
-│       ├── assets/scrcpy/scrcpy-server-v4.0 # 官方 scrcpy server 资产
+│       ├── assets/scrcpy/scrcpy-server-v4.1 # 官方 scrcpy server 资产
 │       ├── java/com/sky22333/skyadb/
 │       │   ├── AdbManagerApplication.kt   # Application 初始化入口
 │       │   ├── AppServices.kt             # 当前实际使用的轻量服务容器
@@ -113,7 +113,7 @@ skyadb/
 │       │   │   ├── ScrcpyControlClient.kt # scrcpy 控制协议发送：触摸、按键、文本
 │       │   │   ├── ScrcpyProtocol.kt      # scrcpy v4 视频包头和控制包编码
 │       │   │   ├── ScrcpyRepository.kt    # 镜像会话仓库，连接 UI 与底层 session
-│       │   │   ├── ScrcpyServerManager.kt # push 并启动 scrcpy-server-v4.0
+│       │   │   ├── ScrcpyServerManager.kt # push 并启动 scrcpy-server-v4.1
 │       │   │   ├── ScrcpySession.kt       # scrcpy video/control socket 和生命周期
 │       │   │   └── ScrcpyVideoDecoder.kt  # MediaCodec 解码到 Surface
 │       │   ├── ui/
@@ -202,7 +202,7 @@ skyadb/
 - 屏幕镜像默认使用均衡画质，用户可切换流畅、均衡、高清三档；高清模式不作为默认值。
 - 屏幕镜像使用 `SurfaceView` 按远端视频比例居中显示，触摸坐标必须与实际画面区域一致。
 - 屏幕镜像的触摸、按键、文本发送和 socket 释放必须在 IO 线程执行，不能阻塞主线程。
-- 屏幕镜像不因短暂切后台或复制文本而自动停止；用户关闭页面、离开镜像页或视频流异常时释放会话。
+- 屏幕镜像不因短暂切后台或 Surface 重建而拆除会话；回前台通过换绑 Surface 并 `RESET_VIDEO` 恢复画面。用户关闭页面、离开镜像页或视频流异常时释放会话。
 
 ## 开发规范
 
@@ -271,8 +271,8 @@ skyadb/
 ## 当前风险与注意事项
 
 - 当前依赖管理统一由 `AppServices` 提供，不保留未使用的 DI 框架；未来如需 Desktop 或多实现架构，再单独评估轻量依赖图或 DI。
-- 屏幕镜像依赖 `app/src/main/assets/scrcpy/scrcpy-server-v4.0`，更新 server 版本时必须同步更新 `ScrcpyConstants` 和相关协议适配。
-- 屏幕镜像的横竖屏体验当前通过 Activity 配置变更处理和 `SurfaceView` 比例布局优化；若后续需要完全避免 Surface 重建导致的重连，需要进一步解耦 scrcpy session 与 decoder Surface。
+- 屏幕镜像依赖 `app/src/main/assets/scrcpy/scrcpy-server-v4.1`，更新 server 版本时必须同步更新 `ScrcpyConstants` 和相关协议适配。
+- 屏幕镜像会话与 Surface 解耦：`surfaceDestroyed` 只暂停渲染，不拆除 scrcpy；新 Surface 通过 `MediaCodec.setOutputSurface` 与 `RESET_VIDEO` 恢复。视频解码在配置后等待关键帧再上屏。
 - mDNS 自动发现依赖局域网 multicast / DNS-SD 支持，部分路由器、访客网络、热点隔离、跨网段场景可能无法发现服务；此时用户可继续使用网段扫描或在设置中手动配置网段。
 - 局域网扫描依赖网络拓扑，手机热点、旁路由、访客网络、跨网段场景需要用户在设置中手动配置网段。
 - 本机应用安装到目标设备当前只支持用户应用的单 APK 导出；Split APK / App Bundle 不在当前范围。

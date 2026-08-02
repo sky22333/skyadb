@@ -3,8 +3,10 @@ package com.sky22333.skyadb.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.ConnectionState
@@ -71,8 +73,8 @@ class HomeViewModel(
                             connectingUsbDeviceName = null,
                             connectEnabled = true,
                             operationStatus = OperationStatus.Failed(
-                                text = "USB 授权被拒绝",
-                                suggestion = "请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。",
+                                text = appString(R.string.home_usb_permission_denied),
+                                suggestion = appString(R.string.home_usb_permission_hint),
                             ),
                         )
                     }
@@ -108,7 +110,7 @@ class HomeViewModel(
             ipError = validation.ipError,
             portError = validation.portError,
             connectEnabled = validation.isValid,
-            operationStatus = OperationStatus.Success("已填入发现的地址，请确认后连接。"),
+            operationStatus = OperationStatus.Success(appString(R.string.home_autofill_discovered)),
         )
     }
 
@@ -121,9 +123,7 @@ class HomeViewModel(
             ipError = validation.ipError,
             portError = validation.portError,
             connectEnabled = validation.isValid,
-            operationStatus = OperationStatus.Success(
-                "配对成功，已填入 IP。请确认连接端口（无线调试页的「IP 地址与端口」）后连接。",
-            ),
+            operationStatus = OperationStatus.Success(appString(R.string.home_pairing_success_ip_filled)),
         )
     }
 
@@ -133,7 +133,7 @@ class HomeViewModel(
             state.value = state.value.copy(
                 canDisconnect = false,
                 connectingUsbDeviceName = null,
-                operationStatus = OperationStatus.Success("已断开连接"),
+                operationStatus = OperationStatus.Success(appString(R.string.home_disconnected)),
             )
         }
     }
@@ -147,8 +147,8 @@ class HomeViewModel(
                 portError = validation.portError,
                 connectEnabled = false,
                 operationStatus = OperationStatus.Failed(
-                    text = "无法发起连接",
-                    suggestion = "请先检查 IP 地址和端口是否正确。",
+                    text = appString(R.string.home_cannot_connect),
+                    suggestion = appString(R.string.home_check_ip_port),
                 ),
             )
             return
@@ -158,7 +158,7 @@ class HomeViewModel(
             ipError = validation.ipError,
             portError = validation.portError,
             connectEnabled = false,
-            operationStatus = OperationStatus.Running("正在连接 ${current.ip}:${current.port}"),
+            operationStatus = OperationStatus.Running(appString(R.string.home_connecting, current.ip, current.port)),
         )
 
         viewModelScope.launch {
@@ -167,7 +167,7 @@ class HomeViewModel(
                     state.value = state.value.copy(
                         connectEnabled = true,
                         canDisconnect = true,
-                        operationStatus = OperationStatus.Success("设备连接成功：${result.data}"),
+                        operationStatus = OperationStatus.Success(appString(R.string.home_connect_success, result.data)),
                     )
                 }
                 is AdbOperationResult.Failure -> {
@@ -185,7 +185,7 @@ class HomeViewModel(
         if (!attachment.hasPermission) {
             state.value = state.value.copy(
                 connectingUsbDeviceName = deviceName,
-                operationStatus = OperationStatus.Running("等待 USB 授权…"),
+                operationStatus = OperationStatus.Running(appString(R.string.home_waiting_usb_permission)),
             )
             AppServices.usbOtgActions.askPermission(deviceName)
             return
@@ -204,7 +204,7 @@ class HomeViewModel(
             state.value = state.value.copy(
                 connectingUsbDeviceName = null,
                 canDisconnect = false,
-                operationStatus = OperationStatus.Success("USB 设备已断开"),
+                operationStatus = OperationStatus.Success(appString(R.string.repo_usb_device_disconnected)),
             )
             return
         }
@@ -223,7 +223,7 @@ class HomeViewModel(
         state.value = state.value.copy(
             connectingUsbDeviceName = deviceName,
             connectEnabled = false,
-            operationStatus = OperationStatus.Running("正在通过 USB OTG 连接 $modeLabel 设备…"),
+            operationStatus = OperationStatus.Running(appString(R.string.home_usb_otg_connecting, modeLabel)),
         )
         viewModelScope.launch {
             when (val result = adbRepository.connectUsbOtg(deviceName)) {
@@ -232,7 +232,7 @@ class HomeViewModel(
                         connectingUsbDeviceName = null,
                         connectEnabled = true,
                         canDisconnect = true,
-                        operationStatus = OperationStatus.Success("USB 连接成功：${result.data}"),
+                        operationStatus = OperationStatus.Success(appString(R.string.home_usb_connect_success, result.data)),
                     )
                 }
                 is AdbOperationResult.Failure -> {
@@ -259,8 +259,8 @@ class HomeViewModel(
     }
 
     private fun validateForm(ip: String, port: String): ValidationResult {
-        val ipError = NetworkInputValidator.ipv4Error(ip)
-        val portError = NetworkInputValidator.portError(port)
+        val ipError = NetworkInputValidator.ipv4Error(ip)?.let(::appString)
+        val portError = NetworkInputValidator.portError(port)?.resolve(AppServices.context)
 
         return ValidationResult(
             ipError = ipError,

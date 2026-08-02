@@ -1,5 +1,8 @@
 package com.sky22333.skyadb.model
 
+import androidx.annotation.StringRes
+import com.sky22333.skyadb.R
+
 enum class AdbLinkKind(val label: String) {
     Wifi("Wi-Fi"),
     UsbOtg("USB OTG"),
@@ -16,18 +19,18 @@ data class AdbDevice(
     val linkKind: AdbLinkKind = AdbLinkKind.Wifi,
 )
 
-enum class DeviceType(val label: String) {
-    Phone("手机"),
-    Tablet("平板"),
-    Tv("电视"),
-    Box("盒子"),
-    Unknown("未知设备"),
+enum class DeviceType(@param:StringRes val labelRes: Int) {
+    Phone(R.string.device_type_phone),
+    Tablet(R.string.device_type_tablet),
+    Tv(R.string.device_type_tv),
+    Box(R.string.device_type_box),
+    Unknown(R.string.device_type_unknown),
 }
 
-enum class ConnectionState(val label: String) {
-    Disconnected("未连接"),
-    Connecting("连接中"),
-    Connected("已连接"),
-    Failed("连接失败"),
-    Offline("离线"),
+enum class ConnectionState(@param:StringRes val labelRes: Int) {
+    Disconnected(R.string.connection_state_disconnected),
+    Connecting(R.string.connection_state_connecting),
+    Connected(R.string.connection_state_connected),
+    Failed(R.string.connection_state_failed),
+    Offline(R.string.connection_state_offline),
 }

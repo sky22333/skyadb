@@ -1,10 +1,14 @@
 package com.sky22333.skyadb.ui.apps
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
+import com.sky22333.skyadb.R
+import com.sky22333.skyadb.apps.AppDisplayEnricher
 import com.sky22333.skyadb.files.LocalFileManager
+import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.OperationStatus
@@ -15,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AppsUiState(
     val query: String = "",
@@ -43,10 +48,10 @@ data class AppsUiState(
         }
 }
 
-enum class AppFilter(val label: String) {
-    All("全部"),
-    User("用户应用"),
-    System("系统应用"),
+enum class AppFilter(@param:StringRes val labelRes: Int) {
+    All(R.string.apps_filter_all),
+    User(R.string.apps_filter_user),
+    System(R.string.apps_filter_system),
 }
 
 sealed interface AppPendingAction {
@@ -77,18 +82,22 @@ class AppsViewModel(
 
     fun loadApps(force: Boolean = false) {
         if (!force && state.value.apps.isNotEmpty()) return
-        state.value = state.value.copy(
-            loading = true,
-            operationStatus = OperationStatus.Running("正在读取应用列表"),
-        )
         viewModelScope.launch {
+            state.value = state.value.copy(
+                loading = true,
+                operationStatus = OperationStatus.Running(appString(R.string.apps_loading_list)),
+            )
             when (val result = adbRepository.listApps()) {
                 is AdbOperationResult.Success -> {
                     state.value = state.value.copy(
                         apps = result.data,
                         loading = false,
-                        operationStatus = OperationStatus.Success("已读取 ${result.data.size} 个应用"),
+                        operationStatus = OperationStatus.Success(appString(R.string.apps_loaded_count, result.data.size)),
                     )
+                    val enriched = withContext(Dispatchers.Default) {
+                        AppDisplayEnricher.enrichWithLocal(AppServices.context, result.data)
+                    }
+                    state.value = state.value.copy(apps = enriched)
                 }
                 is AdbOperationResult.Failure -> {
                     state.value = state.value.copy(
@@ -101,11 +110,11 @@ class AppsViewModel(
     }
 
     fun launchApp(packageName: String) {
-        runAppAction("正在启动 $packageName") { adbRepository.launchApp(packageName) }
+        runAppAction(appString(R.string.apps_launching, packageName)) { adbRepository.launchApp(packageName) }
     }
 
     fun forceStopApp(packageName: String) {
-        runAppAction("正在停止 $packageName") { adbRepository.forceStopApp(packageName) }
+        runAppAction(appString(R.string.apps_stopping, packageName)) { adbRepository.forceStopApp(packageName) }
     }
 
     fun uninstallApp(packageName: String) {
@@ -131,7 +140,7 @@ class AppsViewModel(
         state.value = state.value.copy(pendingExportPackage = null)
         if (uri == null) return
 
-        state.value = state.value.copy(operationStatus = OperationStatus.Running("正在导出 $packageName"))
+        state.value = state.value.copy(operationStatus = OperationStatus.Running(appString(R.string.common_exporting_arg, packageName)))
         viewModelScope.launch(Dispatchers.IO) {
             val target = fileManager.createExportApkFile(packageName)
             try {
@@ -158,16 +167,16 @@ class AppsViewModel(
         state.value = state.value.copy(pendingAction = null)
         when (action) {
             is AppPendingAction.Uninstall -> runAppAction(
-                runningText = "正在卸载 ${action.packageName}",
+                runningText = appString(R.string.apps_uninstalling, action.packageName),
                 refreshAfterSuccess = true,
             ) {
                 adbRepository.uninstall(action.packageName)
             }
             is AppPendingAction.SetEnabled -> runAppAction(
                 runningText = if (action.enabled) {
-                    "正在启用 ${action.packageName}"
+                    appString(R.string.apps_enabling, action.packageName)
                 } else {
-                    "正在冻结 ${action.packageName}"
+                    appString(R.string.apps_disabling, action.packageName)
                 },
                 refreshAfterSuccess = true,
             ) {
@@ -185,7 +194,7 @@ class AppsViewModel(
         viewModelScope.launch {
             when (val result = action()) {
                 is AdbOperationResult.Success -> {
-                    state.value = state.value.copy(operationStatus = OperationStatus.Success("操作完成"))
+                    state.value = state.value.copy(operationStatus = OperationStatus.Success(appString(R.string.apps_operation_complete)))
                     if (refreshAfterSuccess) {
                         loadApps(force = true)
                     }
@@ -204,16 +213,17 @@ class AppsViewModel(
             fileManager.copyToUri(file, uri)
         }.fold(
             onSuccess = {
-                state.value = state.value.copy(operationStatus = OperationStatus.Success("APK 导出完成"))
+                state.value = state.value.copy(operationStatus = OperationStatus.Success(appString(R.string.apps_export_complete)))
             },
             onFailure = { error ->
                 state.value = state.value.copy(
                     operationStatus = OperationStatus.Failed(
-                        text = "保存 APK 失败",
-                        suggestion = error.message ?: "请确认保存位置可写，并保持应用前台运行。",
+                        text = appString(R.string.apps_save_apk_failed),
+                        suggestion = error.message ?: appString(R.string.apps_save_apk_hint),
                     ),
                 )
             },
         )
     }
+
 }
