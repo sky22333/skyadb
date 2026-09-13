@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">sky adb</string>
+    <string name="app_name">SkyADB v3.1.0</string>
 
     <!-- Language -->
     <string name="language_follow_system">System</string>
@@ -18,6 +18,19 @@
     <string name="mirror_quality_smooth">Smooth</string>
     <string name="mirror_quality_balanced">Balanced</string>
     <string name="mirror_quality_high">High</string>
+    <string name="mirror_quality_custom">Custom</string>
+    <string name="mirror_custom_desc">Manually configure resolution, fps and bitrate</string>
+    <string name="settings_mirror_custom_resolution_title">Resolution</string>
+    <string name="settings_mirror_custom_resolution_desc">Longest side, e.g. 1920x1080</string>
+    <string name="settings_mirror_custom_fps_title">Frame rate</string>
+    <string name="settings_mirror_custom_fps_desc">Frames transmitted per second</string>
+    <string name="settings_mirror_custom_bitrate_title">Bitrate</string>
+    <string name="settings_mirror_custom_bitrate_desc">Video encoding bitrate, higher is clearer</string>
+    <string name="settings_quality_resolution_label">Resolution</string>
+    <string name="settings_quality_fps_label">Frame rate</string>
+    <string name="settings_quality_bitrate_label">Bitrate</string>
+    <string name="unit_fps">fps</string>
+    <string name="unit_mbps">Mbps</string>
 
     <!-- Navigation / common -->
     <string name="nav_devices">Devices</string>
@@ -50,6 +63,11 @@
     <string name="settings_scan_ranges_placeholder">e.g. 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">Mirror quality</string>
     <string name="settings_mirror_quality_desc">Applies the next time mirroring starts</string>
+    <string name="settings_camera_quality_title">Camera quality</string>
+    <string name="settings_camera_quality_desc">Independent from mirror quality, applies next time viewing the camera</string>
+    <string name="settings_camera_resolution_title">Camera resolution</string>
+    <string name="settings_camera_fps_title">Camera frame rate</string>
+    <string name="settings_camera_bitrate_title">Camera bitrate</string>
     <string name="settings_theme_mode_title">Theme mode</string>
     <string name="settings_theme_mode_desc">Choose the app appearance</string>
     <string name="settings_diagnostics_title">Diagnostic log</string>
@@ -57,6 +75,11 @@
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
     <string name="settings_clear_recent_devices_desc">Remove connection history</string>
     <string name="settings_project_url_title">Project URL</string>
+    <string name="settings_status_refresh_title">Status refresh interval</string>
+    <string name="settings_status_refresh_desc">Update interval for system status (500-10000ms)</string>
+    <string name="settings_status_refresh_required">Enter the refresh interval</string>
+    <string name="settings_status_refresh_range">Must be between 500-10000 ms</string>
+    <string name="unit_ms">ms</string>
 
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
@@ -94,7 +117,10 @@
     <string name="action_install_apk">Install APK</string>
     <string name="action_download_online">Online download</string>
     <string name="action_file_manage">File manager</string>
-    <string name="action_mirror">Screen mirror</string>
+    <string name="action_mirror">Control mode</string>
+    <string name="action_watch">Watch screen</string>
+    <string name="action_status">System status</string>
+    <string name="action_camera">Camera</string>
     <string name="action_remote">Remote control</string>
     <string name="action_system_log">System log</string>
 
@@ -220,13 +246,84 @@
     <string name="remote_power_title">Power</string>
 
     <!-- Mirror screen -->
+    <string name="mirror_hide_all_desc">Hide all buttons</string>
     <string name="mirror_hide_controls_desc">Hide controls</string>
     <string name="mirror_show_controls_desc">Show controls</string>
     <string name="mirror_close_desc">Close mirroring</string>
     <string name="mirror_recent_tasks_desc">Recent tasks</string>
     <string name="mirror_volume_down_desc">Volume down</string>
     <string name="mirror_volume_up_desc">Volume up</string>
-    <string name="mirror_send_text">Send text</string>
+    <string name="mirror_privacy_on_desc">Privacy screen: off</string>
+    <string name="mirror_privacy_off_desc">Privacy screen: on</string>
+
+    <!-- Camera screen -->
+    <string name="camera_select_title">Camera</string>
+    <string name="camera_select_hint">Choose the camera to view</string>
+    <string name="camera_face_back">Rear</string>
+    <string name="camera_face_front">Front</string>
+    <string name="camera_start_view">Start viewing</string>
+    <string name="camera_close_desc">Close camera</string>
+    <string name="camera_starting">Starting camera</string>
+    <string name="camera_active">Camera is active</string>
+    <string name="camera_disconnected">Camera connection lost</string>
+    <string name="camera_stream_error">Camera video stream error</string>
+    <string name="camera_diagnostic_template">Camera: %1$s. Launch args: %2$s. scrcpy server log:\n%3$s</string>
+    <string name="camera_start_failed">Failed to start camera</string>
+    <string name="camera_start_failed_suggestion">Make sure the device supports scrcpy camera capture, and check the diagnostic log in settings.</string>
+    <string name="camera_face_error_format">Camera error: %1$s</string>
+    <string name="camera_main_failed">Main camera error</string>
+    <string name="camera_take_photo_desc">Take a photo</string>
+    <string name="camera_torch_on_desc">Turn flashlight on</string>
+    <string name="camera_torch_off_desc">Turn flashlight off</string>
+    <string name="camera_photo_capturing">Capturing photo</string>
+    <string name="camera_photo_saved">Photo saved</string>
+    <string name="camera_photo_failed">Failed to take a photo</string>
+    <string name="camera_photo_view_required">The camera preview isn\'t ready yet</string>
+    <string name="camera_torch_failed">Failed to control the flashlight</string>
+
+    <!-- Media gallery screen -->
+    <string name="action_gallery">Media gallery</string>
+    <string name="gallery_title">Media gallery</string>
+    <string name="gallery_subtitle">Photos and videos taken via camera</string>
+    <string name="gallery_filter_all">All</string>
+    <string name="gallery_filter_photo">Photos</string>
+    <string name="gallery_filter_video">Videos</string>
+    <string name="gallery_refresh_desc">Refresh gallery</string>
+    <string name="gallery_empty_title">No media yet</string>
+    <string name="gallery_empty_message">Photos and videos taken with the camera will appear here.</string>
+    <string name="gallery_preview_desc">Media preview</string>
+    <string name="gallery_preview_failed">Failed to load the preview</string>
+    <string name="gallery_delete_confirm_title">Delete this item?</string>
+    <string name="gallery_delete_confirm_message">%1$s will be permanently removed from the app storage.</string>
+    <string name="gallery_saving">Saving</string>
+    <string name="gallery_saved">Saved</string>
+    <string name="gallery_save_failed">Failed to save</string>
+    <string name="gallery_cannot_open_location">Cannot open the save location</string>
+    <string name="gallery_confirm_writable">Please make sure the save location is writable.</string>
+    <string name="gallery_deleting">Deleting</string>
+    <string name="gallery_delete_failed">Failed to delete</string>
+    <string name="gallery_confirm_permission">Please make sure the file can be deleted.</string>
+
+    <!-- Location screen -->
+    <string name="location_title">Find phone location</string>
+    <string name="location_subtitle">Read the last known location from the target device</string>
+    <string name="location_refresh_desc">Refresh location</string>
+    <string name="location_status_title">Location status</string>
+    <string name="location_last_location_title">Last known location</string>
+    <string name="location_provider">Source</string>
+    <string name="location_coordinates">Coordinates</string>
+    <string name="location_accuracy">Accuracy</string>
+    <string name="location_time">Time</string>
+    <string name="location_not_found">No location fix yet. The location switch is auto-enabled via ADB if it was off; if still no result, open any location-using app (e.g. Maps) on the target device to trigger a fix, then refresh.</string>
+    <string name="location_loading">Reading location\u2026</string>
+    <string name="location_read_failed">Failed to read the location</string>
+    <string name="location_open_map">Open in map</string>
+    <string name="location_enable_hint">Location can be auto-enabled via ADB. Open an app that uses location (e.g. Maps) to trigger a fix, then refresh.</string>
+    <string name="location_mode_label">Location switch</string>
+    <string name="location_mode_on">On (high accuracy)</string>
+    <string name="location_mode_off">Off</string>
+    <string name="location_mode_unknown">Unknown</string>
+    <string name="location_auto_enabled">Auto-enabled via ADB, waiting for a fix\u2026</string>
 
     <!-- System log screen -->
     <string name="syslog_title">System log</string>
@@ -388,7 +485,7 @@
     <string name="scrcpy_control_disconnected_suggestion">The mirroring connection may have dropped. Please re-enter screen mirroring.</string>
     <string name="scrcpy_send_touch_failed">Failed to send the remote touch event</string>
     <string name="scrcpy_send_key_failed">Failed to send the remote key event</string>
-    <string name="scrcpy_send_text_failed">Failed to send the remote text</string>
+    <string name="scrcpy_set_screen_power_failed">Failed to set screen power</string>
     <string name="scrcpy_mirror_diagnostic_template">Current quality: %1$s. Start parameters: %2$s. Please re-enter screen mirroring; if it keeps failing, switch to the smooth quality preset.</string>
     <string name="scrcpy_mirror_diagnostic_with_log">%1$s\nscrcpy server log:\n%2$s</string>
     <string name="scrcpy_audio_requires_connection">An audio connection is required when audio is enabled</string>
@@ -511,6 +608,7 @@
     <string name="diagnostic_module_logs">System logs</string>
     <string name="diagnostic_module_remote">Remote control</string>
     <string name="diagnostic_module_mirror">Screen mirror</string>
+    <string name="diagnostic_module_camera">Camera</string>
     <string name="diagnostic_module_download">Download</string>
     <string name="diagnostic_module_settings">Settings</string>
 
@@ -532,13 +630,25 @@
     <!-- ViewModel operation status: Settings -->
     <string name="settings_timeout_required">Enter a timeout value</string>
     <string name="settings_timeout_range">Must be between 1-300 seconds</string>
+    <string name="settings_resolution_invalid">Invalid resolution, e.g. 1920x1080</string>
+    <string name="settings_fps_range">Frame rate must be between 1 and 120</string>
+    <string name="settings_bitrate_range">Bitrate must be between 1 and 100 Mbps</string>
 
-    <!-- ViewModel operation status: Mirror -->
-    <string name="mirror_starting">Starting screen mirroring</string>
-    <string name="mirror_invalid_surface">The display surface is invalid. Please re-enter screen mirroring.</string>
-    <string name="mirror_disconnected">Screen mirroring disconnected</string>
-    <string name="mirror_reenter_hint">Please re-enter screen mirroring.</string>
-    <string name="mirror_active">Mirroring</string>
+    <!-- ViewModel operation status: Mirror (control mode) -->
+    <string name="mirror_starting">Starting control mode</string>
+    <string name="mirror_invalid_surface">The display surface is invalid. Please re-enter control mode.</string>
+    <string name="mirror_disconnected">Control mode disconnected</string>
+    <string name="mirror_reenter_hint">Please re-enter control mode.</string>
+    <string name="mirror_active">Control mode active</string>
+
+    <!-- Watch screen -->
+    <string name="watch_starting">Starting screen viewing</string>
+    <string name="watch_invalid_surface">The display surface is invalid. Please re-enter screen viewing.</string>
+    <string name="watch_disconnected">Screen viewing disconnected</string>
+    <string name="watch_reenter_hint">Please re-enter screen viewing.</string>
+    <string name="watch_active">Viewing</string>
+    <string name="watch_close_desc">Close</string>
+    <string name="watch_touch_unsupported">This operation is not supported in watch mode. Please use control mode!</string>
 
     <!-- ViewModel operation status: Shell -->
     <string name="shell_cannot_execute">Cannot execute command</string>
@@ -719,4 +829,37 @@
     <string name="files_downloading_progress">Downloading %1$d/%2$d \u00b7 %3$s</string>
     <string name="files_cannot_read_local_dir">Cannot read local directory</string>
     <string name="files_grant_storage_permission">Please grant storage permission.</string>
+
+    <!-- System status screen -->
+    <string name="status_title">System status</string>
+    <string name="status_refresh_desc">Refresh status</string>
+    <string name="status_updated_at">Updated: %1$s</string>
+    <string name="status_no_data">No status data yet</string>
+    <string name="status_connect_hint">Connect a device to view system status</string>
+    <string name="status_failed">Failed to collect system status</string>
+    <string name="status_loading">Collecting system status\u2026</string>
+
+    <string name="status_network">Network</string>
+    <string name="status_battery">Battery</string>
+    <string name="status_storage">Storage</string>
+    <string name="status_cpu">CPU usage</string>
+    <string name="status_memory">Memory usage</string>
+    <string name="status_brightness">Screen brightness</string>
+    <string name="status_system_time">System time</string>
+    <string name="status_current_app">Current app</string>
+    <string name="status_app_processes">App processes</string>
+    <string name="status_system_processes">System processes</string>
+    <string name="status_running_services">Running services</string>
+
+    <string name="status_battery_charging">Charging</string>
+    <string name="status_battery_discharging">Discharging</string>
+    <string name="status_battery_not_charging">Not charging</string>
+    <string name="status_battery_full">Full</string>
+    <string name="status_battery_format">%1$s%%, %2$s</string>
+    <string name="status_no_active_network">No active network</string>
+    <string name="status_storage_format">Used %1$s / %2$s (%3$s)</string>
+    <string name="status_memory_format">Used %1$s / %2$s (%3$s)</string>
+    <string name="status_brightness_format">%1$d / 255 (%2$d%%)</string>
+    <string name="status_processes_format">%1$d processes</string>
+    <string name="status_services_format">%1$d services</string>
 </resources>

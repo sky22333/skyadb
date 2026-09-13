@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">sky adb</string>
+    <string name="app_name">SkyADB v3.1.0</string>
 
     <!-- Language -->
     <string name="language_follow_system">系统</string>
@@ -18,6 +18,19 @@
     <string name="mirror_quality_smooth">流畅</string>
     <string name="mirror_quality_balanced">均衡</string>
     <string name="mirror_quality_high">高清</string>
+    <string name="mirror_quality_custom">自定义</string>
+    <string name="mirror_custom_desc">手动配置分辨率、帧率与码率</string>
+    <string name="settings_mirror_custom_resolution_title">分辨率</string>
+    <string name="settings_mirror_custom_resolution_desc">最长边，例如 1920x1080</string>
+    <string name="settings_mirror_custom_fps_title">帧率</string>
+    <string name="settings_mirror_custom_fps_desc">每秒传输画面帧数</string>
+    <string name="settings_mirror_custom_bitrate_title">码率</string>
+    <string name="settings_mirror_custom_bitrate_desc">视频编码码率，越大越清晰</string>
+    <string name="settings_quality_resolution_label">分辨率</string>
+    <string name="settings_quality_fps_label">帧率</string>
+    <string name="settings_quality_bitrate_label">码率</string>
+    <string name="unit_fps">帧/秒</string>
+    <string name="unit_mbps">Mbps</string>
 
     <!-- Navigation / common -->
     <string name="nav_devices">设备</string>
@@ -50,6 +63,11 @@
     <string name="settings_scan_ranges_placeholder">例如 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">镜像画质</string>
     <string name="settings_mirror_quality_desc">下次启动镜像生效</string>
+    <string name="settings_camera_quality_title">摄像头画质</string>
+    <string name="settings_camera_quality_desc">与镜像画质相互独立，下次查看摄像头生效</string>
+    <string name="settings_camera_resolution_title">摄像头分辨率</string>
+    <string name="settings_camera_fps_title">摄像头帧率</string>
+    <string name="settings_camera_bitrate_title">摄像头码率</string>
     <string name="settings_theme_mode_title">主题模式</string>
     <string name="settings_theme_mode_desc">选择应用外观</string>
     <string name="settings_diagnostics_title">诊断日志</string>
@@ -57,6 +75,11 @@
     <string name="settings_clear_recent_devices_title">清理最近设备</string>
     <string name="settings_clear_recent_devices_desc">移除连接历史</string>
     <string name="settings_project_url_title">项目地址</string>
+    <string name="settings_status_refresh_title">状态刷新间隔</string>
+    <string name="settings_status_refresh_desc">系统状态更新间隔（500-10000ms）</string>
+    <string name="settings_status_refresh_required">请输入刷新间隔</string>
+    <string name="settings_status_refresh_range">范围应为 500-10000 毫秒</string>
+    <string name="unit_ms">毫秒</string>
 
     <!-- Home screen -->
     <string name="home_title">设备连接</string>
@@ -94,7 +117,10 @@
     <string name="action_install_apk">安装 APK</string>
     <string name="action_download_online">在线下载</string>
     <string name="action_file_manage">文件管理</string>
-    <string name="action_mirror">屏幕镜像</string>
+    <string name="action_mirror">控制模式</string>
+    <string name="action_watch">观看屏幕</string>
+    <string name="action_status">系统状态</string>
+    <string name="action_camera">查看摄像头</string>
     <string name="action_remote">遥控器</string>
     <string name="action_system_log">系统日志</string>
 
@@ -220,13 +246,84 @@
     <string name="remote_power_title">电源</string>
 
     <!-- Mirror screen -->
+    <string name="mirror_hide_all_desc">隐藏全部按钮</string>
     <string name="mirror_hide_controls_desc">隐藏控制区</string>
     <string name="mirror_show_controls_desc">显示控制区</string>
     <string name="mirror_close_desc">关闭镜像</string>
     <string name="mirror_recent_tasks_desc">最近任务</string>
     <string name="mirror_volume_down_desc">音量减</string>
     <string name="mirror_volume_up_desc">音量加</string>
-    <string name="mirror_send_text">发送文本</string>
+    <string name="mirror_privacy_on_desc">隐私屏：关闭</string>
+    <string name="mirror_privacy_off_desc">隐私屏：开启</string>
+
+    <!-- Camera screen -->
+    <string name="camera_select_title">查看摄像头</string>
+    <string name="camera_select_hint">选择要查看的摄像头</string>
+    <string name="camera_face_back">后置</string>
+    <string name="camera_face_front">前置</string>
+    <string name="camera_start_view">开始查看</string>
+    <string name="camera_close_desc">关闭摄像头</string>
+    <string name="camera_starting">正在启动摄像头</string>
+    <string name="camera_active">摄像头已开启</string>
+    <string name="camera_disconnected">摄像头连接已断开</string>
+    <string name="camera_stream_error">摄像头视频流异常</string>
+    <string name="camera_diagnostic_template">摄像头：%1$s。启动参数：%2$s。scrcpy server 日志：\n%3$s</string>
+    <string name="camera_start_failed">摄像头启动失败</string>
+    <string name="camera_start_failed_suggestion">请确认目标设备支持 scrcpy 摄像头采集，并查看设置里的诊断日志。</string>
+    <string name="camera_face_error_format">摄像头异常：%1$s</string>
+    <string name="camera_main_failed">主画面摄像头异常</string>
+    <string name="camera_take_photo_desc">拍照</string>
+    <string name="camera_torch_on_desc">打开手电筒</string>
+    <string name="camera_torch_off_desc">关闭手电筒</string>
+    <string name="camera_photo_capturing">正在拍照</string>
+    <string name="camera_photo_saved">照片已保存</string>
+    <string name="camera_photo_failed">拍照失败</string>
+    <string name="camera_photo_view_required">摄像头画面尚未就绪</string>
+    <string name="camera_torch_failed">手电筒控制失败</string>
+
+    <!-- Media gallery screen -->
+    <string name="action_gallery">媒体库</string>
+    <string name="gallery_title">媒体库</string>
+    <string name="gallery_subtitle">摄像头拍摄的照片和录像</string>
+    <string name="gallery_filter_all">全部</string>
+    <string name="gallery_filter_photo">照片</string>
+    <string name="gallery_filter_video">录像</string>
+    <string name="gallery_refresh_desc">刷新媒体库</string>
+    <string name="gallery_empty_title">暂无媒体</string>
+    <string name="gallery_empty_message">用摄像头拍摄的照片和录像会显示在这里。</string>
+    <string name="gallery_preview_desc">媒体预览</string>
+    <string name="gallery_preview_failed">预览加载失败</string>
+    <string name="gallery_delete_confirm_title">删除此项？</string>
+    <string name="gallery_delete_confirm_message">%1$s 将从应用存储中永久删除。</string>
+    <string name="gallery_saving">正在保存</string>
+    <string name="gallery_saved">已保存</string>
+    <string name="gallery_save_failed">保存失败</string>
+    <string name="gallery_cannot_open_location">无法打开保存位置</string>
+    <string name="gallery_confirm_writable">请确认保存位置可写。</string>
+    <string name="gallery_deleting">正在删除</string>
+    <string name="gallery_delete_failed">删除失败</string>
+    <string name="gallery_confirm_permission">请确认该文件可以被删除。</string>
+
+    <!-- Location screen -->
+    <string name="location_title">查找手机定位</string>
+    <string name="location_subtitle">读取目标设备的最近一次定位信息</string>
+    <string name="location_refresh_desc">刷新定位</string>
+    <string name="location_status_title">定位状态</string>
+    <string name="location_last_location_title">最近一次定位</string>
+    <string name="location_provider">定位来源</string>
+    <string name="location_coordinates">坐标</string>
+    <string name="location_accuracy">精度</string>
+    <string name="location_time">定位时间</string>
+    <string name="location_not_found">暂未获取到定位信息。若定位开关未开启，本应用已通过 ADB 自动开启；若仍无结果，请在目标设备打开任意使用定位的应用（如地图）触发一次定位，然后刷新。</string>
+    <string name="location_loading">正在获取定位\u2026</string>
+    <string name="location_read_failed">读取定位失败</string>
+    <string name="location_open_map">在地图中打开</string>
+    <string name="location_enable_hint">已通过 ADB 自动开启定位开关；打开使用定位的应用（如地图）可触发一次精确定位，然后点击刷新。</string>
+    <string name="location_mode_label">定位开关</string>
+    <string name="location_mode_on">已开启（高精度）</string>
+    <string name="location_mode_off">已关闭</string>
+    <string name="location_mode_unknown">未知</string>
+    <string name="location_auto_enabled">已通过 ADB 自动开启定位，正在等待定位结果\u2026</string>
 
     <!-- System log screen -->
     <string name="syslog_title">系统日志</string>
@@ -388,7 +485,7 @@
     <string name="scrcpy_control_disconnected_suggestion">镜像连接可能已断开，请重新进入屏幕镜像。</string>
     <string name="scrcpy_send_touch_failed">远程触摸发送失败</string>
     <string name="scrcpy_send_key_failed">远程按键发送失败</string>
-    <string name="scrcpy_send_text_failed">远程文本发送失败</string>
+    <string name="scrcpy_set_screen_power_failed">设置屏幕电源失败</string>
     <string name="scrcpy_mirror_diagnostic_template">当前画质：%1$s。启动参数：%2$s。请重新进入屏幕镜像；如果持续失败，请切换到流畅画质。</string>
     <string name="scrcpy_mirror_diagnostic_with_log">%1$s\nscrcpy server 日志：\n%2$s</string>
     <string name="scrcpy_audio_requires_connection">启用音频时需要 audio 连接</string>
@@ -511,6 +608,7 @@
     <string name="diagnostic_module_logs">系统日志</string>
     <string name="diagnostic_module_remote">遥控器</string>
     <string name="diagnostic_module_mirror">屏幕镜像</string>
+    <string name="diagnostic_module_camera">摄像头</string>
     <string name="diagnostic_module_download">下载</string>
     <string name="diagnostic_module_settings">设置</string>
 
@@ -532,13 +630,25 @@
     <!-- ViewModel operation status: Settings -->
     <string name="settings_timeout_required">请输入超时时间</string>
     <string name="settings_timeout_range">范围应为 1-300 秒</string>
+    <string name="settings_resolution_invalid">分辨率格式无效，例如 1920x1080</string>
+    <string name="settings_fps_range">帧率范围应为 1-120</string>
+    <string name="settings_bitrate_range">码率范围应为 1-100 Mbps</string>
 
-    <!-- ViewModel operation status: Mirror -->
-    <string name="mirror_starting">正在启动屏幕镜像</string>
-    <string name="mirror_invalid_surface">画面表面无效，请重新进入屏幕镜像。</string>
-    <string name="mirror_disconnected">屏幕镜像已断开</string>
-    <string name="mirror_reenter_hint">请重新进入屏幕镜像。</string>
-    <string name="mirror_active">正在镜像</string>
+    <!-- ViewModel operation status: Mirror (控制模式) -->
+    <string name="mirror_starting">正在启动控制模式</string>
+    <string name="mirror_invalid_surface">画面表面无效，请重新进入控制模式。</string>
+    <string name="mirror_disconnected">控制模式已断开</string>
+    <string name="mirror_reenter_hint">请重新进入控制模式。</string>
+    <string name="mirror_active">控制模式运行中</string>
+
+    <!-- 观看屏幕 -->
+    <string name="watch_starting">正在启动观看屏幕</string>
+    <string name="watch_invalid_surface">画面表面无效，请重新进入观看屏幕。</string>
+    <string name="watch_disconnected">观看已断开</string>
+    <string name="watch_reenter_hint">请重新进入观看屏幕。</string>
+    <string name="watch_active">正在观看</string>
+    <string name="watch_close_desc">关闭</string>
+    <string name="watch_touch_unsupported">观看模式下不支持该操作，请使用控制模式！</string>
 
     <!-- ViewModel operation status: Shell -->
     <string name="shell_cannot_execute">无法执行命令</string>
@@ -719,4 +829,37 @@
     <string name="files_downloading_progress">下载 %1$d/%2$d \u00b7 %3$s</string>
     <string name="files_cannot_read_local_dir">无法读取本机目录</string>
     <string name="files_grant_storage_permission">请授予存储权限。</string>
+
+    <!-- 系统状态 -->
+    <string name="status_title">系统状态</string>
+    <string name="status_refresh_desc">刷新状态</string>
+    <string name="status_updated_at">更新时间：%1$s</string>
+    <string name="status_no_data">暂无状态数据</string>
+    <string name="status_connect_hint">连接设备后查看系统状态</string>
+    <string name="status_failed">获取系统状态失败</string>
+    <string name="status_loading">正在采集系统状态\u2026</string>
+
+    <string name="status_network">网络状态</string>
+    <string name="status_battery">电池状态</string>
+    <string name="status_storage">存储状态</string>
+    <string name="status_cpu">CPU 使用率</string>
+    <string name="status_memory">内存使用率</string>
+    <string name="status_brightness">屏幕亮度</string>
+    <string name="status_system_time">系统时间</string>
+    <string name="status_current_app">当前运行应用</string>
+    <string name="status_app_processes">应用进程</string>
+    <string name="status_system_processes">系统进程</string>
+    <string name="status_running_services">当前运行服务</string>
+
+    <string name="status_battery_charging">充电中</string>
+    <string name="status_battery_discharging">放电中</string>
+    <string name="status_battery_not_charging">未充电</string>
+    <string name="status_battery_full">已充满</string>
+    <string name="status_battery_format">%1$s%%，%2$s</string>
+    <string name="status_no_active_network">无活动网络</string>
+    <string name="status_storage_format">已用 %1$s / %2$s（%3$s）</string>
+    <string name="status_memory_format">已用 %1$s / %2$s（%3$s）</string>
+    <string name="status_brightness_format">%1$d / 255（%2$d%%）</string>
+    <string name="status_processes_format">%1$d 个进程</string>
+    <string name="status_services_format">%1$d 个服务</string>
 </resources>

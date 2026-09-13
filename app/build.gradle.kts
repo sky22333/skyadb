@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.sky22333.skyadb"
+    namespace = "com.qwadb.app"
     compileSdk = 37
     val ciVersionCode = providers.environmentVariable("VERSION_CODE").map { it.toInt() }.orNull
     val ciVersionName = providers.environmentVariable("VERSION_NAME").orNull
@@ -18,11 +18,11 @@ android {
         !keyPasswordValue.isNullOrBlank()
 
     defaultConfig {
-        applicationId = "com.sky22333.skyadb"
+        applicationId = "com.qwadb.skyadb3"
         minSdk = 24
         targetSdk = 37
-        versionCode = ciVersionCode ?: 10000
-        versionName = ciVersionName ?: "1.0.0"
+        versionCode = ciVersionCode ?: 31000
+        versionName = ciVersionName ?: "3.1.0"
     }
 
     signingConfigs {
