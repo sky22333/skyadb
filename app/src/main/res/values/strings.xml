@@ -6,8 +6,7 @@
     <string name="language_follow_system">System</string>
     <string name="language_chinese">Chinese</string>
     <string name="language_english">English</string>
-    <string name="settings_language">Language</string>
-    <string name="settings_language_desc">Follow system or choose manually</string>
+    <string name="settings_language">App language</string>
 
     <!-- Theme -->
     <string name="theme_system">System</string>
@@ -23,13 +22,8 @@
     <string name="nav_devices">Devices</string>
     <string name="nav_details">Details</string>
     <string name="nav_settings">Settings</string>
-    <string name="nav_pairing">Pairing</string>
-    <string name="nav_discovery">Scan</string>
-    <string name="nav_apps">Apps</string>
     <string name="nav_local_apps">Local apps</string>
-    <string name="nav_download">Download</string>
     <string name="nav_install">Install</string>
-    <string name="nav_files">Files</string>
     <string name="nav_screenshot">Screenshot</string>
     <string name="nav_shell">Shell</string>
     <string name="action_back">Back</string>
@@ -40,35 +34,27 @@
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
     <string name="settings_default_port_title">Default port</string>
-    <string name="settings_default_port_desc">Default connection port</string>
     <string name="settings_connection_timeout_title">Connection timeout</string>
-    <string name="settings_connection_timeout_desc">Wait time to establish a connection</string>
     <string name="settings_command_timeout_title">Command timeout</string>
-    <string name="settings_command_timeout_desc">Wait time for ADB commands</string>
     <string name="settings_scan_ranges_title">Scan ranges</string>
-    <string name="settings_scan_ranges_desc">Optional, customize discovery range</string>
     <string name="settings_scan_ranges_placeholder">e.g. 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">Mirror quality</string>
-    <string name="settings_mirror_quality_desc">Applies the next time mirroring starts</string>
     <string name="settings_theme_mode_title">Theme mode</string>
-    <string name="settings_theme_mode_desc">Choose the app appearance</string>
     <string name="settings_diagnostics_title">Diagnostic log</string>
-    <string name="settings_diagnostics_desc">View recent errors</string>
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
-    <string name="settings_clear_recent_devices_desc">Remove connection history</string>
     <string name="settings_project_url_title">Project URL</string>
 
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="home_refresh_usb_desc">Refresh USB devices</string>
-    <string name="home_no_usb_devices">No devices detected</string>
     <string name="device_authorized">Authorized</string>
     <string name="device_unauthorized">Pending authorization</string>
     <string name="action_connecting">Connecting\u2026</string>
     <string name="action_connect">Connect</string>
     <string name="home_manual_connect_title">Manual connection</string>
-    <string name="home_ip_label">IP address</string>
+    <string name="home_endpoint_label">IP address:port</string>
+    <string name="home_endpoint_hint">Use default port %1$s when omitted</string>
     <string name="action_wireless_pairing">Pair</string>
     <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
@@ -77,14 +63,14 @@
     <!-- Device screen -->
     <string name="device_details_title">Device details</string>
     <string name="device_refresh_info_desc">Refresh device info</string>
-    <string name="device_connect_hint">Connect a device to view system info</string>
+    <string name="device_connect_hint">Connect a device, then tap its status for details</string>
     <string name="section_quick_actions">Quick actions</string>
     <string name="section_system_info">System info</string>
-    <string name="device_info_expanded_desc">Missing basic info is shown as Unknown</string>
-    <string name="device_info_collapsed_desc">Tap the icon to expand</string>
-    <string name="device_info_collapse_desc">Collapse system info</string>
-    <string name="device_info_expand_desc">View system info</string>
     <string name="device_info_brand">Brand</string>
+    <string name="device_info_manufacturer">Manufacturer</string>
+    <string name="device_info_device">Device code</string>
+    <string name="device_info_build">Build</string>
+    <string name="device_info_security_patch">Security patch</string>
     <string name="device_info_model">Model</string>
     <string name="device_info_android_version">Android version</string>
     <string name="device_info_resolution">Resolution</string>
@@ -100,12 +86,10 @@
 
     <!-- Apps screen -->
     <string name="apps_title">App manager</string>
-    <string name="apps_subtitle">View, launch, stop, or uninstall apps</string>
     <string name="apps_refresh_list_desc">Refresh app list</string>
     <string name="apps_search_label">Search apps</string>
-    <string name="apps_search_placeholder">Enter package name or app name</string>
     <string name="apps_list_title">App list</string>
-    <string name="apps_list_desc_format">%1$d total, filtered locally by category and search</string>
+    <string name="apps_list_desc_format">%1$d total</string>
     <string name="apps_empty_title">No apps</string>
     <string name="apps_empty_message">Connect a device and refresh to see apps here.</string>
     <string name="apps_confirm_uninstall_title">Uninstall this app?</string>
@@ -130,10 +114,8 @@
 
     <!-- Local apps screen -->
     <string name="local_apps_title">Local apps</string>
-    <string name="local_apps_subtitle">Export a single-APK user app and install it on the target device</string>
     <string name="local_apps_refresh_desc">Refresh local apps</string>
     <string name="local_apps_search_label">Search local apps</string>
-    <string name="local_apps_search_placeholder">Enter app name or package name</string>
     <string name="local_apps_user_apps_title">User apps</string>
     <string name="local_apps_list_desc_format">%1$d total, only launchable single-APK apps are supported</string>
     <string name="local_apps_empty_title">No apps to show</string>
@@ -143,15 +125,12 @@
 
     <!-- Install APK screen -->
     <string name="install_apk_title">Install APK</string>
-    <string name="install_apk_subtitle">Choose a local APK and install it on the connected device</string>
     <string name="install_apk_local_title">Local APK</string>
-    <string name="install_apk_local_desc">Make sure the target device is connected before installing</string>
     <string name="install_apk_no_file_selected">No file selected</string>
     <string name="action_pick_apk">Choose APK</string>
 
     <!-- Online download screen -->
     <string name="online_download_title">Online download</string>
-    <string name="online_download_task_title">Download task</string>
     <string name="online_download_url_label">Download URL</string>
     <string name="online_download_target_path_label">Device target directory</string>
     <string name="action_start">Start</string>
@@ -168,11 +147,17 @@
     <string name="files_cancel_transfer_desc">Cancel transfer</string>
     <string name="action_rename">Rename</string>
     <string name="action_refresh">Refresh</string>
-    <string name="files_permission_required">\"All files access\" permission is required</string>
+    <string name="files_permission_required">Allow storage access to show all files</string>
     <string name="action_authorize">Authorize</string>
-    <string name="files_nav_up_desc">Up</string>
     <string name="files_sync_path_desc">Sync path from other pane</string>
     <string name="files_transfer_to_other_desc">Transfer to other pane</string>
+    <string name="files_transfer_selected">Transfer selected</string>
+    <string name="files_delete_selected">Delete selected</string>
+    <string name="files_more_actions">More file actions</string>
+    <string name="files_copy_path">Copy path</string>
+    <string name="files_copy_name">Copy name</string>
+    <string name="files_copied">Copied</string>
+    <string name="files_details">Details</string>
     <string name="files_new_folder_desc">New folder</string>
     <string name="files_empty_dir">Empty directory</string>
     <string name="files_dir_meta">Folder</string>
@@ -189,9 +174,7 @@
 
     <!-- Screenshot screen -->
     <string name="screenshot_title">Device screenshot</string>
-    <string name="screenshot_subtitle">The screenshot is previewed first, then saved when needed</string>
     <string name="screenshot_task_title">Screenshot task</string>
-    <string name="screenshot_task_desc">The screenshot is cached first; you then choose where to save it</string>
     <string name="screenshot_no_screenshot_yet">No screenshot yet</string>
     <string name="action_save">Save</string>
     <string name="action_clear_preview">Clear preview</string>
@@ -241,7 +224,6 @@
 
     <!-- Remote control screen -->
     <string name="remote_title">Virtual remote</string>
-    <string name="remote_subtitle">Send physical key events to the target device</string>
 
     <!-- Mirror screen -->
     <string name="mirror_hide_controls_desc">Hide controls</string>
@@ -254,7 +236,6 @@
 
     <!-- System log screen -->
     <string name="syslog_title">System log</string>
-    <string name="syslog_subtitle">Read recent logs from the target device on demand</string>
     <string name="syslog_copy_desc">Copy logs</string>
     <string name="syslog_clear_desc">Clear logs</string>
     <string name="syslog_refresh_desc">Refresh logs</string>
@@ -267,7 +248,6 @@
     <string name="syslog_copied_toast">Current log copied</string>
 
     <!-- Diagnostic log screen -->
-    <string name="diagnostics_subtitle">Only errors from the current run are kept</string>
     <string name="diagnostics_clip_label">Diagnostic log</string>
     <string name="diagnostics_copied_toast">Diagnostic log copied</string>
     <string name="diagnostics_recent_errors_title">Recent errors</string>
@@ -303,7 +283,6 @@
     <string name="discovery_scan_range_title">Scan range</string>
     <string name="discovery_scan_progress_format">Scanned %1$d / %2$d, %3$d found</string>
     <string name="action_start_scan">Start scan</string>
-    <string name="action_use">Use</string>
     <string name="discovery_connect_wifi_first">Connect to Wi-Fi or a LAN first</string>
     <string name="discovery_network_with_source">%1$s (%2$s)</string>
     <string name="discovery_scan_range_format">%1$s, port %2$s</string>
@@ -590,7 +569,6 @@
     <!-- ViewModel operation status: Home -->
     <string name="home_usb_permission_denied">USB permission denied</string>
     <string name="home_usb_permission_hint">Please allow sky adb to access this USB device in the system dialog, then retry.</string>
-    <string name="home_autofill_discovered">Filled in the discovered address. Please confirm before connecting.</string>
     <string name="home_pairing_success_ip_filled">Paired successfully, IP filled in. Confirm the connect port (\"IP address &amp; port\" on the wireless debugging page) before connecting.</string>
     <string name="home_disconnected">Disconnected</string>
     <string name="home_cannot_connect">Cannot start connection</string>

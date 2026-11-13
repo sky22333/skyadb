@@ -26,10 +26,6 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.System,
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
     val language: AppLanguage = AppLanguage.FollowSystem,
-    val defaultPortError: String? = null,
-    val connectionTimeoutError: String? = null,
-    val commandTimeoutError: String? = null,
-    val scanRangesError: String? = null,
 )
 
 class SettingsViewModel(
@@ -52,10 +48,6 @@ class SettingsViewModel(
                     scanRanges = scanRanges,
                     themeMode = settings.themeMode,
                     mirrorQualityPreset = settings.mirrorQualityPreset,
-                    defaultPortError = null,
-                    connectionTimeoutError = null,
-                    commandTimeoutError = null,
-                    scanRangesError = null,
                 )
                 if (!defaultScanRangeSaved && settings.scanRanges.isBlank() && scanRanges.isNotBlank()) {
                     defaultScanRangeSaved = true
@@ -68,7 +60,7 @@ class SettingsViewModel(
     fun onDefaultPortChanged(value: String) {
         val filtered = value.filter { it.isDigit() }.take(5)
         val error = NetworkInputValidator.portError(filtered)?.resolve(AppServices.context)
-        state.value = state.value.copy(defaultPort = filtered, defaultPortError = error)
+        state.value = state.value.copy(defaultPort = filtered)
         val port = filtered.toIntOrNull()
         if (port != null && error == null) {
             viewModelScope.launch {
@@ -80,10 +72,9 @@ class SettingsViewModel(
     fun onConnectionTimeoutChanged(value: String) {
         updateTimeout(
             value = value,
-            onState = { text, error ->
+            onState = { text ->
                 state.value = state.value.copy(
                     connectionTimeoutSeconds = text,
-                    connectionTimeoutError = error,
                 )
             },
             onSave = settingsStore::updateConnectionTimeoutSeconds,
@@ -93,10 +84,9 @@ class SettingsViewModel(
     fun onCommandTimeoutChanged(value: String) {
         updateTimeout(
             value = value,
-            onState = { text, error ->
+            onState = { text ->
                 state.value = state.value.copy(
                     commandTimeoutSeconds = text,
-                    commandTimeoutError = error,
                 )
             },
             onSave = settingsStore::updateCommandTimeoutSeconds,
@@ -108,7 +98,7 @@ class SettingsViewModel(
             .lineSequence()
             .joinToString("\n") { line -> line.trim().take(32) }
         val error = ScanRangeParser.validationError(normalized)?.resolve(AppServices.context)
-        state.value = state.value.copy(scanRanges = normalized, scanRangesError = error)
+        state.value = state.value.copy(scanRanges = normalized)
         if (error == null) {
             viewModelScope.launch {
                 settingsStore.updateScanRanges(normalized)
@@ -143,7 +133,7 @@ class SettingsViewModel(
 
     private fun updateTimeout(
         value: String,
-        onState: (String, String?) -> Unit,
+        onState: (String) -> Unit,
         onSave: suspend (Int) -> Unit,
     ) {
         val filtered = value.filter { it.isDigit() }.take(3)
@@ -153,7 +143,7 @@ class SettingsViewModel(
             seconds == null || seconds !in 1..300 -> appString(R.string.settings_timeout_range)
             else -> null
         }
-        onState(filtered, error)
+        onState(filtered)
         if (seconds != null && error == null) {
             viewModelScope.launch {
                 onSave(seconds)

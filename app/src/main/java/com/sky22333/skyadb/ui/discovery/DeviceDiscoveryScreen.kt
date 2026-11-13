@@ -1,5 +1,14 @@
 package com.sky22333.skyadb.ui.discovery
 
+import com.sky22333.skyadb.ui.components.AppIcons
+
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Link
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,27 +21,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SettingsEthernet
-import androidx.compose.material.icons.outlined.Stop
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import com.sky22333.skyadb.ui.components.FlatButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,7 +81,6 @@ fun DeviceDiscoveryScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeviceDiscoveryContent(
     bottomPadding: Dp = 0.dp,
@@ -100,15 +94,15 @@ private fun DeviceDiscoveryContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(stringResource(R.string.discovery_title)) },
+            title = stringResource(R.string.discovery_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onRefreshNetworkClick, enabled = !uiState.scanning) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.discovery_refresh_network_desc))
+                    Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.discovery_refresh_network_desc))
                 }
             },
         )
@@ -121,31 +115,37 @@ private fun DeviceDiscoveryContent(
                 end = AppDimens.ScreenPadding,
                 bottom = AppDimens.ScreenPadding + bottomPadding,
             ),
-            verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            item { SectionHeader(title = stringResource(R.string.discovery_auto_discovery_title)) }
             item {
-                MdnsDiscoveryStatus(
-                    running = uiState.mdnsRunning,
-                    endpoints = uiState.mdnsEndpoints,
-                    error = uiState.mdnsError,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(AppDimens.CompactGap)) {
+                    SectionHeader(title = stringResource(R.string.discovery_auto_discovery_title))
+                    MdnsDiscoveryStatus(
+                        running = uiState.mdnsRunning,
+                        endpoints = uiState.mdnsEndpoints,
+                        error = uiState.mdnsError,
+                    )
+                }
             }
             items(uiState.mdnsEndpoints, key = { it.id }) { endpoint ->
-                MdnsEndpointCard(
+                MdnsEndpointRow(
                     endpoint = endpoint,
                     onUseEndpoint = onUseEndpoint,
                     onPairEndpoint = onPairEndpoint,
                 )
             }
             item {
-                ScanControlCard(
-                    uiState = uiState,
-                    onStartScanClick = onStartScanClick,
-                    onStopScanClick = onStopScanClick,
-                )
+                Column(
+                    modifier = Modifier.padding(top = AppDimens.SectionGap),
+                    verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
+                ) {
+                    ScanControlSection(
+                        uiState = uiState,
+                        onStartScanClick = onStartScanClick,
+                        onStopScanClick = onStopScanClick,
+                    )
+                    SectionHeader(title = stringResource(R.string.discovery_results_title))
+                }
             }
-            item { SectionHeader(title = stringResource(R.string.discovery_results_title)) }
             if (uiState.results.isEmpty()) {
                 item {
                     EmptyState(
@@ -156,7 +156,7 @@ private fun DeviceDiscoveryContent(
                 }
             } else {
                 items(uiState.results, key = { it.endpoint }) { result ->
-                    ScanResultCard(result = result, onUseEndpoint = onUseEndpoint)
+                    ScanResultRow(result = result, onUseEndpoint = onUseEndpoint)
                 }
             }
         }
@@ -172,137 +172,128 @@ private fun MdnsDiscoveryStatus(
     when {
         error != null -> Text(
             text = stringResource(R.string.discovery_mdns_error_suffix_format, error),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.footnote1,
         )
         endpoints.isNotEmpty() -> Text(
             text = stringResource(R.string.discovery_mdns_found_format, endpoints.size),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodySmall,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
         )
         running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(
                 text = stringResource(R.string.discovery_mdns_running),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
             )
         }
-        else -> EmptyState(title = stringResource(R.string.discovery_mdns_none_found))
+        else -> Text(
+            text = stringResource(R.string.discovery_mdns_none_found),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+        )
     }
 }
 
 @Composable
-private fun MdnsEndpointCard(
+internal fun MdnsEndpointRow(
     endpoint: AdbMdnsEndpoint,
     onUseEndpoint: (String, Int) -> Unit,
     onPairEndpoint: (String, Int) -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = AppDimens.CompactGap),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppDimens.CardPadding),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = endpoint.type.icon(),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+        Icon(
+            imageVector = endpoint.type.icon(),
+            contentDescription = null,
+            tint = MiuixTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(endpoint.name, style = MiuixTheme.textStyles.subtitle)
+            Text(
+                text = "${stringResource(endpoint.type.labelRes)} · ${endpoint.endpoint}",
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(endpoint.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "${stringResource(endpoint.type.labelRes)} · ${endpoint.endpoint}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            TextButton(
-                onClick = {
-                    if (endpoint.type == AdbMdnsServiceType.Pairing) {
-                        onPairEndpoint(endpoint.host, endpoint.port)
-                    } else {
-                        onUseEndpoint(endpoint.host, endpoint.port)
-                    }
-                },
-            ) {
-                Text(stringResource(endpoint.type.actionLabelRes))
-            }
+        }
+        FlatButton(
+            onClick = {
+                if (endpoint.type == AdbMdnsServiceType.Pairing) {
+                    onPairEndpoint(endpoint.host, endpoint.port)
+                } else {
+                    onUseEndpoint(endpoint.host, endpoint.port)
+                }
+            },
+        ) {
+            Text(stringResource(endpoint.type.actionLabelRes))
         }
     }
 }
 
 private fun AdbMdnsServiceType.icon(): ImageVector {
     return when (this) {
-        AdbMdnsServiceType.Pairing -> Icons.Outlined.Key
-        AdbMdnsServiceType.Connect -> Icons.Outlined.CheckCircle
-        AdbMdnsServiceType.Legacy -> Icons.Outlined.SettingsEthernet
+        AdbMdnsServiceType.Pairing -> AppIcons.Wifi
+        AdbMdnsServiceType.Connect -> MiuixIcons.Link
+        AdbMdnsServiceType.Legacy -> MiuixIcons.Link
     }
 }
 
 @Composable
-private fun ScanControlCard(
+internal fun ScanControlSection(
     uiState: DeviceDiscoveryUiState,
     onStartScanClick: () -> Unit,
     onStopScanClick: () -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.discovery_scan_range_title),
-                description = scanRangeDescription(uiState),
+        SectionHeader(
+            title = stringResource(R.string.discovery_scan_range_title),
+            description = scanRangeDescription(uiState),
+        )
+        if (uiState.scanning) {
+            LinearProgressIndicator(
+                progress = if (uiState.totalCount == 0) 0f else uiState.scannedCount.toFloat() / uiState.totalCount,
+                modifier = Modifier.fillMaxWidth(),
             )
-            if (uiState.scanning) {
-                LinearProgressIndicator(
-                    progress = {
-                        if (uiState.totalCount == 0) 0f else uiState.scannedCount.toFloat() / uiState.totalCount
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(
-                        R.string.discovery_scan_progress_format,
-                        uiState.scannedCount,
-                        uiState.totalCount,
-                        uiState.results.size,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            Text(
+                text = stringResource(
+                    R.string.discovery_scan_progress_format,
+                    uiState.scannedCount,
+                    uiState.totalCount,
+                    uiState.results.size,
+                ),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
+            )
+        }
+        DiscoveryStatus(status = uiState.status)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FlatButton(
+                onClick = onStartScanClick,
+                primary = true,
+                enabled = uiState.network != null && !uiState.scanning,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(MiuixIcons.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_start_scan))
             }
-            DiscoveryStatus(status = uiState.status)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onStartScanClick,
-                    enabled = uiState.network != null && !uiState.scanning,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.action_start_scan))
-                }
-                OutlinedButton(
-                    onClick = onStopScanClick,
-                    enabled = uiState.scanning,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Outlined.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.action_cancel))
-                }
+            FlatButton(
+                onClick = onStopScanClick,
+                enabled = uiState.scanning,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(MiuixIcons.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     }
@@ -312,49 +303,43 @@ private fun ScanControlCard(
 private fun DiscoveryStatus(status: OperationStatus) {
     when (status) {
         OperationStatus.Idle -> Unit
-        is OperationStatus.Running -> Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
+        is OperationStatus.Running -> Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        is OperationStatus.Success -> Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         is OperationStatus.Failed -> Text(
             text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.footnote1,
         )
     }
 }
 
 @Composable
-private fun ScanResultCard(
+internal fun ScanResultRow(
     result: AdbScanResult,
     onUseEndpoint: (String, Int) -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = AppDimens.CompactGap),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppDimens.CardPadding),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+        Icon(
+            imageVector = MiuixIcons.Link,
+            contentDescription = null,
+            tint = MiuixTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(result.endpoint, style = MiuixTheme.textStyles.subtitle)
+            Text(
+                text = "${stringResource(result.state.labelRes)} · ${result.latencyMs}ms",
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(result.endpoint, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "${stringResource(result.state.labelRes)} · ${result.latencyMs}ms",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            TextButton(onClick = { onUseEndpoint(result.host, result.port) }) {
-                Text(stringResource(R.string.action_use))
-            }
+        }
+        FlatButton(onClick = { onUseEndpoint(result.host, result.port) }) {
+            Text(stringResource(R.string.action_connect))
         }
     }
 }
@@ -377,7 +362,7 @@ private fun scanRangeDescription(uiState: DeviceDiscoveryUiState): String {
 @Preview(name = "局域网扫描", showBackground = true, widthDp = 390)
 @Composable
 private fun DeviceDiscoveryContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         DeviceDiscoveryContent(
             uiState = DeviceDiscoveryUiState(
                 networks = listOf(

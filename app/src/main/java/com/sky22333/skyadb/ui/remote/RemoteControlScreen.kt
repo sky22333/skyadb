@@ -1,24 +1,34 @@
 package com.sky22333.skyadb.ui.remote
 
+import com.sky22333.skyadb.ui.components.AppIcons
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Theme
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.VolumeOff
+import top.yukonga.miuix.kmp.icon.extended.VolumeUp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.VolumeDown
-import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import com.sky22333.skyadb.ui.components.Button
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -31,7 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
-import com.sky22333.skyadb.ui.components.AppTopBar
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 
 @Composable
@@ -52,12 +62,12 @@ internal fun RemoteControlContent(
     onKeyClick: (RemoteKey) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(bottom = bottomPadding)) {
-        AppTopBar(
-            title = { Text(stringResource(R.string.remote_title)) },
+        SmallTopAppBar(
+            title = stringResource(R.string.remote_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        MiuixIcons.Back,
                         stringResource(R.string.action_back),
                     )
                 }
@@ -85,7 +95,7 @@ internal fun RemotePanel(modifier: Modifier = Modifier, onKeyClick: (RemoteKey) 
                 if (landscape) Modifier.widthIn(max = 640.dp).fillMaxSize()
                 else Modifier.widthIn(max = 320.dp).fillMaxHeight().fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color = MiuixTheme.colorScheme.surfaceContainer,
         ) {
             if (landscape) {
                 Row(
@@ -133,42 +143,44 @@ private fun DirectionPad(diameter: Dp, onKeyClick: (RemoteKey) -> Unit) {
     val keySize = (diameter.value / 3).toInt().dp
     Box(
         Modifier.size(diameter)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh, CircleShape)
     ) {
         DirectionKey(
             RemoteKey.Up,
-            Icons.Outlined.KeyboardArrowUp,
+            MiuixIcons.ChevronBackward,
             Modifier.align(Alignment.TopCenter).size(keySize),
             onKeyClick,
+            rotation = 90f,
         )
         DirectionKey(
             RemoteKey.Left,
-            Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+            MiuixIcons.ChevronBackward,
             Modifier.align(Alignment.CenterStart).size(keySize),
             onKeyClick,
         )
         DirectionKey(
             RemoteKey.Right,
-            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            MiuixIcons.ChevronForward,
             Modifier.align(Alignment.CenterEnd).size(keySize),
             onKeyClick,
         )
         DirectionKey(
             RemoteKey.Down,
-            Icons.Outlined.KeyboardArrowDown,
+            MiuixIcons.ChevronBackward,
             Modifier.align(Alignment.BottomCenter).size(keySize),
             onKeyClick,
+            rotation = 270f,
         )
         RemoteKeySurface(
             RemoteKey.Center,
             Modifier.align(Alignment.Center).size(keySize),
             onKeyClick,
             CircleShape,
-            MaterialTheme.colorScheme.surface,
+            MiuixTheme.colorScheme.surface,
         ) {
             Text(
                 stringResource(RemoteKey.Center.labelRes),
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.subtitle,
                 maxLines = 1,
             )
         }
@@ -181,9 +193,10 @@ private fun DirectionKey(
     icon: ImageVector,
     modifier: Modifier,
     onKeyClick: (RemoteKey) -> Unit,
+    rotation: Float = 0f,
 ) {
     RemoteKeySurface(key, modifier, onKeyClick, CircleShape, Color.Transparent) {
-        Icon(icon, null, Modifier.size(28.dp))
+        Icon(icon, null, Modifier.size(28.dp).rotate(rotation))
     }
 }
 
@@ -195,7 +208,7 @@ private fun RemoteRow(keys: List<KeyAction>, onKeyClick: (RemoteKey) -> Unit) {
                 key,
                 Modifier.weight(1f).height(56.dp),
                 onKeyClick,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = MiuixTheme.colorScheme.surfaceContainerHigh,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -204,7 +217,7 @@ private fun RemoteRow(keys: List<KeyAction>, onKeyClick: (RemoteKey) -> Unit) {
                     Icon(icon, null, Modifier.size(22.dp))
                     Text(
                         stringResource(key.labelRes),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MiuixTheme.textStyles.footnote2,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -239,14 +252,14 @@ private fun RemoteStatus(status: OperationStatus) {
     var showDetails by remember(status) { mutableStateOf(false) }
     val text =
         when (status) {
-            OperationStatus.Idle -> stringResource(R.string.remote_subtitle)
+            OperationStatus.Idle -> ""
             is OperationStatus.Running -> status.text
             is OperationStatus.Success -> status.text
             is OperationStatus.Failed ->
                 stringResource(R.string.device_status_error_format, status.text, status.suggestion)
         }
     Box(
-        Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 20.dp).clickable(
+        Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 20.dp).clip(RoundedCornerShape(12.dp)).clickable(
             enabled = status is OperationStatus.Failed,
             role = Role.Button,
         ) {
@@ -257,24 +270,24 @@ private fun RemoteStatus(status: OperationStatus) {
         Text(
             text,
             color =
-                if (status is OperationStatus.Failed) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
+                if (status is OperationStatus.Failed) MiuixTheme.colorScheme.error
+                else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
     if (showDetails && status is OperationStatus.Failed) {
-        AlertDialog(
+        WindowDialog(
+            show = true,
             onDismissRequest = { showDetails = false },
-            title = { Text(status.text) },
-            text = { Text(status.suggestion) },
-            confirmButton = {
-                TextButton(onClick = { showDetails = false }) {
-                    Text(stringResource(R.string.action_confirm))
-                }
-            },
-        )
+            title = status.text,
+            summary = status.suggestion,
+        ) {
+            Button(onClick = { showDetails = false }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_confirm))
+            }
+        }
     }
 }
 
@@ -282,27 +295,27 @@ private data class KeyAction(val key: RemoteKey, val icon: ImageVector)
 
 private val powerKeys =
     listOf(
-        KeyAction(RemoteKey.Wakeup, Icons.Outlined.LightMode),
-        KeyAction(RemoteKey.Power, Icons.Outlined.PowerSettingsNew),
-        KeyAction(RemoteKey.Sleep, Icons.Outlined.Bedtime),
+        KeyAction(RemoteKey.Wakeup, AppIcons.Wake),
+        KeyAction(RemoteKey.Power, AppIcons.Power),
+        KeyAction(RemoteKey.Sleep, AppIcons.Sleep),
     )
 private val navigationKeys =
     listOf(
-        KeyAction(RemoteKey.Back, Icons.AutoMirrored.Outlined.ArrowBack),
-        KeyAction(RemoteKey.Home, Icons.Outlined.Home),
-        KeyAction(RemoteKey.Menu, Icons.Outlined.Menu),
+        KeyAction(RemoteKey.Back, MiuixIcons.Back),
+        KeyAction(RemoteKey.Home, MiuixIcons.Home),
+        KeyAction(RemoteKey.Menu, MiuixIcons.More),
     )
 private val volumeKeys =
     listOf(
-        KeyAction(RemoteKey.VolumeDown, Icons.AutoMirrored.Outlined.VolumeDown),
-        KeyAction(RemoteKey.Mute, Icons.AutoMirrored.Outlined.VolumeOff),
-        KeyAction(RemoteKey.VolumeUp, Icons.AutoMirrored.Outlined.VolumeUp),
+        KeyAction(RemoteKey.VolumeDown, AppIcons.VolumeDown),
+        KeyAction(RemoteKey.Mute, MiuixIcons.VolumeOff),
+        KeyAction(RemoteKey.VolumeUp, MiuixIcons.VolumeUp),
     )
 private val mediaKeys =
     listOf(
-        KeyAction(RemoteKey.Previous, Icons.Outlined.SkipPrevious),
-        KeyAction(RemoteKey.PlayPause, Icons.Outlined.PlayArrow),
-        KeyAction(RemoteKey.Next, Icons.Outlined.SkipNext),
+        KeyAction(RemoteKey.Previous, AppIcons.SkipPrevious),
+        KeyAction(RemoteKey.PlayPause, AppIcons.PlayPause),
+        KeyAction(RemoteKey.Next, AppIcons.SkipNext),
     )
 
 @Preview(name = "紧凑遥控器", showBackground = true, widthDp = 320, heightDp = 568)
@@ -310,7 +323,7 @@ private val mediaKeys =
 @Preview(name = "横屏遥控器", showBackground = true, widthDp = 640, heightDp = 360)
 @Composable
 private fun RemoteControlContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         RemoteControlContent(uiState = RemoteControlUiState(), onBackClick = {}, onKeyClick = {})
     }
 }

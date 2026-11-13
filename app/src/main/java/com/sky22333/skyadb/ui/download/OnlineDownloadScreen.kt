@@ -1,7 +1,12 @@
 package com.sky22333.skyadb.ui.download
 
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Download
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,30 +14,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import com.sky22333.skyadb.ui.components.FlatButton
+import com.sky22333.skyadb.ui.components.FlatTabRow
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,9 +62,8 @@ fun OnlineDownloadScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OnlineDownloadContent(
+internal fun OnlineDownloadContent(
     bottomPadding: Dp = 0.dp,
     uiState: OnlineDownloadUiState,
     onBackClick: () -> Unit,
@@ -85,10 +79,10 @@ private fun OnlineDownloadContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = { Text(stringResource(R.string.online_download_title)) },
+            title = stringResource(R.string.online_download_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(imageVector = MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -104,7 +98,7 @@ private fun OnlineDownloadContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            DownloadFormCard(
+            DownloadFormSection(
                 uiState = uiState,
                 onModeChanged = onModeChanged,
                 onUrlChanged = onUrlChanged,
@@ -112,15 +106,14 @@ private fun OnlineDownloadContent(
                 onStartClick = onStartClick,
                 onCancelClick = onCancelClick,
             )
-            DownloadTaskCard(task = uiState.task)
+            DownloadTaskSection(task = uiState.task)
             DownloadStatusMessage(status = uiState.operationStatus)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DownloadFormCard(
+private fun DownloadFormSection(
     uiState: OnlineDownloadUiState,
     onModeChanged: (OnlineDownloadMode) -> Unit,
     onUrlChanged: (String) -> Unit,
@@ -128,123 +121,103 @@ private fun DownloadFormCard(
     onStartClick: () -> Unit,
     onCancelClick: () -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            SectionHeader(title = stringResource(R.string.online_download_task_title))
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                OnlineDownloadMode.entries.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = uiState.mode == mode,
-                        onClick = { onModeChanged(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = OnlineDownloadMode.entries.size,
-                        ),
-                    ) {
-                        Text(stringResource(mode.labelRes))
-                    }
-                }
-            }
-            OutlinedTextField(
-                value = uiState.url,
-                onValueChange = onUrlChanged,
+        FlatTabRow(
+            tabs = OnlineDownloadMode.entries.map { stringResource(it.labelRes) },
+            selectedTabIndex = OnlineDownloadMode.entries.indexOf(uiState.mode),
+            onTabSelected = { onModeChanged(OnlineDownloadMode.entries[it]) },
+            minWidth = 120.dp,
+            maxWidth = 200.dp,
+        )
+        TextField(
+            value = uiState.url,
+            onValueChange = onUrlChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = stringResource(R.string.online_download_url_label),
+            singleLine = true,
+        )
+        uiState.urlError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
+        if (uiState.mode == OnlineDownloadMode.PushFile) {
+            TextField(
+                value = uiState.targetPath,
+                onValueChange = onTargetPathChanged,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.online_download_url_label)) },
+                label = stringResource(R.string.online_download_target_path_label),
                 singleLine = true,
-                placeholder = { Text("https://example.com/app.apk") },
-                isError = uiState.urlError != null,
-                supportingText = uiState.urlError?.let { { Text(it) } },
             )
-            if (uiState.mode == OnlineDownloadMode.PushFile) {
-                OutlinedTextField(
-                    value = uiState.targetPath,
-                    onValueChange = onTargetPathChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.online_download_target_path_label)) },
-                    singleLine = true,
-                    placeholder = { Text("/sdcard/Download/") },
-                    isError = uiState.targetPathError != null,
-                    supportingText = uiState.targetPathError?.let { { Text(it) } },
-                )
+            if (uiState.targetPath.isBlank() && uiState.targetPathError == null) Text("/sdcard/Download/", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            uiState.targetPathError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlatButton(
+                onClick = onStartClick,
+                primary = true,
+                enabled = uiState.actionEnabled,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(imageVector = MiuixIcons.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_start))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onStartClick,
-                    enabled = uiState.actionEnabled,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(imageVector = Icons.Outlined.Download, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.action_start))
-                }
-                OutlinedButton(
-                    onClick = onCancelClick,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(imageVector = Icons.Outlined.Cancel, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.action_cancel))
-                }
+            IconButton(
+                onClick = onCancelClick,
+                enabled = uiState.operationStatus is OperationStatus.Running,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Close,
+                    contentDescription = stringResource(R.string.action_cancel),
+                    tint = if (uiState.operationStatus is OperationStatus.Running) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSecondaryVariant,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DownloadTaskCard(task: DownloadTask?) {
-    Card(
+private fun DownloadTaskSection(task: DownloadTask?) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SectionHeader(title = stringResource(R.string.online_download_task_status_title))
-            if (task == null) {
+        SectionHeader(title = stringResource(R.string.online_download_task_status_title))
+        if (task == null) {
+            Text(
+                text = stringResource(R.string.online_download_no_task),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+            )
+        } else {
+            Text(text = task.fileName, style = MiuixTheme.textStyles.subtitle)
+            Text(
+                text = task.message,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+            )
+            LinearProgressIndicator(
+                progress = task.progress.coerceIn(0f, 1f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(
+                    R.string.online_download_status_format,
+                    stringResource(task.state.labelRes),
+                ),
+                color = if (task.state == DownloadState.Failed) {
+                    MiuixTheme.colorScheme.error
+                } else {
+                    MiuixTheme.colorScheme.onSurfaceVariantSummary
+                },
+                style = MiuixTheme.textStyles.footnote1,
+            )
+            if (task.targetPath.isNotBlank()) {
                 Text(
-                    text = stringResource(R.string.online_download_no_task),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(R.string.online_download_target_format, task.targetPath),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
                 )
-            } else {
-                Text(text = task.fileName, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = task.message,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                LinearProgressIndicator(
-                    progress = { task.progress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(
-                        R.string.online_download_status_format,
-                        stringResource(task.state.labelRes),
-                    ),
-                    color = if (task.state == DownloadState.Failed) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (task.targetPath.isNotBlank()) {
-                    Text(
-                        text = stringResource(R.string.online_download_target_format, task.targetPath),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
         }
     }
@@ -254,11 +227,11 @@ private fun DownloadTaskCard(task: DownloadTask?) {
 private fun DownloadStatusMessage(status: OperationStatus) {
     when (status) {
         OperationStatus.Idle -> Unit
-        is OperationStatus.Running -> Text(text = status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        is OperationStatus.Success -> Text(text = status.text, color = MaterialTheme.colorScheme.primary)
+        is OperationStatus.Running -> Text(text = status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        is OperationStatus.Success -> Text(text = status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         is OperationStatus.Failed -> Text(
             text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
-            color = MaterialTheme.colorScheme.error,
+            color = MiuixTheme.colorScheme.error,
         )
     }
 }
@@ -266,7 +239,7 @@ private fun DownloadStatusMessage(status: OperationStatus) {
 @Preview(name = "在线下载 - APK", showBackground = true, widthDp = 390)
 @Composable
 private fun OnlineDownloadApkPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         OnlineDownloadContent(
             uiState = OnlineDownloadUiState(
                 mode = OnlineDownloadMode.InstallApk,
@@ -286,7 +259,7 @@ private fun OnlineDownloadApkPreview() {
 @Preview(name = "在线下载 - 文件推送", showBackground = true, widthDp = 390)
 @Composable
 private fun OnlineDownloadPushPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         OnlineDownloadContent(
             uiState = OnlineDownloadUiState(
                 mode = OnlineDownloadMode.PushFile,

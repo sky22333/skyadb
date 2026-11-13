@@ -1,5 +1,10 @@
 package com.sky22333.skyadb.ui.install
 
+import com.sky22333.skyadb.ui.components.AppIcons
+
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Folder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -11,22 +16,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Android
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import com.sky22333.skyadb.ui.components.FlatButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -63,9 +59,8 @@ fun InstallApkScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InstallApkContent(
+internal fun InstallApkContent(
     bottomPadding: Dp = 0.dp,
     uiState: InstallApkUiState,
     onBackClick: () -> Unit,
@@ -78,19 +73,10 @@ private fun InstallApkContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(stringResource(R.string.install_apk_title))
-                    Text(
-                        stringResource(R.string.install_apk_subtitle),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = stringResource(R.string.install_apk_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(imageVector = MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -106,46 +92,40 @@ private fun InstallApkContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            Card(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(AppDimens.CardRadius),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(AppDimens.CardPadding),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    SectionHeader(
-                        title = stringResource(R.string.install_apk_local_title),
-                        description = stringResource(R.string.install_apk_local_desc),
-                    )
+                SectionHeader(
+                    title = stringResource(R.string.install_apk_local_title),
+                )
+                Text(
+                    text = uiState.selectedName ?: stringResource(R.string.install_apk_no_file_selected),
+                    style = MiuixTheme.textStyles.subtitle,
+                )
+                if (uiState.selectedUriText != null) {
                     Text(
-                        text = uiState.selectedName ?: stringResource(R.string.install_apk_no_file_selected),
-                        style = MaterialTheme.typography.titleMedium,
+                        text = uiState.selectedUriText,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        style = MiuixTheme.textStyles.footnote1,
                     )
-                    if (uiState.selectedUriText != null) {
-                        Text(
-                            text = uiState.selectedUriText,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                }
+                InstallStatusMessage(status = uiState.operationStatus)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlatButton(onClick = onPickClick, modifier = Modifier.weight(1f)) {
+                        Icon(imageVector = MiuixIcons.Folder, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.action_pick_apk))
                     }
-                    InstallStatusMessage(status = uiState.operationStatus)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(onClick = onPickClick, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Outlined.FolderOpen, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.action_pick_apk))
-                        }
-                        Button(
-                            onClick = onInstallClick,
-                            enabled = uiState.installEnabled,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Android, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.nav_install))
-                        }
+                    FlatButton(
+                        onClick = onInstallClick,
+                        primary = true,
+                        enabled = uiState.installEnabled,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(imageVector = AppIcons.Install, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.nav_install))
                     }
                 }
             }
@@ -160,13 +140,13 @@ private fun InstallStatusMessage(status: OperationStatus) {
         is OperationStatus.Running -> {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OperationProgressIndicator(progress = status.progress)
-                Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             }
         }
-        is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
+        is OperationStatus.Success -> Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         is OperationStatus.Failed -> Text(
             text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
-            color = MaterialTheme.colorScheme.error,
+            color = MiuixTheme.colorScheme.error,
         )
     }
 }
@@ -174,7 +154,7 @@ private fun InstallStatusMessage(status: OperationStatus) {
 @Preview(name = "安装 APK", showBackground = true, widthDp = 390)
 @Composable
 private fun InstallApkContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         InstallApkContent(
             uiState = InstallApkUiState(
                 selectedName = "demo.apk",

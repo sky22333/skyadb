@@ -23,7 +23,6 @@ data class DeviceUiState(
     val info: DeviceInfo = DeviceInfo(),
     val refreshing: Boolean = false,
     val refreshStatus: OperationStatus = OperationStatus.Idle,
-    val infoExpanded: Boolean = false,
 )
 
 class DeviceViewModel(
@@ -62,11 +61,8 @@ class DeviceViewModel(
         }
     }
 
-    fun toggleInfoExpanded() {
-        state.value = state.value.copy(infoExpanded = !state.value.infoExpanded)
-    }
-
     fun refreshDeviceInfo() {
+        if (state.value.refreshing || state.value.connectionState != ConnectionState.Connected) return
         state.value = state.value.copy(
             refreshing = true,
             refreshStatus = OperationStatus.Running(appString(R.string.device_refreshing)),

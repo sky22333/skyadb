@@ -21,7 +21,6 @@ import com.sky22333.skyadb.MainActivity
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
-import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -64,7 +63,7 @@ class RemoteControlUiTest {
         instrumentation.runOnMainSync {
             resumed.setContent {
                 CompositionLocalProvider(LocalDensity provides Density(1f, fontScale.value)) {
-                    AdbManagerTheme(darkTheme = dark.value, dynamicColor = false) {
+                    AdbManagerTheme(darkTheme = dark.value) {
                         Box(
                             Modifier.requiredSize(viewport.value.first.dp, viewport.value.second.dp)
                                 .testTag("viewport")
@@ -166,16 +165,11 @@ class RemoteControlUiTest {
                 .performClick()
             compose.onNodeWithText(error.suggestion).assertIsDisplayed()
             compose
-                .onNodeWithText(appString(com.sky22333.skyadb.R.string.action_confirm))
+                .onAllNodesWithText(appString(com.sky22333.skyadb.R.string.action_confirm))
+                .onLast()
                 .performClick()
             compose.runOnIdle { status.value = OperationStatus.Idle }
             compose.waitForIdle()
-            instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
-                File(resumed.cacheDir, "remote-control.png").outputStream().use {
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
-                }
-                bitmap.recycle()
-            }
         } finally {
             instrumentation.runOnMainSync { resumed.finish() }
         }

@@ -1,39 +1,32 @@
 package com.sky22333.skyadb.ui.logs
 
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import android.content.ClipData
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import com.sky22333.skyadb.ui.components.FlatTabRow
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
@@ -87,7 +80,7 @@ fun SystemLogScreen(
 }
 
 @Composable
-private fun SystemLogContent(
+internal fun SystemLogContent(
     bottomPadding: Dp = 0.dp,
     uiState: SystemLogUiState,
     onBackClick: () -> Unit,
@@ -98,35 +91,27 @@ private fun SystemLogContent(
     onLevelSelected: (String) -> Unit,
     onLineLimitSelected: (Int) -> Unit,
 ) {
+    val filteredLogs = remember(uiState.logs, uiState.level, uiState.query) { uiState.filteredLogs }
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(stringResource(R.string.syslog_title))
-                    Text(
-                        stringResource(R.string.syslog_subtitle),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = stringResource(R.string.syslog_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(
                     onClick = onCopyClick,
-                    enabled = uiState.filteredLogs.isNotEmpty(),
+                    enabled = filteredLogs.isNotEmpty(),
                 ) {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.syslog_copy_desc))
+                    Icon(MiuixIcons.Copy, contentDescription = stringResource(R.string.syslog_copy_desc))
                 }
                 IconButton(onClick = onClearClick, enabled = uiState.logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.DeleteSweep, contentDescription = stringResource(R.string.syslog_clear_desc))
+                    Icon(MiuixIcons.Clear, contentDescription = stringResource(R.string.syslog_clear_desc))
                 }
                 IconButton(onClick = onRefreshClick, enabled = !uiState.loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.syslog_refresh_desc))
+                    Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.syslog_refresh_desc))
                 }
             },
         )
@@ -135,32 +120,36 @@ private fun SystemLogContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = AppDimens.ScreenPadding,
-                top = AppDimens.ScreenPadding,
+                top = AppDimens.CompactGap,
                 end = AppDimens.ScreenPadding,
                 bottom = AppDimens.ScreenPadding + bottomPadding,
             ),
-            verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             item {
-                LogFilterCard(
-                    uiState = uiState,
-                    onQueryChanged = onQueryChanged,
-                    onLevelSelected = onLevelSelected,
-                    onLineLimitSelected = onLineLimitSelected,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(AppDimens.CompactGap)) {
+                    LogFilters(
+                        uiState = uiState,
+                        onQueryChanged = onQueryChanged,
+                        onLevelSelected = onLevelSelected,
+                        onLineLimitSelected = onLineLimitSelected,
+                    )
+                    if (uiState.status !is OperationStatus.Idle) {
+                        LogStatus(uiState.status, uiState.loading)
+                    }
+                    SectionHeader(
+                        title = stringResource(R.string.syslog_content_title),
+                        trailing = {
+                            Text(
+                                text = stringResource(R.string.syslog_content_desc_format, filteredLogs.size, uiState.logs.size),
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                style = MiuixTheme.textStyles.footnote1,
+                            )
+                        },
+                    )
+                }
             }
-            item { LogStatus(uiState.status, uiState.loading) }
-            item {
-                SectionHeader(
-                    title = stringResource(R.string.syslog_content_title),
-                    description = stringResource(
-                        R.string.syslog_content_desc_format,
-                        uiState.filteredLogs.size,
-                        uiState.logs.size,
-                    ),
-                )
-            }
-            if (uiState.filteredLogs.isEmpty()) {
+            if (filteredLogs.isEmpty()) {
                 item {
                     EmptyState(
                         title = stringResource(R.string.syslog_empty_title),
@@ -168,7 +157,7 @@ private fun SystemLogContent(
                     )
                 }
             } else {
-                items(uiState.filteredLogs.takeLast(MaxDisplayLogs)) { line ->
+                items(filteredLogs.takeLast(MaxDisplayLogs)) { line ->
                     LogLine(line = line)
                 }
             }
@@ -176,65 +165,35 @@ private fun SystemLogContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun LogFilterCard(
+private fun LogFilters(
     uiState: SystemLogUiState,
     onQueryChanged: (String) -> Unit,
     onLevelSelected: (String) -> Unit,
     onLineLimitSelected: (Int) -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedTextField(
-                value = uiState.query,
-                onValueChange = onQueryChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.syslog_keyword_label)) },
-                singleLine = true,
-            )
+        TextField(
+            value = uiState.query,
+            onValueChange = onQueryChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = stringResource(R.string.syslog_keyword_label),
+            singleLine = true,
+        )
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                LogLineLimits.forEach { limit ->
-                    FilterChip(
-                        selected = uiState.lineLimit == limit,
-                        onClick = { onLineLimitSelected(limit) },
-                        label = { Text("$limit") },
-                    )
-                }
-            }
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                LogLevels.forEach { level ->
-                    FilterChip(
-                        selected = uiState.level == level,
-                        onClick = { onLevelSelected(level) },
-                        label = {
-                            Text(
-                                if (level == LogLevelAll) {
-                                    stringResource(R.string.logs_level_all)
-                                } else {
-                                    level
-                                },
-                            )
-                        },
-                    )
-                }
-            }
-        }
+        FlatTabRow(
+            tabs = LogLineLimits.map(Int::toString),
+            selectedTabIndex = LogLineLimits.indexOf(uiState.lineLimit),
+            onTabSelected = { onLineLimitSelected(LogLineLimits[it]) },
+        )
+        FlatTabRow(
+            tabs = LogLevels.map { if (it == LogLevelAll) stringResource(R.string.logs_level_all) else it },
+            selectedTabIndex = LogLevels.indexOf(uiState.level),
+            onTabSelected = { onLevelSelected(LogLevels[it]) },
+            minWidth = 48.dp,
+        )
     }
 }
 
@@ -244,14 +203,9 @@ private fun LogLine(line: String) {
         text = line,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 28.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = RoundedCornerShape(6.dp),
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            .padding(vertical = 3.dp),
+        color = MiuixTheme.colorScheme.onSurface,
+        style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
     )
@@ -264,14 +218,15 @@ private fun LogStatus(status: OperationStatus, loading: Boolean) {
 
         is OperationStatus.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
         }
 
-        is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
+        is OperationStatus.Success -> Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
 
         is OperationStatus.Failed -> Text(
             text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
-            color = MaterialTheme.colorScheme.error,
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.footnote1,
         )
     }
 }
@@ -287,7 +242,7 @@ private const val MaxDisplayLogs = 1000
 @Preview(name = "系统日志", showBackground = true, widthDp = 390)
 @Composable
 private fun SystemLogContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         SystemLogContent(
             uiState = SystemLogUiState(
                 logs = listOf(

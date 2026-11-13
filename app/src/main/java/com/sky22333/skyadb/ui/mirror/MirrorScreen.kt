@@ -1,10 +1,19 @@
 package com.sky22333.skyadb.ui.mirror
 
+
+import com.sky22333.skyadb.ui.components.AppIcons
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Home
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Send
+import top.yukonga.miuix.kmp.icon.extended.VolumeUp
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
+import android.graphics.SurfaceTexture
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,25 +35,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Send
-import androidx.compose.material.icons.automirrored.outlined.VolumeDown
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Keyboard
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PowerSettingsNew
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TextFieldDefaults
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -89,7 +88,7 @@ fun MirrorScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
             val surfaceModifier =
@@ -102,33 +101,33 @@ fun MirrorScreen(
             AndroidView(
                 modifier = surfaceModifier,
                 factory = { context ->
-                    object : SurfaceView(context) {
+                    object : TextureView(context) {
                             override fun performClick(): Boolean {
                                 super.performClick()
                                 return true
                             }
                         }
                         .apply {
-                            holder.addCallback(
-                                object : SurfaceHolder.Callback {
-                                    override fun surfaceCreated(holder: SurfaceHolder) {
-                                        surface = holder.surface
-                                        viewModel.onSurfaceCreated(holder.surface)
+                            surfaceTextureListener =
+                                object : TextureView.SurfaceTextureListener {
+                                    override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
+                                        val videoSurface = Surface(texture)
+                                        surface = videoSurface
+                                        viewModel.onSurfaceCreated(videoSurface)
                                     }
 
-                                    override fun surfaceChanged(
-                                        holder: SurfaceHolder,
-                                        format: Int,
-                                        width: Int,
-                                        height: Int,
-                                    ) = Unit
+                                    override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = Unit
 
-                                    override fun surfaceDestroyed(holder: SurfaceHolder) {
+                                    override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
+                                        val oldSurface = surface
                                         surface = null
                                         viewModel.onSurfaceDestroyed()
+                                        oldSurface?.release()
+                                        return true
                                     }
+
+                                    override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
                                 }
-                            )
                             setOnTouchListener { view, event ->
                                 if (event.actionMasked == MotionEvent.ACTION_UP) view.performClick()
                                 if (surface != null) {
@@ -154,10 +153,7 @@ fun MirrorScreen(
                     keyboardVisible = true
                 }
             },
-            onClose = {
-                viewModel.stop()
-                onBackClick()
-            },
+            onClose = onBackClick,
         )
 
         AnimatedVisibility(
@@ -225,12 +221,12 @@ private fun MirrorTopActions(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MirrorIconButton(
-            icon = Icons.Outlined.Keyboard,
+            icon = AppIcons.Keyboard,
             contentDescription = stringResource(R.string.mirror_toggle_keyboard),
             onClick = onToggleKeyboard,
         )
         MirrorIconButton(
-            icon = Icons.Outlined.MoreVert,
+            icon = MiuixIcons.More,
             contentDescription =
                 stringResource(
                     if (controlsVisible) R.string.mirror_hide_controls_desc
@@ -239,7 +235,7 @@ private fun MirrorTopActions(
             onClick = onToggleControls,
         )
         MirrorIconButton(
-            icon = Icons.Outlined.Close,
+            icon = MiuixIcons.Close,
             contentDescription = stringResource(R.string.mirror_close_desc),
             onClick = onClose,
         )
@@ -258,8 +254,9 @@ private fun MirrorControls(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.50f)),
+        cornerRadius = 8.dp,
+        insideMargin = PaddingValues(0.dp),
+        colors = CardDefaults.defaultColors(color = Color.Black.copy(alpha = 0.50f), contentColor = Color.White),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -271,32 +268,32 @@ private fun MirrorControls(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MirrorIconButton(
-                    Icons.AutoMirrored.Outlined.ArrowBack,
+                    MiuixIcons.Back,
                     stringResource(R.string.action_back),
                 ) {
                     onKey(KeyEvent.KEYCODE_BACK)
                 }
-                MirrorIconButton(Icons.Outlined.Home, "Home") { onKey(KeyEvent.KEYCODE_HOME) }
+                MirrorIconButton(MiuixIcons.Home, stringResource(R.string.remote_key_home)) { onKey(KeyEvent.KEYCODE_HOME) }
                 MirrorIconButton(
-                    Icons.Outlined.Apps,
+                    AppIcons.RecentTasks,
                     stringResource(R.string.mirror_recent_tasks_desc),
                 ) {
                     onKey(KeyEvent.KEYCODE_APP_SWITCH)
                 }
                 MirrorIconButton(
-                    Icons.Outlined.PowerSettingsNew,
+                    AppIcons.Power,
                     stringResource(R.string.remote_key_power),
                 ) {
                     onKey(KeyEvent.KEYCODE_POWER)
                 }
                 MirrorIconButton(
-                    Icons.AutoMirrored.Outlined.VolumeDown,
+                    AppIcons.VolumeDown,
                     stringResource(R.string.mirror_volume_down_desc),
                 ) {
                     onKey(KeyEvent.KEYCODE_VOLUME_DOWN)
                 }
                 MirrorIconButton(
-                    Icons.AutoMirrored.Outlined.VolumeUp,
+                    MiuixIcons.VolumeUp,
                     stringResource(R.string.mirror_volume_up_desc),
                 ) {
                     onKey(KeyEvent.KEYCODE_VOLUME_UP)
@@ -307,33 +304,24 @@ private fun MirrorControls(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         modifier = Modifier.weight(1f),
                         value = inputText,
                         onValueChange = onInputTextChange,
                         singleLine = true,
-                        leadingIcon = { Icon(Icons.Outlined.Keyboard, contentDescription = null) },
-                        placeholder = { Text(stringResource(R.string.mirror_send_text)) },
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = Color.White.copy(alpha = 0.72f),
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.38f),
-                                focusedLeadingIconColor = Color.White,
-                                unfocusedLeadingIconColor = Color.White.copy(alpha = 0.72f),
-                                focusedPlaceholderColor = Color.White.copy(alpha = 0.58f),
-                                unfocusedPlaceholderColor = Color.White.copy(alpha = 0.58f),
-                            ),
+                        label = stringResource(R.string.mirror_send_text),
+                        useLabelAsPlaceholder = true,
+                        textStyle = MiuixTheme.textStyles.main.copy(color = Color.White),
+                        colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Black.copy(alpha = 0.45f), labelColor = Color.White.copy(alpha = 0.72f), borderColor = Color.White),
                     )
                     MirrorIconButton(
-                        icon = Icons.AutoMirrored.Outlined.Send,
+                        icon = MiuixIcons.Send,
                         contentDescription = stringResource(R.string.mirror_send_text),
                         enabled = inputText.isNotBlank(),
                         onClick = onSendText,
                     )
                     MirrorIconButton(
-                        Icons.Outlined.Close,
+                        MiuixIcons.Close,
                         stringResource(R.string.mirror_hide_keyboard),
                         onClick = onHideKeyboard,
                     )
@@ -369,8 +357,7 @@ private fun MirrorStatus(
 ) {
     Card(
         modifier = modifier.padding(24.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        insideMargin = PaddingValues(0.dp),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -379,11 +366,11 @@ private fun MirrorStatus(
             when (status) {
                 is OperationStatus.Running -> Text(status.text)
                 is OperationStatus.Failed -> {
-                    Text(status.text, color = MaterialTheme.colorScheme.error)
+                    Text(status.text, color = MiuixTheme.colorScheme.error)
                     Text(
                         status.suggestion,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        style = MiuixTheme.textStyles.footnote1,
                     )
                 }
                 else -> Unit

@@ -37,9 +37,9 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 | --- | --- |
 | Gradle Wrapper / Android Gradle Plugin | 9.8.1 / 9.4.1 |
 | Kotlin | 2.4.21 |
-| Compose BOM / Material 3 | 2026.09.00 / 由 BOM 管理 |
+| Compose BOM / Miuix | 2026.09.00 / 0.9.4 |
 | Activity / AppCompat | 1.13.0 / 1.8.0 |
-| Lifecycle / Navigation Compose | 2.11.0 / 2.10.2 |
+| Lifecycle / Miuix Navigation | 2.11.0 / 0.9.4 |
 | Coroutines / DataStore Preferences | 1.11.0 / 1.2.1 |
 | Kadb / kadb-mdns | 2.1.5 / 2.1.4 |
 | scrcpy-server | 5.0.1 |
@@ -138,10 +138,10 @@ skyadb/
 ## UI 与交互规范
 
 - App 内可见文案通过资源提供简体中文和英文，品牌名统一写作 `sky adb`。
-- 使用 Material 3 作为基础，但要保持现代、扁平、克制、工具型产品风格。
+- 使用 Miuix 默认主题和组件，保持扁平、克制的工具型产品风格；底部导航使用实色背景，以减少页面切换时不必要的模糊绘制。
 - 页面不能有粗糙默认感，按钮、卡片、输入框、状态徽章、列表间距必须统一。
 - 首页、设置页、设备页、Shell 页等长内容页面使用 `LazyColumn`，避免滚动不跟手。
-- 页面切换使用淡入淡出，底部导航与工具卡片使用共享过渡；动画参数统一由 `SharedMotion` 管理。
+- 页面导航使用 Miuix 的默认转场，顶部栏使用 Miuix 默认组件。
 - 列表项要尽量轻量，避免在列表滚动时做阻塞 IO、ADB 调用或大图加载。
 - 耗时操作必须展示状态，失败必须给出中文原因和下一步建议。
 - 危险操作，例如卸载应用，应保留确认流程。
@@ -179,7 +179,7 @@ skyadb/
 - 新增设置项必须进入 `AppSettingsStore`，并在设置页保持布局紧凑统一。
 - 新增持久化数据要考虑字段升级、默认值和读取失败兜底。
 - 新增网络能力必须考虑超时、取消、错误提示、缓存清理和进度节流。
-- 新增 UI 要遵循现有 `AppDimens`、主题颜色、圆角和 Material Icons 风格。
+- 新增 UI 要优先使用 Miuix 组件、默认主题和图标，并遵循现有 `AppDimens` 保持间距一致。
 - 新增镜像参数必须通过 `MirrorQualityPreset` 或 `ScrcpyOptions` 集中管理，不能在 UI 或启动命令中散落硬编码。
 
 ## 验收标准
@@ -224,7 +224,7 @@ skyadb/
 
 ## 构建与验证
 
-- 使用项目 Gradle Wrapper，安装 Android SDK Platform 37 和 Build Tools 37.0.0；CI 使用 JDK 17，本地可使用 JDK 21。
+- 使用项目 Gradle Wrapper，安装 Android SDK Platform 37 和 Build Tools 37.0.0；编译和 CI 使用 JDK 21 或更高版本。
 - `local.properties` 配置本机 `sdk.dir`，或通过 `ANDROID_HOME` 指向 Android SDK。
 - Windows 执行以下命令；Linux / macOS 改用 `./gradlew` 调用相同任务。
 

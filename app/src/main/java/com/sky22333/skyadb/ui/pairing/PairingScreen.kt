@@ -1,34 +1,29 @@
 package com.sky22333.skyadb.ui.pairing
 
+
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ExpandLess
+import top.yukonga.miuix.kmp.icon.extended.ExpandMore
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import com.sky22333.skyadb.ui.components.FlatButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -83,7 +78,6 @@ fun PairingScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PairingContent(
     bottomPadding: Dp = 0.dp,
@@ -101,10 +95,10 @@ private fun PairingContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = { Text(text = stringResource(R.string.action_wireless_pairing)) },
+            title = stringResource(R.string.action_wireless_pairing),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(imageVector = MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
         )
@@ -120,8 +114,8 @@ private fun PairingContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            PairingGuideCard()
-            PairingFormCard(
+            PairingGuideSection()
+            PairingFormSection(
                 uiState = uiState,
                 onIpChanged = onIpChanged,
                 onPairingPortChanged = onPairingPortChanged,
@@ -134,41 +128,33 @@ private fun PairingContent(
 }
 
 @Composable
-private fun PairingGuideCard() {
+private fun PairingGuideSection() {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(AppDimens.CardPadding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(interactionSource = null, indication = null) { expanded = !expanded },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.pairing_guide_title),
+                style = MiuixTheme.textStyles.subtitle,
+            )
+            Icon(
+                imageVector = if (expanded) MiuixIcons.ExpandLess else MiuixIcons.ExpandMore,
+                contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier.padding(top = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.pairing_guide_title),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                    contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
-                )
-            }
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier.padding(top = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    GuideStep("1", stringResource(R.string.pairing_guide_step1))
-                    GuideStep("2", stringResource(R.string.pairing_guide_step2))
-                    GuideStep("3", stringResource(R.string.pairing_guide_step3))
-                }
+                GuideStep("1", stringResource(R.string.pairing_guide_step1))
+                GuideStep("2", stringResource(R.string.pairing_guide_step2))
+                GuideStep("3", stringResource(R.string.pairing_guide_step3))
             }
         }
     }
@@ -182,19 +168,19 @@ private fun GuideStep(index: String, text: String) {
     ) {
         Text(
             text = index,
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelLarge,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
         )
         Text(
             text = text,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
         )
     }
 }
 
 @Composable
-private fun PairingFormCard(
+internal fun PairingFormSection(
     uiState: PairingUiState,
     onIpChanged: (String) -> Unit,
     onPairingPortChanged: (String) -> Unit,
@@ -202,71 +188,62 @@ private fun PairingFormCard(
     onPairClick: () -> Unit,
     onContinueToConnect: () -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            SectionHeader(title = stringResource(R.string.pairing_info_title))
+        SectionHeader(title = stringResource(R.string.pairing_info_title))
 
-            OutlinedTextField(
-                value = uiState.ip,
-                onValueChange = onIpChanged,
+        TextField(
+            value = uiState.ip,
+            onValueChange = onIpChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = stringResource(R.string.pairing_ip_label),
+            singleLine = true,
+        )
+        if (uiState.ip.isBlank() && uiState.ipError == null) {
+            Text("192.168.1.86", color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+        }
+        uiState.ipError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
+
+        TextField(
+            value = uiState.pairingPort,
+            onValueChange = onPairingPortChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = stringResource(R.string.pairing_port_label),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        uiState.portError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
+
+        TextField(
+            value = uiState.pairingCode,
+            onValueChange = onPairingCodeChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = stringResource(R.string.pairing_code_label),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        )
+        uiState.codeError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
+
+        PairingStatusMessage(status = uiState.operationStatus)
+
+        if (uiState.readyToConnect) {
+            FlatButton(
+                onClick = onContinueToConnect,
+                primary = true,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.pairing_ip_label)) },
-                singleLine = true,
-                placeholder = { Text("192.168.1.86") },
-                isError = uiState.ipError != null,
-                supportingText = uiState.ipError?.let { { Text(it) } },
-            )
-
-            OutlinedTextField(
-                value = uiState.pairingPort,
-                onValueChange = onPairingPortChanged,
+            ) {
+                Text(text = stringResource(R.string.action_go_connect))
+            }
+        } else {
+            FlatButton(
+                onClick = onPairClick,
+                primary = true,
+                enabled = uiState.pairEnabled,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.pairing_port_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = uiState.portError != null,
-                supportingText = uiState.portError?.let { { Text(it) } },
-            )
-
-            OutlinedTextField(
-                value = uiState.pairingCode,
-                onValueChange = onPairingCodeChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.pairing_code_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                isError = uiState.codeError != null,
-                supportingText = uiState.codeError?.let { { Text(it) } },
-            )
-
-            PairingStatusMessage(status = uiState.operationStatus)
-
-            if (uiState.readyToConnect) {
-                Button(
-                    onClick = onContinueToConnect,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(text = stringResource(R.string.action_go_connect))
-                }
-            } else {
-                Button(
-                    onClick = onPairClick,
-                    enabled = uiState.pairEnabled,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(imageVector = Icons.Outlined.Key, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.action_start_pairing))
-                }
+            ) {
+                Text(text = stringResource(R.string.action_start_pairing))
             }
         }
     }
@@ -280,45 +257,27 @@ private fun PairingStatusMessage(status: OperationStatus) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(
                 text = status.text,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
             )
         }
         is OperationStatus.Success -> Text(
             text = status.text,
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodySmall,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
         )
-        is OperationStatus.Failed -> Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(AppDimens.CardRadius),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = status.text,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Text(
-                    text = status.suggestion,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
+        is OperationStatus.Failed -> Text(
+            text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.footnote1,
+        )
     }
 }
 
 @Preview(name = "无线配对 - 空状态", showBackground = true, widthDp = 390)
 @Composable
 private fun PairingContentEmptyPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         PairingContent(
             uiState = PairingUiState(),
             onBackClick = {},
@@ -333,7 +292,7 @@ private fun PairingContentEmptyPreview() {
 @Preview(name = "无线配对 - 错误态", showBackground = true, widthDp = 390)
 @Composable
 private fun PairingContentErrorPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         PairingContent(
             uiState = PairingUiState(
                 ip = "192.168.1.999",

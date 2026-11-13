@@ -4,6 +4,9 @@ import android.os.Build
 import android.os.Environment
 import android.os.SystemClock
 import android.system.Os
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
@@ -314,7 +317,20 @@ class FileTransferViewModel(
         }
     }
 
-    fun showRenameDialog() {
+    fun renameEntry(pane: FilePaneId, entry: RemoteFileEntry) {
+        setActivePane(pane)
+        state.update { it.copy(selectedPaths = setOf(entry.path)) }
+        showRenameDialog()
+    }
+
+    fun transferEntry(pane: FilePaneId, entry: RemoteFileEntry) {
+        if (entry.isDirectory) return
+        setActivePane(pane)
+        state.update { it.copy(selectedPaths = setOf(entry.path)) }
+        transferSelected()
+    }
+
+    private fun showRenameDialog() {
         val entry =
             state.value.selectedEntries.singleOrNull()
                 ?: run {
@@ -415,9 +431,13 @@ class FileTransferViewModel(
 
     fun requestDelete(pane: FilePaneId, entry: RemoteFileEntry) {
         setActivePane(pane)
-        val selected = state.value.selectedPaths
-        val targets =
-            if (selected.isNotEmpty() && entry.path in selected) selected else setOf(entry.path)
+        state.update { it.copy(selectedPaths = setOf(entry.path)) }
+        requestDeleteSelected()
+    }
+
+    fun requestDeleteSelected() {
+        val targets = state.value.selectedPaths
+        if (targets.isEmpty()) return
         state.update { snapshot ->
             snapshot.copy(
                 selectedPaths = targets,
@@ -674,7 +694,7 @@ class FileTransferViewModel(
                                 it.copy(entries = entries, loading = false, error = null)
                             }
                             state.update { snapshot ->
-                                snapshot.copy(needsStoragePermission = false)
+                                snapshot.copy(needsStoragePermission = !hasAllFilesAccess())
                             }
                             if (
                                 state.value.activePane == FilePaneId.Local &&
@@ -778,5 +798,10 @@ class FileTransferViewModel(
     }
 
     private fun hasAllFilesAccess(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(AppServices.context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(AppServices.context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
 }

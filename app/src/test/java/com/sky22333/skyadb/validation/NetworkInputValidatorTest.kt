@@ -7,6 +7,16 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class NetworkInputValidatorTest {
+    @org.junit.Test
+    fun endpointParsesExplicitAndDefaultPortsAndRejectsInvalidInput() {
+        val explicit = NetworkInputValidator.endpoint(" 192.168.1.20:12345 ", 5555)
+        org.junit.Assert.assertTrue(explicit.isValid)
+        org.junit.Assert.assertEquals("192.168.1.20", explicit.host)
+        org.junit.Assert.assertEquals(12345, explicit.port)
+        org.junit.Assert.assertEquals(5555, NetworkInputValidator.endpoint("192.168.1.20", 5555).port)
+        listOf("", "192.168.1.20:", "192.168.1.20:0", "192.168.1.20:65536", "192.168.1.20:12:3", "192.168.1.999:5555", ":5555")
+            .forEach { org.junit.Assert.assertFalse(it, NetworkInputValidator.endpoint(it, 5555).isValid) }
+    }
     @Test
     fun ipv4Error_acceptsValidIpv4() {
         assertNull(NetworkInputValidator.ipv4Error("192.168.1.86"))

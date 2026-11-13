@@ -1,5 +1,11 @@
 package com.sky22333.skyadb.ui.screenshot
 
+import top.yukonga.miuix.kmp.icon.extended.ScreenCapture
+
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.Back
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.graphics.BitmapFactory
@@ -13,27 +19,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import com.sky22333.skyadb.ui.components.FlatButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -75,9 +72,8 @@ fun ScreenshotScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScreenshotContent(
+internal fun ScreenshotContent(
     bottomPadding: Dp = 0.dp,
     uiState: ScreenshotUiState,
     onBackClick: () -> Unit,
@@ -85,10 +81,11 @@ private fun ScreenshotContent(
     onSaveClick: () -> Unit,
     onClearClick: () -> Unit,
 ) {
-    val preview by produceState<ImageBitmap?>(initialValue = null, key1 = uiState.latestLocalPath) {
-        value = withContext(Dispatchers.IO) {
-            decodePreviewImage(uiState.latestLocalPath)
-        }
+    val preview = key(uiState.latestLocalPath) {
+        produceState<PreviewState>(initialValue = PreviewState.Loading) {
+            val image = withContext(Dispatchers.IO) { decodePreviewImage(uiState.latestLocalPath) }
+            value = if (image == null) PreviewState.Failed else PreviewState.Ready(image)
+        }.value
     }
 
     Column(
@@ -97,19 +94,19 @@ private fun ScreenshotContent(
             .verticalScroll(rememberScrollState()),
     ) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(stringResource(R.string.screenshot_title))
-                    Text(
-                        stringResource(R.string.screenshot_subtitle),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = stringResource(R.string.screenshot_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(imageVector = MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
+                }
+            },
+            actions = {
+                IconButton(onClick = onClearClick, enabled = uiState.latestLocalPath != null) {
+                    Icon(
+                        MiuixIcons.Clear,
+                        contentDescription = stringResource(R.string.action_clear_preview),
+                        tint = if (uiState.latestLocalPath != null) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSurface,
+                    )
                 }
             },
         )
@@ -125,51 +122,35 @@ private fun ScreenshotContent(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.SectionGap),
         ) {
-            Card(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(AppDimens.CardRadius),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(AppDimens.CardPadding),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    SectionHeader(
-                        title = stringResource(R.string.screenshot_task_title),
-                        description = stringResource(R.string.screenshot_task_desc),
-                    )
-                    Text(
-                        text = uiState.latestFileName ?: stringResource(R.string.screenshot_no_screenshot_yet),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    if (uiState.latestLocalPath != null) {
-                        ScreenshotPreview(preview = preview)
-                    }
-                    ScreenshotStatus(status = uiState.operationStatus)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = onCaptureClick, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Outlined.PhotoCamera, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.nav_screenshot))
-                        }
-                        OutlinedButton(
-                            onClick = onSaveClick,
-                            enabled = uiState.saveEnabled,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.action_save))
-                        }
-                    }
-                    OutlinedButton(
-                        onClick = onClearClick,
-                        enabled = uiState.latestLocalPath != null,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(imageVector = Icons.Outlined.DeleteSweep, contentDescription = null)
+                SectionHeader(
+                    title = stringResource(R.string.screenshot_task_title),
+                )
+                Text(
+                    text = uiState.latestFileName ?: stringResource(R.string.screenshot_no_screenshot_yet),
+                    style = MiuixTheme.textStyles.subtitle,
+                )
+                if (uiState.latestLocalPath != null) {
+                    ScreenshotPreview(preview = preview)
+                }
+                ScreenshotStatus(status = uiState.operationStatus)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlatButton(onClick = onCaptureClick, modifier = Modifier.weight(1f), primary = true) {
+                        Icon(imageVector = MiuixIcons.ScreenCapture, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.action_clear_preview))
+                        Text(stringResource(R.string.nav_screenshot))
+                    }
+                    FlatButton(
+                        onClick = onSaveClick,
+                        enabled = uiState.saveEnabled,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(imageVector = MiuixIcons.Download, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.action_save))
                     }
                 }
             }
@@ -183,12 +164,12 @@ private fun ScreenshotStatus(status: OperationStatus) {
         OperationStatus.Idle -> Unit
         is OperationStatus.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Text(status.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         }
-        is OperationStatus.Success -> Text(status.text, color = MaterialTheme.colorScheme.primary)
+        is OperationStatus.Success -> Text(status.text, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         is OperationStatus.Failed -> Text(
             text = stringResource(R.string.device_status_error_format, status.text, status.suggestion),
-            color = MaterialTheme.colorScheme.error,
+            color = MiuixTheme.colorScheme.error,
         )
     }
 }
@@ -196,7 +177,7 @@ private fun ScreenshotStatus(status: OperationStatus) {
 @Preview(name = "设备截图", showBackground = true, widthDp = 390)
 @Composable
 private fun ScreenshotContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         ScreenshotContent(
             uiState = ScreenshotUiState(
                 latestFileName = "screenshot.png",
@@ -213,29 +194,27 @@ private fun ScreenshotContentPreview() {
 }
 
 @Composable
-private fun ScreenshotPreview(preview: ImageBitmap?) {
-    if (preview == null) {
-        Text(
+private fun ScreenshotPreview(preview: PreviewState) {
+    when (preview) {
+        PreviewState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        PreviewState.Failed -> Text(
             text = stringResource(R.string.screenshot_preview_failed),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.footnote1,
         )
-        return
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-    ) {
-        Image(
-            bitmap = preview,
+        is PreviewState.Ready -> Image(
+            bitmap = preview.image,
             contentDescription = stringResource(R.string.screenshot_preview_desc),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+            modifier = Modifier.fillMaxWidth(),
             contentScale = ContentScale.FillWidth,
         )
     }
+}
+
+private sealed interface PreviewState {
+    data object Loading : PreviewState
+    data object Failed : PreviewState
+    data class Ready(val image: ImageBitmap) : PreviewState
 }
 
 private fun decodePreviewImage(path: String?): ImageBitmap? {

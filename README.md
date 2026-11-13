@@ -49,7 +49,7 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 
 - Kotlin
 - Jetpack Compose
-- Material 3
+- Miuix 0.9.4
 - Kadb 2.1.5 + kadb-mdns 2.1.4
 - scrcpy-server 5.0.1
 - Coroutines / Flow
@@ -57,8 +57,3 @@ sky adb 是一款运行在 Android 手机上的 ADB 管理工具，用于通过 
 - OkHttp
 
 详细实现、构建验证和维护规范见 [项目文档](docs/README.md)。
-
-### 鸣谢
-
-- [Kadb](https://github.com/flyfishxu/Kadb)
-- [scrcpy](https://github.com/Genymobile/scrcpy)

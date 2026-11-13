@@ -1,27 +1,41 @@
 package com.sky22333.skyadb.ui.files
 
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.File
+import top.yukonga.miuix.kmp.icon.extended.Folder
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.More
 import android.content.Intent
+import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,30 +43,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.DriveFileRenameOutline
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.ripple
+import top.yukonga.miuix.kmp.window.WindowDialog
+import com.sky22333.skyadb.ui.components.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,8 +67,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,14 +83,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.model.RemoteFileEntry
-import com.sky22333.skyadb.ui.components.AppTopBar
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
 import java.util.Locale
 private val FileMotion = tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val FileMotionDp = tween<androidx.compose.ui.unit.Dp>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val RowHeight = 44.dp
-private val BottomBarHeight = 48.dp
 private val IconSize = 22.dp
 
 @Composable
@@ -99,6 +105,11 @@ fun FileTransferScreen(
     ) {
         viewModel.onStoragePermissionResult()
     }
+    val legacyPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        viewModel.onStoragePermissionResult()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.onStoragePermissionResult()
@@ -110,13 +121,14 @@ fun FileTransferScreen(
         bottomPadding = bottomPadding,
         onBackClick = onBackClick,
         onRefreshClick = viewModel::refreshAll,
-        onGoUpClick = { viewModel.goUp() },
         onGoUpPane = viewModel::goUp,
         onSyncClick = viewModel::syncPathFromOther,
         onTransferClick = viewModel::transferSelected,
         onCancelTransfer = viewModel::cancelTransfer,
         onNewFolderClick = viewModel::showNewFolderDialog,
-        onRenameClick = viewModel::showRenameDialog,
+        onRenameEntry = viewModel::renameEntry,
+        onTransferEntry = viewModel::transferEntry,
+        onDeleteSelected = viewModel::requestDeleteSelected,
         onPathClick = viewModel::showJumpDialog,
         onActivatePane = viewModel::setActivePane,
         onOpenEntry = viewModel::openEntry,
@@ -140,24 +152,29 @@ fun FileTransferScreen(
                         Uri.parse("package:${context.packageName}"),
                     ),
                 )
+            } else {
+                legacyPermissionLauncher.launch(
+                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                )
             }
         },
     )
 }
 
 @Composable
-private fun FileManagerContent(
+internal fun FileManagerContent(
     uiState: FileTransferUiState,
     bottomPadding: Dp = 0.dp,
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit,
-    onGoUpClick: () -> Unit,
     onGoUpPane: (FilePaneId) -> Unit,
     onSyncClick: () -> Unit,
     onTransferClick: () -> Unit,
     onCancelTransfer: () -> Unit,
     onNewFolderClick: () -> Unit,
-    onRenameClick: () -> Unit,
+    onRenameEntry: (FilePaneId, RemoteFileEntry) -> Unit,
+    onTransferEntry: (FilePaneId, RemoteFileEntry) -> Unit,
+    onDeleteSelected: () -> Unit,
     onPathClick: () -> Unit,
     onActivatePane: (FilePaneId) -> Unit,
     onOpenEntry: (FilePaneId, RemoteFileEntry) -> Unit,
@@ -175,84 +192,75 @@ private fun FileManagerContent(
     onConfirmJump: () -> Unit,
     onRequestStoragePermission: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var menuEntry by remember { mutableStateOf<Pair<FilePaneId, RemoteFileEntry>?>(null) }
+    var detailsEntry by remember { mutableStateOf<RemoteFileEntry?>(null) }
     val transferring = uiState.operationStatus is OperationStatus.Running
     val active = uiState.active
     val sideLabel = stringResource(
         if (uiState.activePane == FilePaneId.Local) R.string.files_side_local else R.string.files_side_remote,
     )
     val selectedCount = uiState.selectedPaths.size
-    val titleKey = remember(uiState.activePane, active.path, active.entries.size, selectedCount) {
-        listOf(sideLabel, active.path, active.entries.size.toString(), selectedCount.toString())
-    }
+
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MiuixTheme.colorScheme.surface)
             .padding(bottom = bottomPadding),
     ) {
-        AppTopBar(
-            title = {
-                AnimatedContent(
-                    targetState = titleKey,
-                    transitionSpec = {
-                        fadeIn(FileMotion) togetherWith fadeOut(tween(100))
-                    },
-                    label = "file-title",
-                ) { key ->
-                    val side = key[0]
-                    val path = key[1]
-                    val count = key[2]
-                    val selected = key[3].toInt()
-                    Column(
-                        modifier = Modifier.combinedClickable(
-                            indication = ripple(bounded = true),
-                            interactionSource = null,
-                            onClick = onPathClick,
-                        ),
-                    ) {
-                        Text(
-                            text = if (selected > 0) {
-                                stringResource(R.string.files_title_selected_format, side, selected)
-                            } else {
-                                stringResource(R.string.files_title_count_format, side, count.toInt())
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = shortPath(path),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                }
-            },
-            actions = {
-                if (transferring) {
-                    IconButton(onClick = onCancelTransfer) {
-                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.files_cancel_transfer_desc))
-                    }
+        Box {
+            SmallTopAppBar(
+                title = shortPath(active.path),
+                subtitle = if (selectedCount > 0) {
+                    stringResource(R.string.files_title_selected_format, sideLabel, selectedCount)
                 } else {
-                    IconButton(
-                        onClick = onRenameClick,
-                        enabled = selectedCount == 1,
-                    ) {
-                        Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = stringResource(R.string.action_rename))
+                    stringResource(R.string.files_title_count_format, sideLabel, active.entries.size)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                     }
-                    IconButton(onClick = onRefreshClick) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                },
+                actions = {
+                    if (transferring) {
+                        IconButton(onClick = onCancelTransfer) {
+                            Icon(MiuixIcons.Close, contentDescription = stringResource(R.string.files_cancel_transfer_desc))
+                        }
+                    } else {
+                        IconButton(onClick = onRefreshClick) {
+                            Icon(MiuixIcons.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                        }
+                        val newFolder = stringResource(R.string.files_new_folder_desc)
+                        val syncPath = stringResource(R.string.files_sync_path_desc)
+                        val transferSelected = stringResource(R.string.files_transfer_selected)
+                        val deleteSelected = stringResource(R.string.files_delete_selected)
+                        val actions = DropdownEntry(buildList {
+                            add(DropdownItem(text = newFolder, onClick = onNewFolderClick))
+                            add(DropdownItem(text = syncPath, onClick = onSyncClick))
+                            if (uiState.selectedFiles.isNotEmpty()) {
+                                add(DropdownItem(text = transferSelected, onClick = onTransferClick))
+                            }
+                            if (selectedCount > 0) {
+                                add(DropdownItem(text = deleteSelected, onClick = onDeleteSelected))
+                            }
+                        })
+                        OverlayIconDropdownMenu(entry = actions) {
+                            Icon(MiuixIcons.More, contentDescription = stringResource(R.string.files_more_actions))
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(start = 64.dp, end = 112.dp)
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(AppDimens.ControlRadius))
+                    .clickable(onClickLabel = stringResource(R.string.files_path_label), onClick = onPathClick),
+            )
+        }
 
         AnimatedVisibility(
             visible = uiState.needsStoragePermission,
@@ -287,7 +295,10 @@ private fun FileManagerContent(
                 onActivate = onActivatePane,
                 onOpenEntry = onOpenEntry,
                 onSelectEntry = onSelectEntry,
-                onDeleteEntry = onDeleteEntry,
+                onLongPressEntry = { pane, entry ->
+                    onActivatePane(pane)
+                    menuEntry = pane to entry
+                },
                 onNavigateUp = { onGoUpPane(FilePaneId.Local) },
             )
             FilePane(
@@ -302,25 +313,52 @@ private fun FileManagerContent(
                 onActivate = onActivatePane,
                 onOpenEntry = onOpenEntry,
                 onSelectEntry = onSelectEntry,
-                onDeleteEntry = onDeleteEntry,
+                onLongPressEntry = { pane, entry ->
+                    onActivatePane(pane)
+                    menuEntry = pane to entry
+                },
                 onNavigateUp = { onGoUpPane(FilePaneId.Remote) },
             )
         }
 
         ActivePaneIndicator(activePane = uiState.activePane)
 
-        FileBottomBar(
-            canGoUp = active.canGoUp,
-            enabled = !transferring,
-            onGoUpClick = onGoUpClick,
-            onSyncClick = onSyncClick,
-            onTransferClick = onTransferClick,
-            onNewFolderClick = onNewFolderClick,
-        )
-
         StatusFooter(status = uiState.operationStatus)
     }
 
+    menuEntry?.let { (pane, entry) ->
+        FileActionDialog(
+            entry = entry,
+            onDismiss = { menuEntry = null },
+            onTransfer = { menuEntry = null; onTransferEntry(pane, entry) },
+            onRename = { menuEntry = null; onRenameEntry(pane, entry) },
+            onDelete = { menuEntry = null; onDeleteEntry(pane, entry) },
+            onCopyPath = {
+                copyFileText(context, entry.name, entry.path)
+                menuEntry = null
+            },
+            onCopyName = {
+                copyFileText(context, entry.name, entry.name)
+                menuEntry = null
+            },
+            onDetails = { menuEntry = null; detailsEntry = entry },
+        )
+    }
+    detailsEntry?.let { entry ->
+        WindowDialog(
+            show = true,
+            onDismissRequest = { detailsEntry = null },
+            title = entry.name,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.files_path_label) + ": " + entry.path)
+                Text(if (entry.isDirectory) stringResource(R.string.files_dir_meta) else formatBytes(entry.sizeBytes))
+                Button(onClick = { detailsEntry = null }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.action_confirm))
+                }
+            }
+        }
+    }
     DeleteConfirmDialog(
         label = uiState.pendingDeleteLabel,
         onDismiss = onCancelDelete,
@@ -350,6 +388,14 @@ private fun FileManagerContent(
     )
 }
 
+private fun copyFileText(context: Context, label: String, value: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        Toast.makeText(context, R.string.files_copied, Toast.LENGTH_SHORT).show()
+    }
+}
+
 @Composable
 private fun TransferProgress(status: OperationStatus) {
     if (status !is OperationStatus.Running) return
@@ -358,15 +404,13 @@ private fun TransferProgress(status: OperationStatus) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp),
-            trackColor = Color.Transparent,
         )
     } else {
         LinearProgressIndicator(
-            progress = { status.progress.coerceIn(0f, 1f) },
+            progress = status.progress.coerceIn(0f, 1f),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp),
-            trackColor = Color.Transparent,
         )
     }
 }
@@ -388,16 +432,16 @@ private fun StatusFooter(status: OperationStatus) {
             OperationStatus.Idle -> ""
         }
         val color = when (status) {
-            is OperationStatus.Failed -> MaterialTheme.colorScheme.error
-            is OperationStatus.Success -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            is OperationStatus.Failed -> MiuixTheme.colorScheme.error
+            is OperationStatus.Success -> MiuixTheme.colorScheme.onSurfaceVariantSummary
+            else -> MiuixTheme.colorScheme.onSurfaceVariantSummary
         }
         Text(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = color,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -410,17 +454,17 @@ private fun PermissionBanner(onRequestStoragePermission: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f))
+            .background(MiuixTheme.colorScheme.errorContainer.copy(alpha = 0.45f))
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.files_permission_required),
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onErrorContainer,
         )
-        TextButton(onClick = onRequestStoragePermission) {
+        Button(onClick = onRequestStoragePermission) {
             Text(stringResource(R.string.action_authorize))
         }
     }
@@ -440,61 +484,7 @@ private fun ActivePaneIndicator(activePane: FilePaneId) {
                 .offset { IntOffset(x.roundToPx(), 0) }
                 .width(maxWidth / 2)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.primary),
-        )
-    }
-}
-
-@Composable
-private fun FileBottomBar(
-    canGoUp: Boolean,
-    enabled: Boolean,
-    onGoUpClick: () -> Unit,
-    onSyncClick: () -> Unit,
-    onTransferClick: () -> Unit,
-    onNewFolderClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(BottomBarHeight),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BottomBarIcon(Icons.Outlined.ArrowUpward, stringResource(R.string.files_nav_up_desc), enabled && canGoUp, onGoUpClick)
-        BottomBarIcon(Icons.Outlined.Sync, stringResource(R.string.files_sync_path_desc), enabled, onSyncClick)
-        BottomBarIcon(Icons.Outlined.SwapHoriz, stringResource(R.string.files_transfer_to_other_desc), enabled, onTransferClick)
-        BottomBarIcon(Icons.Outlined.CreateNewFolder, stringResource(R.string.files_new_folder_desc), enabled, onNewFolderClick)
-    }
-}
-
-@Composable
-private fun RowScope.BottomBarIcon(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .combinedClickable(
-                enabled = enabled,
-                indication = ripple(bounded = true),
-                interactionSource = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(IconSize),
-            tint = if (enabled) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            },
+                .background(MiuixTheme.colorScheme.primary),
         )
     }
 }
@@ -509,7 +499,7 @@ private fun FilePane(
     onActivate: (FilePaneId) -> Unit,
     onOpenEntry: (FilePaneId, RemoteFileEntry) -> Unit,
     onSelectEntry: (FilePaneId, RemoteFileEntry) -> Unit,
-    onDeleteEntry: (FilePaneId, RemoteFileEntry) -> Unit,
+    onLongPressEntry: (FilePaneId, RemoteFileEntry) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Box(modifier = modifier) {
@@ -545,8 +535,8 @@ private fun FilePane(
                                         onClick = { onActivate(paneId) },
                                     )
                                     .padding(horizontal = 12.dp, vertical = AppDimens.CompactGap),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                     } else {
@@ -565,8 +555,7 @@ private fun FilePane(
                                     else onSelectEntry(paneId, entry)
                                 },
                                 onLongClick = {
-                                    onActivate(paneId)
-                                    onDeleteEntry(paneId, entry)
+                                    onLongPressEntry(paneId, entry)
                                 },
                             )
                         }
@@ -580,8 +569,7 @@ private fun FilePane(
                     .fillMaxWidth()
                     .height(2.dp)
                     .align(Alignment.TopCenter),
-                trackColor = Color.Transparent,
-            )
+                )
         }
     }
 }
@@ -595,25 +583,26 @@ private fun NavigateUpRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(RowHeight)
+            .clip(RoundedCornerShape(AppDimens.ControlRadius))
             .combinedClickable(
                 enabled = enabled,
-                indication = ripple(bounded = true),
+                indication = LocalIndication.current,
                 interactionSource = null,
                 onClick = onClick,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Folder,
+            imageVector = MiuixIcons.Folder,
             contentDescription = null,
             modifier = Modifier
                 .padding(horizontal = AppDimens.CompactGap)
                 .size(IconSize),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
         Text(
             text = "..",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body2,
             maxLines = 1,
         )
     }
@@ -636,13 +625,14 @@ private fun FileRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(RowHeight)
+            .clip(RoundedCornerShape(AppDimens.ControlRadius))
             .background(
-                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                if (selected) MiuixTheme.colorScheme.primary.copy(alpha = 0.20f)
                 else Color.Transparent,
             )
             .combinedClickable(
                 enabled = enabled,
-                indication = ripple(bounded = true),
+                indication = LocalIndication.current,
                 interactionSource = null,
                 onClick = onClick,
                 onLongClick = onLongClick,
@@ -650,15 +640,15 @@ private fun FileRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = if (entry.isDirectory) Icons.Outlined.Folder else Icons.AutoMirrored.Outlined.InsertDriveFile,
+            imageVector = if (entry.isDirectory) MiuixIcons.Folder else MiuixIcons.File,
             contentDescription = null,
             modifier = Modifier
                 .padding(horizontal = AppDimens.CompactGap)
                 .size(IconSize),
             tint = if (entry.isDirectory) {
-                MaterialTheme.colorScheme.primary
+                MiuixTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                MiuixTheme.colorScheme.onSurfaceVariantSummary
             },
         )
         Column(
@@ -668,14 +658,14 @@ private fun FileRow(
         ) {
             Text(
                 text = entry.name,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MiuixTheme.textStyles.body2,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = meta,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -684,104 +674,93 @@ private fun FileRow(
 }
 
 @Composable
-private fun DeleteConfirmDialog(
-    label: String?,
+private fun FileActionDialog(
+    entry: RemoteFileEntry,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
+    onTransfer: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+    onCopyPath: () -> Unit,
+    onCopyName: () -> Unit,
+    onDetails: () -> Unit,
 ) {
+    WindowDialog(
+        show = true,
+        onDismissRequest = onDismiss,
+        title = entry.name,
+    ) {
+        Column {
+            if (!entry.isDirectory) FileAction(stringResource(R.string.files_transfer_to_other_desc), onTransfer)
+            FileAction(stringResource(R.string.action_rename), onRename)
+            FileAction(stringResource(R.string.files_copy_name), onCopyName)
+            FileAction(stringResource(R.string.files_copy_path), onCopyPath)
+            FileAction(stringResource(R.string.files_details), onDetails)
+            FileAction(stringResource(R.string.action_delete), onDelete, destructive = true)
+        }
+    }
+}
+
+@Composable
+private fun FileAction(label: String, onClick: () -> Unit, destructive: Boolean = false) {
+    BasicComponent(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(AppDimens.ControlRadius)),
+        insideMargin = PaddingValues(vertical = 12.dp),
+        onClick = onClick,
+    ) {
+        Text(label, style = MiuixTheme.textStyles.main, color = if (destructive) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun DialogActions(onDismiss: () -> Unit, onConfirm: () -> Unit, confirmLabel: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_cancel)) }
+        Button(onClick = onConfirm, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) { Text(confirmLabel) }
+    }
+}
+
+@Composable
+private fun DeleteConfirmDialog(label: String?, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     if (label == null) return
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.files_delete_title_format, label)) },
-        text = { Text(stringResource(R.string.files_delete_confirm_message)) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_delete)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+    WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(R.string.files_delete_title_format, label), summary = stringResource(R.string.files_delete_confirm_message)) {
+        DialogActions(onDismiss, onConfirm, stringResource(R.string.action_delete))
+    }
 }
 
 @Composable
-private fun RenameDialog(
-    visible: Boolean,
-    value: String,
-    error: String?,
-    onDismiss: () -> Unit,
-    onValueChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-) {
+private fun RenameDialog(visible: Boolean, value: String, error: String?, onDismiss: () -> Unit, onValueChange: (String) -> Unit, onConfirm: () -> Unit) {
     if (!visible) return
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.action_rename)) },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                label = { Text(stringResource(R.string.files_new_name_label)) },
-                singleLine = true,
-                isError = error != null,
-                supportingText = error?.let { { Text(it) } },
-            )
-        },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+    WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(R.string.action_rename)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextField(value = value, onValueChange = onValueChange, label = stringResource(R.string.files_new_name_label), singleLine = true)
+            error?.let { Text(it, color = MiuixTheme.colorScheme.error) }
+            DialogActions(onDismiss, onConfirm, stringResource(R.string.action_confirm))
+        }
+    }
 }
 
 @Composable
-private fun NewFolderDialog(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-    onCreate: (String) -> Unit,
-) {
+private fun NewFolderDialog(visible: Boolean, onDismiss: () -> Unit, onCreate: (String) -> Unit) {
     if (!visible) return
     var name by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.files_new_folder_desc)) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.files_folder_name_label)) },
-                singleLine = true,
-            )
-        },
-        confirmButton = { TextButton(onClick = { onCreate(name) }) { Text(stringResource(R.string.action_create)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+    WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(R.string.files_new_folder_desc)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextField(value = name, onValueChange = { name = it }, label = stringResource(R.string.files_folder_name_label), singleLine = true)
+            DialogActions(onDismiss, { onCreate(name) }, stringResource(R.string.action_create))
+        }
+    }
 }
 
 @Composable
-private fun JumpPathDialog(
-    visible: Boolean,
-    value: String,
-    error: String?,
-    isRemote: Boolean,
-    onDismiss: () -> Unit,
-    onValueChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-) {
+private fun JumpPathDialog(visible: Boolean, value: String, error: String?, isRemote: Boolean, onDismiss: () -> Unit, onValueChange: (String) -> Unit, onConfirm: () -> Unit) {
     if (!visible) return
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(if (isRemote) R.string.files_jump_remote_title else R.string.files_jump_local_title),
-            )
-        },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                label = { Text(stringResource(R.string.files_path_label)) },
-                singleLine = true,
-                isError = error != null,
-                supportingText = error?.let { { Text(it) } },
-            )
-        },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+    WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(if (isRemote) R.string.files_jump_remote_title else R.string.files_jump_local_title)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextField(value = value, onValueChange = onValueChange, label = stringResource(R.string.files_path_label), singleLine = true)
+            error?.let { Text(it, color = MiuixTheme.colorScheme.error) }
+            DialogActions(onDismiss, onConfirm, stringResource(R.string.action_confirm))
+        }
+    }
 }
 
 private fun shortPath(path: String): String {
@@ -802,7 +781,7 @@ private fun formatBytes(bytes: Long): String {
 @Preview(name = "文件管理沉浸双栏", showBackground = true, widthDp = 390, heightDp = 780)
 @Composable
 private fun FileManagerContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         FileManagerContent(
             uiState = FileTransferUiState(
                 local = FilePaneState(
@@ -824,13 +803,14 @@ private fun FileManagerContentPreview() {
             ),
             onBackClick = {},
             onRefreshClick = {},
-            onGoUpClick = {},
             onGoUpPane = {},
             onSyncClick = {},
             onTransferClick = {},
             onCancelTransfer = {},
             onNewFolderClick = {},
-            onRenameClick = {},
+            onRenameEntry = { _, _ -> },
+            onTransferEntry = { _, _ -> },
+            onDeleteSelected = {},
             onPathClick = {},
             onActivatePane = {},
             onOpenEntry = { _, _ -> },

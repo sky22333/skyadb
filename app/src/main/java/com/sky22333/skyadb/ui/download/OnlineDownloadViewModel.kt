@@ -157,6 +157,7 @@ class OnlineDownloadViewModel(
     }
 
     fun onCancelClick() {
+        if (downloadJob?.isActive != true) return
         generation++
         downloadManager.cancelCurrentDownload()
         downloadJob?.cancel()

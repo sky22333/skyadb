@@ -37,6 +37,13 @@ enum class AdbSessionKind {
     UsbFastboot,
 }
 
+internal fun parseDeviceProperties(output: String): Map<String, String> =
+    output.lineSequence().mapNotNull { line ->
+        val separator = line.indexOf("]: [")
+        if (!line.startsWith('[') || separator < 1 || !line.endsWith(']')) return@mapNotNull null
+        line.substring(1, separator) to line.substring(separator + 4, line.lastIndex).trim()
+    }.toMap()
+
 class KadbManager {
     private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sessionMutex = Mutex()
@@ -216,23 +223,22 @@ class KadbManager {
 
             operationCatching {
                 val unknown = appString(R.string.unknown)
-                val brand = kadb.shell("getprop ro.product.brand").output.trim().ifBlank { unknown }
-                val model = kadb.shell("getprop ro.product.model").output.trim().ifBlank { unknown }
-                val androidVersion =
-                    kadb.shell("getprop ro.build.version.release").output.trim().ifBlank { unknown }
-                val sdk =
-                    kadb.shell("getprop ro.build.version.sdk").output.trim().ifBlank { unknown }
-                val abi = kadb.shell("getprop ro.product.cpu.abi").output.trim().ifBlank { unknown }
+                val properties = parseDeviceProperties(kadb.shell("getprop").output)
+                fun property(key: String) = properties[key]?.takeIf { it.isNotBlank() } ?: unknown
                 val resolution = parseResolution(kadb.shell("wm size").output)
                 val battery = parseBatteryLevel(kadb.shell("dumpsys battery").output)
 
                 AdbOperationResult.Success(
                     DeviceInfo(
-                        brand = brand,
-                        model = model,
-                        androidVersion = androidVersion,
-                        sdk = sdk,
-                        abi = abi,
+                        brand = property("ro.product.brand"),
+                        manufacturer = property("ro.product.manufacturer"),
+                        model = property("ro.product.model"),
+                        device = property("ro.product.device"),
+                        androidVersion = property("ro.build.version.release"),
+                        sdk = property("ro.build.version.sdk"),
+                        abi = property("ro.product.cpu.abi"),
+                        buildId = property("ro.build.id"),
+                        securityPatch = property("ro.build.version.security_patch"),
                         resolution = resolution,
                         battery = battery,
                     )

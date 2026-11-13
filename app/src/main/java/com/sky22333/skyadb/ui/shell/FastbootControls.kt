@@ -1,24 +1,22 @@
 package com.sky22333.skyadb.ui.shell
 
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.sky22333.skyadb.ui.components.Button
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,93 +60,86 @@ internal fun FastbootControls(
                 }
             else raw ?: unavailable
         }
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors =
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(
-            Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.fastboot_summary_title),
-                description =
-                    stringResource(
-                        if (state.connected) R.string.fastboot_connected
-                        else R.string.fastboot_not_connected
-                    ),
-                trailing = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (state.summaryLoading)
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        IconButton(onClick = onRefresh, enabled = state.connected && !busy) {
-                            Icon(
-                                Icons.Outlined.Refresh,
-                                stringResource(R.string.fastboot_refresh_summary),
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                onCopy(
-                                    labels.zip(values).joinToString("\n") {
-                                        "${it.first}: ${it.second}"
-                                    }
-                                )
-                            },
-                            enabled = state.summary != null,
-                        ) {
-                            Icon(
-                                Icons.Outlined.ContentCopy,
-                                stringResource(R.string.fastboot_copy_summary),
-                            )
-                        }
+        SectionHeader(
+            title = stringResource(R.string.fastboot_summary_title),
+            description =
+                stringResource(
+                    if (state.connected) R.string.fastboot_connected
+                    else R.string.fastboot_not_connected
+                ),
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.summaryLoading)
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    IconButton(onClick = onRefresh, enabled = state.connected && !busy) {
+                        Icon(
+                            MiuixIcons.Refresh,
+                            stringResource(R.string.fastboot_refresh_summary),
+                        )
                     }
-                },
-            )
-            labels.zip(values).forEach { (label, value) ->
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        label,
-                        Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        value,
-                        Modifier.weight(1.6f),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    IconButton(
+                        onClick = {
+                            onCopy(
+                                labels.zip(values).joinToString("\n") {
+                                    "${it.first}: ${it.second}"
+                                }
+                            )
+                        },
+                        enabled = state.summary != null,
+                    ) {
+                        Icon(
+                            MiuixIcons.Copy,
+                            stringResource(R.string.fastboot_copy_summary),
+                        )
+                    }
                 }
-            }
-            state.summaryError?.let {
+            },
+        )
+        labels.zip(values).forEach { (label, value) ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    label,
+                    Modifier.weight(1f),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Text(
+                    value,
+                    Modifier.weight(1.6f),
+                    style = MiuixTheme.textStyles.body2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+        state.summaryError?.let {
             Text(
-                stringResource(R.string.fastboot_reboot_to),
-                style = MaterialTheme.typography.labelLarge,
+                it,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.error,
             )
-            RebootActions.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { (label, command) ->
-                        OutlinedButton(
-                            onClick = { onReboot(command) },
-                            enabled = state.connected && !busy,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(stringResource(label), maxLines = 1)
-                        }
+        }
+        HorizontalDivider(color = MiuixTheme.colorScheme.dividerLine)
+        Text(
+            stringResource(R.string.fastboot_reboot_to),
+            style = MiuixTheme.textStyles.body2,
+        )
+        RebootActions.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (label, command) ->
+                    Button(
+                        onClick = { onReboot(command) },
+                        enabled = state.connected && !busy,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(label), maxLines = 1)
                     }
                 }
             }

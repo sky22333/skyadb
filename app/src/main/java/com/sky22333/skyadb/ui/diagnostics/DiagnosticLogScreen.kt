@@ -1,5 +1,10 @@
 package com.sky22333.skyadb.ui.diagnostics
 
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Clear
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Delete
 import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -10,18 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import com.sky22333.skyadb.ui.components.AppTopBar as TopAppBar
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -85,27 +83,18 @@ private fun DiagnosticLogContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Column {
-                    Text(stringResource(R.string.settings_diagnostics_title))
-                    Text(
-                        stringResource(R.string.diagnostics_subtitle),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
+            title = stringResource(R.string.settings_diagnostics_title),
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
                 }
             },
             actions = {
                 IconButton(onClick = onCopyClick, enabled = logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.syslog_copy_desc))
+                    Icon(MiuixIcons.Copy, contentDescription = stringResource(R.string.syslog_copy_desc))
                 }
                 IconButton(onClick = onClearClick, enabled = logs.isNotEmpty()) {
-                    Icon(Icons.Outlined.DeleteSweep, contentDescription = stringResource(R.string.syslog_clear_desc))
+                    Icon(MiuixIcons.Clear, contentDescription = stringResource(R.string.syslog_clear_desc))
                 }
             },
         )
@@ -135,7 +124,7 @@ private fun DiagnosticLogContent(
                 }
             } else {
                 items(logs, key = { it.id }) { log ->
-                    DiagnosticLogCard(log)
+                    DiagnosticLogRow(log)
                 }
             }
         }
@@ -143,59 +132,51 @@ private fun DiagnosticLogContent(
 }
 
 @Composable
-private fun DiagnosticLogCard(log: DiagnosticLog) {
-    Card(
+private fun DiagnosticLogRow(log: DiagnosticLog) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.CardRadius),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(AppDimens.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        Text(
+            text = "${stringResource(log.module.labelRes)} · ${log.operation}",
+            style = MiuixTheme.textStyles.subtitle,
+        )
+        log.target?.let {
             Text(
-                text = "${stringResource(log.module.labelRes)} · ${log.operation}",
-                style = MaterialTheme.typography.titleSmall,
-            )
-            log.target?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                )
-            }
-            Text(
-                text = log.message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = log.suggestion,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            log.errorMessage?.takeIf { it.isNotBlank() }?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                )
-            }
-            Text(
-                text = DiagnosticFormatter.formatTime(log.timeMillis),
-                color = MaterialTheme.colorScheme.outline,
-                style = MaterialTheme.typography.labelSmall,
+                text = it,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
             )
         }
+        Text(
+            text = log.message,
+            color = MiuixTheme.colorScheme.error,
+            style = MiuixTheme.textStyles.body2,
+        )
+        Text(
+            text = log.suggestion,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+        )
+        log.errorMessage?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                text = it,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
+            )
+        }
+        Text(
+            text = DiagnosticFormatter.formatTime(log.timeMillis),
+            color = MiuixTheme.colorScheme.outline,
+            style = MiuixTheme.textStyles.footnote2,
+        )
     }
 }
 
 @Preview(name = "诊断日志", showBackground = true, widthDp = 390)
 @Composable
 private fun DiagnosticLogContentPreview() {
-    AdbManagerTheme(dynamicColor = false) {
+    AdbManagerTheme() {
         DiagnosticLogContent(
             logs = listOf(
                 DiagnosticLog(

@@ -6,8 +6,7 @@
     <string name="language_follow_system">系统</string>
     <string name="language_chinese">中文</string>
     <string name="language_english">English</string>
-    <string name="settings_language">语言</string>
-    <string name="settings_language_desc">默认跟随系统，也可手动选择</string>
+    <string name="settings_language">应用语言</string>
 
     <!-- Theme -->
     <string name="theme_system">系统</string>
@@ -23,13 +22,8 @@
     <string name="nav_devices">设备</string>
     <string name="nav_details">详情</string>
     <string name="nav_settings">设置</string>
-    <string name="nav_pairing">配对</string>
-    <string name="nav_discovery">扫描</string>
-    <string name="nav_apps">应用</string>
     <string name="nav_local_apps">本机应用</string>
-    <string name="nav_download">下载</string>
     <string name="nav_install">安装</string>
-    <string name="nav_files">文件</string>
     <string name="nav_screenshot">截图</string>
     <string name="nav_shell">Shell</string>
     <string name="action_back">返回</string>
@@ -40,35 +34,27 @@
     <!-- Settings screen -->
     <string name="settings_title">设置</string>
     <string name="settings_default_port_title">默认端口</string>
-    <string name="settings_default_port_desc">默认连接端口</string>
     <string name="settings_connection_timeout_title">连接超时</string>
-    <string name="settings_connection_timeout_desc">建立连接等待时间</string>
     <string name="settings_command_timeout_title">命令超时</string>
-    <string name="settings_command_timeout_desc">ADB 命令等待时间</string>
     <string name="settings_scan_ranges_title">扫描网段</string>
-    <string name="settings_scan_ranges_desc">可选，自定义发现范围</string>
     <string name="settings_scan_ranges_placeholder">例如 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">镜像画质</string>
-    <string name="settings_mirror_quality_desc">下次启动镜像生效</string>
     <string name="settings_theme_mode_title">主题模式</string>
-    <string name="settings_theme_mode_desc">选择应用外观</string>
     <string name="settings_diagnostics_title">诊断日志</string>
-    <string name="settings_diagnostics_desc">查看最近错误</string>
     <string name="settings_clear_recent_devices_title">清理最近设备</string>
-    <string name="settings_clear_recent_devices_desc">移除连接历史</string>
     <string name="settings_project_url_title">项目地址</string>
 
     <!-- Home screen -->
     <string name="home_title">设备连接</string>
     <string name="action_disconnect">断开连接</string>
     <string name="home_refresh_usb_desc">刷新 USB 设备</string>
-    <string name="home_no_usb_devices">未检测到设备</string>
     <string name="device_authorized">已授权</string>
     <string name="device_unauthorized">待授权</string>
     <string name="action_connecting">连接中\u2026</string>
     <string name="action_connect">连接</string>
     <string name="home_manual_connect_title">手动连接</string>
-    <string name="home_ip_label">IP 地址</string>
+    <string name="home_endpoint_label">IP 地址:端口</string>
+    <string name="home_endpoint_hint">不填写端口时使用默认端口 %1$s</string>
     <string name="action_wireless_pairing">无线配对</string>
     <string name="action_discover_devices">发现设备</string>
     <string name="home_recent_devices_title">最近设备</string>
@@ -77,14 +63,14 @@
     <!-- Device screen -->
     <string name="device_details_title">设备详情</string>
     <string name="device_refresh_info_desc">刷新设备信息</string>
-    <string name="device_connect_hint">连接设备后可在下方查看系统信息</string>
+    <string name="device_connect_hint">连接设备后，点击状态查看设备信息</string>
     <string name="section_quick_actions">快捷操作</string>
     <string name="section_system_info">系统信息</string>
-    <string name="device_info_expanded_desc">基础信息缺失时会显示为未知</string>
-    <string name="device_info_collapsed_desc">点击图标展开查看</string>
-    <string name="device_info_collapse_desc">收起系统信息</string>
-    <string name="device_info_expand_desc">查看系统信息</string>
     <string name="device_info_brand">品牌</string>
+    <string name="device_info_manufacturer">制造商</string>
+    <string name="device_info_device">设备代号</string>
+    <string name="device_info_build">系统版本号</string>
+    <string name="device_info_security_patch">安全补丁</string>
     <string name="device_info_model">型号</string>
     <string name="device_info_android_version">Android 版本</string>
     <string name="device_info_resolution">分辨率</string>
@@ -100,12 +86,10 @@
 
     <!-- Apps screen -->
     <string name="apps_title">应用管理</string>
-    <string name="apps_subtitle">查看、启动、停止或卸载应用</string>
     <string name="apps_refresh_list_desc">刷新应用列表</string>
     <string name="apps_search_label">搜索应用</string>
-    <string name="apps_search_placeholder">输入包名或应用名</string>
     <string name="apps_list_title">应用列表</string>
-    <string name="apps_list_desc_format">共 %1$d 个，分类和搜索在本地即时过滤</string>
+    <string name="apps_list_desc_format">共 %1$d 个</string>
     <string name="apps_empty_title">暂无应用</string>
     <string name="apps_empty_message">连接设备并刷新后，应用会显示在这里。</string>
     <string name="apps_confirm_uninstall_title">确认卸载应用？</string>
@@ -130,10 +114,8 @@
 
     <!-- Local apps screen -->
     <string name="local_apps_title">本机应用</string>
-    <string name="local_apps_subtitle">导出单 APK 用户应用并安装到目标设备</string>
     <string name="local_apps_refresh_desc">刷新本机应用</string>
     <string name="local_apps_search_label">搜索本机应用</string>
-    <string name="local_apps_search_placeholder">输入应用名或包名</string>
     <string name="local_apps_user_apps_title">用户应用</string>
     <string name="local_apps_list_desc_format">共 %1$d 个，当前仅支持可启动的单 APK 应用</string>
     <string name="local_apps_empty_title">暂无可显示应用</string>
@@ -143,15 +125,12 @@
 
     <!-- Install APK screen -->
     <string name="install_apk_title">安装 APK</string>
-    <string name="install_apk_subtitle">选择本机 APK 并安装到已连接设备</string>
     <string name="install_apk_local_title">本地 APK</string>
-    <string name="install_apk_local_desc">安装前请确认目标设备已连接</string>
     <string name="install_apk_no_file_selected">尚未选择文件</string>
     <string name="action_pick_apk">选择 APK</string>
 
     <!-- Online download screen -->
     <string name="online_download_title">在线下载</string>
-    <string name="online_download_task_title">下载任务</string>
     <string name="online_download_url_label">下载链接</string>
     <string name="online_download_target_path_label">设备目标目录</string>
     <string name="action_start">开始</string>
@@ -168,11 +147,17 @@
     <string name="files_cancel_transfer_desc">取消传输</string>
     <string name="action_rename">重命名</string>
     <string name="action_refresh">刷新</string>
-    <string name="files_permission_required">需要「所有文件访问」权限</string>
+    <string name="files_permission_required">授予存储权限以显示全部文件</string>
     <string name="action_authorize">授权</string>
-    <string name="files_nav_up_desc">上级</string>
     <string name="files_sync_path_desc">同步对面路径</string>
     <string name="files_transfer_to_other_desc">传到对面</string>
+    <string name="files_transfer_selected">传输选中项</string>
+    <string name="files_delete_selected">删除选中项</string>
+    <string name="files_more_actions">更多文件操作</string>
+    <string name="files_copy_path">复制路径</string>
+    <string name="files_copy_name">复制名称</string>
+    <string name="files_copied">已复制</string>
+    <string name="files_details">详细信息</string>
     <string name="files_new_folder_desc">新建文件夹</string>
     <string name="files_empty_dir">空目录</string>
     <string name="files_dir_meta">文件夹</string>
@@ -189,9 +174,7 @@
 
     <!-- Screenshot screen -->
     <string name="screenshot_title">设备截图</string>
-    <string name="screenshot_subtitle">截图先显示预览，需要时再保存</string>
     <string name="screenshot_task_title">截图任务</string>
-    <string name="screenshot_task_desc">截图会先保存到缓存，再由你选择保存位置</string>
     <string name="screenshot_no_screenshot_yet">尚未生成截图</string>
     <string name="action_save">保存</string>
     <string name="action_clear_preview">清除预览</string>
@@ -241,7 +224,6 @@
 
     <!-- Remote control screen -->
     <string name="remote_title">虚拟遥控器</string>
-    <string name="remote_subtitle">发送物理按键到目标设备</string>
 
     <!-- Mirror screen -->
     <string name="mirror_hide_controls_desc">隐藏控制区</string>
@@ -254,7 +236,6 @@
 
     <!-- System log screen -->
     <string name="syslog_title">系统日志</string>
-    <string name="syslog_subtitle">按需读取目标设备最近日志</string>
     <string name="syslog_copy_desc">复制日志</string>
     <string name="syslog_clear_desc">清空日志</string>
     <string name="syslog_refresh_desc">刷新日志</string>
@@ -267,7 +248,6 @@
     <string name="syslog_copied_toast">已复制当前日志</string>
 
     <!-- Diagnostic log screen -->
-    <string name="diagnostics_subtitle">仅保留本次运行的错误信息</string>
     <string name="diagnostics_clip_label">诊断日志</string>
     <string name="diagnostics_copied_toast">已复制诊断日志</string>
     <string name="diagnostics_recent_errors_title">最近错误</string>
@@ -303,7 +283,6 @@
     <string name="discovery_scan_range_title">扫描范围</string>
     <string name="discovery_scan_progress_format">已扫描 %1$d / %2$d，发现 %3$d 个</string>
     <string name="action_start_scan">开始扫描</string>
-    <string name="action_use">使用</string>
     <string name="discovery_connect_wifi_first">请先连接 WiFi 或局域网</string>
     <string name="discovery_network_with_source">%1$s（%2$s）</string>
     <string name="discovery_scan_range_format">%1$s，端口 %2$s</string>
@@ -590,7 +569,6 @@
     <!-- ViewModel operation status: Home -->
     <string name="home_usb_permission_denied">USB 授权被拒绝</string>
     <string name="home_usb_permission_hint">请在系统弹窗中允许 sky adb 访问该 USB 设备后重试。</string>
-    <string name="home_autofill_discovered">已填入发现的地址，请确认后连接。</string>
     <string name="home_pairing_success_ip_filled">配对成功，已填入 IP。请确认连接端口（无线调试页的「IP 地址与端口」）后连接。</string>
     <string name="home_disconnected">已断开连接</string>
     <string name="home_cannot_connect">无法发起连接</string>
