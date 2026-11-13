@@ -80,11 +80,14 @@ class LocalFileManager(
     fun copyToCache(uri: Uri, preferredName: String = displayName(uri)): File {
         val taskDir = File(context.cacheDir, "picked/${java.util.UUID.randomUUID()}").apply { mkdirs() }
         val target = File(taskDir, FileNamePolicy.sanitize(preferredName))
-        context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { appString(R.string.files_cannot_read_picked) }
-            target.outputStream().use { output ->
-                input.copyTo(output)
+        try {
+            context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { appString(R.string.files_cannot_read_picked) }
+                target.outputStream().use { output -> input.copyTo(output) }
             }
+        } catch (error: Throwable) {
+            taskDir.deleteRecursively()
+            throw error
         }
         return target
     }

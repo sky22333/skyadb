@@ -176,7 +176,7 @@ class InstallApkViewModel(
                                 }
                             }
                         } finally {
-                            operationCatching { file.delete() }
+                            operationCatching { file.parentFile?.deleteRecursively() }
                         }
                     },
                     onFailure = { error ->

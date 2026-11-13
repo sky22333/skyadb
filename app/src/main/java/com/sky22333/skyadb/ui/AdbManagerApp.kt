@@ -19,6 +19,11 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ui.apps.AppsScreen
+import com.sky22333.skyadb.ui.ai.AiScreen
 import com.sky22333.skyadb.ui.components.AppIcons
 import com.sky22333.skyadb.ui.device.DeviceScreen
 import com.sky22333.skyadb.ui.diagnostics.DiagnosticLogScreen
@@ -64,6 +70,7 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
@@ -78,12 +85,21 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Serializable
 private data class Route(val name: String) : NavKey
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TabBackHandler(enabled: Boolean, onBack: () -> Unit) {
+    val state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None)
+    NavigationBackHandler(state = state, isBackEnabled = enabled && !WindowInsets.isImeVisible, onBackCompleted = onBack)
+}
+
 @Composable
 fun AdbManagerApp() {
     val stack = rememberNavBackStack<Route>(Route(RootRoute))
     var selectedTab by rememberSaveable { mutableStateOf(AppDestination.Home.route) }
     val current = (stack.lastOrNull() as? Route)?.name ?: RootRoute
     val showBottomBar = current == RootRoute
+    var aiSettingsOpen by remember { mutableStateOf(false) }
+    val showNavigation = showBottomBar && !(selectedTab == AppDestination.Ai.route && aiSettingsOpen)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val pageFocusRequester = remember { FocusRequester() }
@@ -137,12 +153,7 @@ fun AdbManagerApp() {
         }
     }
 
-    val tabBackState = rememberNavigationEventState(currentInfo = NavigationEventInfo.None)
-    NavigationBackHandler(
-        state = tabBackState,
-        isBackEnabled = showBottomBar && selectedTab != AppDestination.Home.route,
-        onBackCompleted = { selectTab(AppDestination.Home.route) },
-    )
+    TabBackHandler(showBottomBar && selectedTab != AppDestination.Home.route && !aiSettingsOpen) { selectTab(AppDestination.Home.route) }
 
     Scaffold(
         modifier = Modifier.focusRequester(pageFocusRequester).focusable(),
@@ -150,7 +161,7 @@ fun AdbManagerApp() {
         containerColor = MiuixTheme.colorScheme.background,
         bottomBar = {
             AnimatedVisibility(
-                visible = showBottomBar,
+                visible = showNavigation,
                 enter = fadeIn(tween(120)),
                 exit = fadeOut(tween(120)),
             ) {
@@ -196,7 +207,11 @@ fun AdbManagerApp() {
                         modifier = Modifier.fillMaxSize(),
                         label = "bottom-tab",
                     ) { tab ->
-                        Box(Modifier.fillMaxSize().padding(bottom = rootBottomPadding).background(MiuixTheme.colorScheme.background)) {
+                        Box(Modifier.fillMaxSize().then(
+                            if (tab == AppDestination.Ai.route) Modifier.windowInsetsPadding(
+                                WindowInsets.ime.union(if (aiSettingsOpen) WindowInsets.navigationBars else WindowInsets(bottom = rootBottomPadding))
+                            ) else Modifier.padding(bottom = rootBottomPadding)
+                        ).background(MiuixTheme.colorScheme.background)) {
                             when (tab) {
                                 AppDestination.Home.route -> HomeScreen(
                                     bottomPadding = 0.dp,
@@ -223,6 +238,7 @@ fun AdbManagerApp() {
                                     bottomPadding = 0.dp,
                                     onDiagnosticsClick = { navigate(DiagnosticsRoute) },
                                 )
+                                AppDestination.Ai.route -> AiScreen(onSettingsVisibilityChange = { aiSettingsOpen = it })
                             }
                         }
                     }
@@ -278,6 +294,7 @@ fun AdbManagerApp() {
 private val bottomDestinations = listOf(
     BottomDestination(AppDestination.Home.route, R.string.nav_devices, AppIcons.Device),
     BottomDestination(AppDestination.Device.route, R.string.nav_details, MiuixIcons.Info),
+    BottomDestination(AppDestination.Ai.route, R.string.ai_nav, MiuixIcons.Messages),
     BottomDestination(AppDestination.Settings.route, R.string.nav_settings, MiuixIcons.Settings),
 )
 
@@ -290,6 +307,7 @@ private data class BottomDestination(
 private sealed class AppDestination(val route: String) {
     data object Home : AppDestination("home")
     data object Device : AppDestination("device")
+    data object Ai : AppDestination("ai")
     data object Settings : AppDestination("settings")
     data object Pairing : AppDestination("pairing")
     data object Discovery : AppDestination("discovery")

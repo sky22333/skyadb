@@ -15,6 +15,9 @@ kadbMdns = "2.1.4"
 fastbootJava = "1.2.0"
 junit = "4.13.2"
 miuix = "0.9.4"
+koog = "1.3.0"
+enrichedMarkdown = "0.3.0"
+ktor = "3.3.3"
 testRunner = "1.7.0"
 androidJunit = "1.3.0"
 
@@ -23,6 +26,10 @@ miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "m
 miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
 miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
 miuix-nav = { module = "top.yukonga.miuix.kmp:miuix-nav-android", version.ref = "miuix" }
+koog-openai = { module = "ai.koog:prompt-executor-openai-client", version.ref = "koog" }
+koog-ktor = { module = "ai.koog:http-client-ktor", version.ref = "koog" }
+ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+enriched-markdown = { module = "com.swmansion.enriched.markdown:compose", version.ref = "enrichedMarkdown" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation" }

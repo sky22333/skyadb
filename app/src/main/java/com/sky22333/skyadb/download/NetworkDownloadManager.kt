@@ -30,6 +30,7 @@ import okhttp3.Response
 
 class NetworkDownloadManager(
     private val context: Context? = null,
+    private val persistentDirectory: File? = null,
     private val client: OkHttpClient =
         OkHttpClient.Builder().followRedirects(true).followSslRedirects(true).build(),
 ) {
@@ -95,7 +96,7 @@ class NetworkDownloadManager(
                             )
 
                         val downloadDir = downloadDir()
-                        cleanupDownloadDir(downloadDir)
+                        if (persistentDirectory == null) cleanupDownloadDir(downloadDir)
                         val taskDir =
                             File(downloadDir, java.util.UUID.randomUUID().toString()).apply {
                                 mkdirs()
@@ -115,6 +116,7 @@ class NetworkDownloadManager(
                                         ensureActive()
                                         if (call.isCanceled()) {
                                             targetFile.delete()
+                                            taskDir.delete()
                                             return@withContext DownloadResult.Canceled
                                         }
                                         val read = input.read(buffer)
@@ -162,6 +164,7 @@ class NetworkDownloadManager(
                             }
                         } catch (error: Throwable) {
                             targetFile.delete()
+                            taskDir.delete()
                             throw error
                         }
                         onProgress(
@@ -216,6 +219,7 @@ class NetworkDownloadManager(
         }
 
     private fun downloadDir(): File {
+        persistentDirectory?.let { return it }
         val baseDir = context?.cacheDir ?: File(System.getProperty("java.io.tmpdir") ?: ".")
         return File(baseDir, "downloads")
     }

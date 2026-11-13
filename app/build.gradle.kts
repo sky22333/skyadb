@@ -77,6 +77,10 @@ dependencies {
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
     implementation(libs.miuix.nav)
+    implementation(libs.koog.openai)
+    implementation(libs.koog.ktor)
+    implementation(libs.ktor.okhttp)
+    implementation(libs.enriched.markdown)
     implementation(platform(libs.androidx.compose.bom))
 
     implementation(libs.androidx.appcompat)

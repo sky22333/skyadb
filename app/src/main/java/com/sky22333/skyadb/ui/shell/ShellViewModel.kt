@@ -183,7 +183,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                 return@launch
             }
 
-            when (val result = adbRepository.runShell(command)) {
+            when (val result = adbRepository.runShell(command, timeoutMillis = null)) {
                 is AdbOperationResult.Success -> {
                     val commandResult = result.data
                     val combinedOutput = buildString {

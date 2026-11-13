@@ -2,6 +2,7 @@ package com.sky22333.skyadb
 
 import android.content.Context
 import com.sky22333.skyadb.adb.KadbManager
+import com.sky22333.skyadb.ai.AgentSessions
 import com.sky22333.skyadb.adb.FastbootOtgManager
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.data.RecentDeviceStore
@@ -24,6 +25,7 @@ object AppServices {
         get() = requireNotNull(appContext) { "AppServices 尚未初始化 Context" }
 
     val kadbManager: KadbManager by lazy { KadbManager() }
+    val agentSessions: AgentSessions by lazy { AgentSessions(kadbManager) }
     val fastbootOtgManager: FastbootOtgManager by lazy { FastbootOtgManager() }
     val usbOtgHost: UsbOtgHost by lazy {
         UsbOtgHost(requireNotNull(appContext) { "AppServices 尚未初始化 Context" })

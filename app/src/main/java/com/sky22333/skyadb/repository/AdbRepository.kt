@@ -51,7 +51,7 @@ interface AdbRepository {
 
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
 
-    suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult>
+    suspend fun runShell(command: String, timeoutMillis: Long? = 30_000): AdbOperationResult<ShellCommandResult>
 
     suspend fun install(
         apkFile: File,
@@ -316,7 +316,7 @@ class DefaultAdbRepository(
         return result.logFailure(DiagnosticModule.WifiAdb, "刷新设备信息")
     }
 
-    override suspend fun runShell(command: String): AdbOperationResult<ShellCommandResult> {
+    override suspend fun runShell(command: String, timeoutMillis: Long?): AdbOperationResult<ShellCommandResult> {
         if (kadbManager.sessionKind() == AdbSessionKind.UsbFastboot) {
             return AdbOperationResult.Failure(
                 message = appString(R.string.repo_fastboot_no_shell),
@@ -324,7 +324,7 @@ class DefaultAdbRepository(
             )
         }
         return kadbManager
-            .shell(command)
+            .shell(command, timeoutMillis = timeoutMillis)
             .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
 

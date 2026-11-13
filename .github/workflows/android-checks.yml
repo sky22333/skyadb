@@ -25,7 +25,7 @@ jobs:
       - run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
       - uses: gradle/actions/setup-gradle@v6
       - run: chmod +x gradlew
-      - run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleDebug
+      - run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleDebug assembleRelease
 
   ui-test:
     runs-on: ubuntu-latest
@@ -55,6 +55,18 @@ jobs:
           script: |
             set -e
             for test in \
+              com.sky22333.skyadb.ai.AiClientIntegrationTest \
+              com.sky22333.skyadb.ai.AiResponsesIntegrationTest \
+              com.sky22333.skyadb.ai.AiApprovalIntegrationTest \
+              com.sky22333.skyadb.ai.AiDownloadIntegrationTest \
+              com.sky22333.skyadb.ai.AiDownloadFlowTest \
+              com.sky22333.skyadb.ai.AgentToolsIntegrationTest \
+              com.sky22333.skyadb.ai.LocalCacheAuditTest \
+              com.sky22333.skyadb.ai.AiConfigSaveTest \
+              com.sky22333.skyadb.ai.AiDraftIntegrationTest \
+              com.sky22333.skyadb.ai.AiInterruptedStreamTest \
+              com.sky22333.skyadb.ai.AiNavigationUiTest \
+              com.sky22333.skyadb.ai.AiMarkdownUiTest \
               com.sky22333.skyadb.ui.CompactActionsUiTest \
               com.sky22333.skyadb.ui.apps.AppActionMenuUiTest \
               com.sky22333.skyadb.ui.apps.AppsFilterUiTest \
@@ -63,3 +75,7 @@ jobs:
               com.sky22333.skyadb.ui.remote.RemoteControlUiTest; do
               ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class="$test"
             done
+            adb reverse tcp:15555 tcp:5555
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sky22333.skyadb.ai.AiDeviceIntegrationTest -Pandroid.testInstrumentationRunnerArguments.adbPort=15555
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class='com.sky22333.skyadb.ai.AgentToolsIntegrationTest#connectionsAreReused,com.sky22333.skyadb.ai.AiDeviceFileAuditTest#legacyShellReportsExitCode,com.sky22333.skyadb.ai.AiDeviceFileAuditTest#shellRetainsExitCodeAfterLargeOutput' -Pandroid.testInstrumentationRunnerArguments.targetHost=127.0.0.1 -Pandroid.testInstrumentationRunnerArguments.targetPort=15555
+            adb reverse --remove tcp:15555

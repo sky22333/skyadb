@@ -28,6 +28,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.CoroutineStart
 import okio.source
 
 enum class AdbSessionKind {
@@ -51,6 +55,16 @@ class KadbManager {
     @Volatile private var activeEndpoint: String? = null
 
     @Volatile private var sessionKind: AdbSessionKind = AdbSessionKind.None
+
+    internal fun sessionToken(): Any? = activeKadb
+
+    internal fun isConnected(): Boolean = activeKadb?.connectionCheck() == true
+
+    internal suspend fun <T> withSession(token: Any, action: suspend () -> T): T =
+        sessionMutex.withLock {
+            check(activeKadb === token) { "ADB session changed" }
+            action()
+        }
 
     suspend fun connect(
         host: String,
@@ -183,33 +197,79 @@ class KadbManager {
                 }
         }
 
-    suspend fun shell(command: String): AdbOperationResult<ShellCommandResult> =
+    /** Reads shell output in bounded chunks; never buffers the complete device response. */
+    suspend fun shell(command: String, maxOutputBytes: Int = 1_000_000, timeoutMillis: Long? = 30_000): AdbOperationResult<ShellCommandResult> =
         withContext(Dispatchers.IO) {
-            val kadb =
-                activeKadb
-                    ?: return@withContext AdbOperationResult.Failure(
-                        message = appString(R.string.kadb_not_connected),
-                        suggestion = appString(R.string.kadb_connect_before_shell_suggestion),
-                    )
-
+            val client = activeKadb ?: return@withContext AdbOperationResult.Failure(
+                appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion),
+            )
             operationCatching {
-                val response = kadb.shell(command)
-                AdbOperationResult.Success(
-                    ShellCommandResult(
-                        command = command,
-                        output = response.output,
-                        errorOutput = response.errorOutput,
-                        exitCode = response.exitCode,
-                    )
-                )
-            }
-                .getOrElse { error ->
-                    AdbOperationResult.Failure(
-                        message = appString(R.string.kadb_command_failed),
-                        suggestion = appString(R.string.kadb_command_failed_suggestion),
-                        cause = error,
-                    )
-                }
+                withTimeoutOrNull(timeoutMillis ?: Long.MAX_VALUE) {
+                    val v2 = client.supportsFeature("shell_v2")
+                    val exitMarker = "\n__skyadb_exit_${java.util.UUID.randomUUID()}__"
+                    val legacyCommand = "sh -c ${shellQuote(command)}; printf '${exitMarker.replace("\n", "\\n")}%d\\n' \$?"
+                    val stream = client.open(if (v2) "shell,v2,raw:$command" else "shell:$legacyCommand")
+                    coroutineScope {
+                        val watcher = launch(Dispatchers.IO, start = CoroutineStart.UNDISPATCHED) {
+                            try { awaitCancellation() } finally { runCatching { stream.close() } }
+                        }
+                        try {
+                            val out = java.io.ByteArrayOutputStream()
+                            val err = java.io.ByteArrayOutputStream()
+                            var truncated = false
+                            var exit = -1
+                            val buffer = ByteArray(8192)
+                            val readContext = currentCoroutineContext()
+                            fun consume(length: Long, destination: java.io.ByteArrayOutputStream) {
+                                var left = length
+                                while (left > 0) {
+                                    readContext.ensureActive()
+                                    val n = stream.source.read(buffer, 0, minOf(buffer.size.toLong(), left).toInt())
+                                    if (n < 0) throw java.io.EOFException()
+                                    val keep = minOf(n, (maxOutputBytes - destination.size()).coerceAtLeast(0))
+                                    if (keep > 0) destination.write(buffer, 0, keep)
+                                    if (keep < n) truncated = true
+                                    left -= n
+                                }
+                            }
+                            if (v2) {
+                                while (true) {
+                                    val id = stream.source.readByte().toInt() and 0xff
+                                    val length = stream.source.readIntLe()
+                                    require(length >= 0 && (id == 1 || id == 2 || id == 3)) { "Invalid shell packet" }
+                                    if (id == 3) { require(length == 1); exit = stream.source.readByte().toInt() and 0xff; break }
+                                    consume(length.toLong(), if (id == 1) out else err)
+                                }
+                            } else {
+                                var tail = ByteArray(0)
+                                fun keepOutput(bytes: ByteArray, length: Int) {
+                                    val keep = minOf(length, (maxOutputBytes - out.size()).coerceAtLeast(0))
+                                    if (keep > 0) out.write(bytes, 0, keep)
+                                    if (keep < length) truncated = true
+                                }
+                                while (true) {
+                                    currentCoroutineContext().ensureActive()
+                                    val n = stream.source.read(buffer, 0, buffer.size)
+                                    if (n < 0) break
+                                    val combined = tail + buffer.copyOf(n)
+                                    val emit = (combined.size - 128).coerceAtLeast(0)
+                                    keepOutput(combined, emit)
+                                    tail = combined.copyOfRange(emit, combined.size)
+                                }
+                                val text = tail.toString(Charsets.ISO_8859_1)
+                                val marker = text.lastIndexOf(exitMarker)
+                                val code = if (marker >= 0) text.substring(marker + exitMarker.length).trim().toIntOrNull() else null
+                                if (code != null && code in 0..255) {
+                                    exit = code
+                                    keepOutput(tail, marker)
+                                } else keepOutput(tail, tail.size)
+                            }
+                            val suffix = if (truncated) "\n[output truncated]" else ""
+                            AdbOperationResult.Success(ShellCommandResult(command, out.toString("UTF-8") + suffix, err.toString("UTF-8"), exit))
+                        } finally { watcher.cancel(); stream.close() }
+                    }
+                } ?: throw SocketTimeoutException("Shell command timed out")
+            }.getOrElse { error -> AdbOperationResult.Failure(appString(R.string.kadb_command_failed), appString(R.string.kadb_command_failed_suggestion), error) }
         }
 
     suspend fun fetchDeviceInfo(): AdbOperationResult<DeviceInfo> =

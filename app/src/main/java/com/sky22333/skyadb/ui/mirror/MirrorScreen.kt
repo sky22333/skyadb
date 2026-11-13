@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
 import android.graphics.SurfaceTexture
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -40,7 +41,7 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.basic.TextField
+import com.sky22333.skyadb.ui.components.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
@@ -312,7 +313,8 @@ private fun MirrorControls(
                         label = stringResource(R.string.mirror_send_text),
                         useLabelAsPlaceholder = true,
                         textStyle = MiuixTheme.textStyles.main.copy(color = Color.White),
-                        colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Black.copy(alpha = 0.45f), labelColor = Color.White.copy(alpha = 0.72f), borderColor = Color.White),
+                        colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Black.copy(alpha = 0.45f), labelColor = Color.White.copy(alpha = 0.72f)),
+                        cursorBrush = SolidColor(Color.White),
                     )
                     MirrorIconButton(
                         icon = MiuixIcons.Send,
