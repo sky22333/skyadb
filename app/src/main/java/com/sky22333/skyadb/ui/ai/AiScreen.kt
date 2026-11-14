@@ -61,8 +61,11 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 
 @Composable
-fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState()) {
+fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (Boolean) -> Unit = {}, listState: LazyListState? = null, followState: MutableState<Boolean>? = null) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val messagesListState = listState ?: key(state.historyLoading) {
+        rememberLazyListState(initialFirstVisibleItemIndex = state.messages.lastIndex.coerceAtLeast(0))
+    }
     var showConfig by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
@@ -90,29 +93,27 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
         h4 { this.color = color }; h5 { this.color = color }; h6 { this.color = color }
         link { this.color = accent }
     } }
-    val dragging by listState.interactionSource.collectIsDraggedAsState()
-    var followsBottom by remember(listState) { mutableStateOf(true) }
+    val dragging by messagesListState.interactionSource.collectIsDraggedAsState()
+    val localFollowState = remember { mutableStateOf(true) }
+    var followsBottom by (followState ?: localFollowState)
+    var wasDragging by remember(messagesListState) { mutableStateOf(false) }
     LaunchedEffect(dragging) {
         if (dragging) followsBottom = false
-        else if (!listState.canScrollForward) followsBottom = true
-    }
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.canScrollForward }.collect { canScroll ->
-            if (!canScroll && !dragging) followsBottom = true
-        }
+        else if (wasDragging && !messagesListState.canScrollForward) followsBottom = true
+        wasDragging = dragging
     }
     val lastMessageId = state.messages.lastOrNull()?.id
     val lastIndex = state.messages.lastIndex
-    LaunchedEffect(lastMessageId, followsBottom) {
-        if (followsBottom && lastIndex >= 0) listState.scrollToItem(lastIndex)
+    LaunchedEffect(messagesListState, lastMessageId, followsBottom) {
+        if (followsBottom && lastIndex >= 0) messagesListState.scrollToItem(lastIndex)
     }
-    LaunchedEffect(lastMessageId, followsBottom) {
+    LaunchedEffect(messagesListState, lastMessageId, followsBottom) {
         if (followsBottom && lastIndex >= 0) {
             snapshotFlow {
-                val layout = listState.layoutInfo
+                val layout = messagesListState.layoutInfo
                 val last = layout.visibleItemsInfo.lastOrNull { it.index == lastIndex }
                 last?.let { (it.offset + it.size + layout.afterContentPadding - layout.viewportEndOffset).coerceAtLeast(0) } ?: 0
-            }.collect { overflow -> if (overflow > 0) listState.scrollBy(overflow.toFloat()) }
+            }.collect { overflow -> if (overflow > 0) messagesListState.scrollBy(overflow.toFloat()) }
         }
     }
     if (showConfig) {
@@ -124,12 +125,16 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
             IconButton(onClick = { followsBottom = true; viewModel.clear() }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.Add, stringResource(R.string.ai_new)) }
             IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onSettingsVisibilityChange(true); showConfig = true }, enabled = !state.busy) { Icon(MiuixIcons.Settings, stringResource(R.string.ai_config)) }
         })
-        if (state.messages.isEmpty()) {
+        if (state.historyLoading) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.messages.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.ai_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             }
         } else {
-            LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth().testTag("ai_messages"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            LazyColumn(state = messagesListState, modifier = Modifier.weight(1f).fillMaxWidth().testTag("ai_messages"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(state.messages, key = { it.id }) { message ->
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (message.role == "user") Alignment.End else Alignment.Start) {
                         when (message.role) {

@@ -201,9 +201,6 @@ internal fun PairingFormSection(
             label = stringResource(R.string.pairing_ip_label),
             singleLine = true,
         )
-        if (uiState.ip.isBlank() && uiState.ipError == null) {
-            Text("192.168.1.86", color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
-        }
         uiState.ipError?.let { Text(it, color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1) }
 
         TextField(

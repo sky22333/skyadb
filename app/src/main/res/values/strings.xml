@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="storage_read_failed">Unable to read app data</string>
+    <string name="storage_read_retry_hint">Check device storage and try again.</string>
+    <string name="action_retry">Retry</string>
     <string name="ai_response_interrupted">[Response interrupted]</string>
     <string name="ai_operation_interrupted">Operation interrupted</string>
     <string name="ai_history_delete">Delete this conversation?</string>
@@ -15,8 +18,6 @@
     <string name="ai_input_count">%1$d / %2$d characters</string>
     <string name="ai_input_over_limit">Too long to send: %1$d / %2$d characters</string>
     <string name="ai_input_too_long">Message exceeds the %1$d character limit</string>
-    <string name="ai_draft_read_failed">Could not load chat draft</string>
-    <string name="ai_draft_save_failed">Could not save chat draft</string>
     <string name="ai_history">Chat history</string>
     <string name="ai_history_empty">No conversations yet</string>
     <string name="ai_history_read_failed">Could not load chat history</string>
@@ -75,7 +76,6 @@
     <string name="action_connect">Connect</string>
     <string name="home_manual_connect_title">Manual connection</string>
     <string name="home_endpoint_label">IP address:port</string>
-    <string name="home_endpoint_hint">Use default port %1$s when omitted</string>
     <string name="action_wireless_pairing">Pair</string>
     <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
@@ -387,11 +387,12 @@
     <string name="repo_device_name_android">Android device</string>
     <string name="repo_device_name_usb">USB device</string>
     <string name="repo_device_name_fastboot">Fastboot device</string>
-    <string name="repo_status_just_connected">Just connected</string>
-    <string name="repo_status_fastboot_connected">Fastboot connected</string>
+
+
 
     <!-- Scrcpy mirroring -->
     <string name="scrcpy_video_stream_error">Screen mirroring video stream error</string>
+    <string name="scrcpy_audio_stream_error">Audio unavailable; video is still playing</string>
     <string name="scrcpy_start_failed">Failed to start screen mirroring</string>
     <string name="scrcpy_start_failed_fallback_suggestion">Check the diagnostic logs in Settings.</string>
     <string name="scrcpy_control_disconnected_suggestion">The mirroring connection may have dropped. Please re-enter screen mirroring.</string>
@@ -434,15 +435,13 @@
     <string name="discovery_unavailable">Automatic discovery isn\'t available. You can continue using subnet scanning.</string>
 
     <!-- Device type / connection state labels -->
-    <string name="device_type_phone">Phone</string>
-    <string name="device_type_tablet">Tablet</string>
-    <string name="device_type_tv">TV</string>
-    <string name="device_type_box">Box</string>
-    <string name="device_type_unknown">Unknown device</string>
+
+
+
+
+
     <string name="connection_state_disconnected">Disconnected</string>
-    <string name="connection_state_connecting">Connecting</string>
     <string name="connection_state_connected">Connected</string>
-    <string name="connection_state_failed">Failed</string>
     <string name="connection_state_offline">Offline</string>
 
     <!-- Download task states -->
@@ -457,19 +456,19 @@
 
     <!-- LAN discovery: ADB probe states -->
     <string name="adb_probe_port_closed_label">Closed</string>
-    <string name="adb_probe_port_closed_desc">Target port did not respond</string>
+
     <string name="adb_probe_not_adb_label">Not ADB</string>
-    <string name="adb_probe_not_adb_desc">Port is open but did not respond to the ADB handshake</string>
+
     <string name="adb_probe_port_open_label">Port open</string>
-    <string name="adb_probe_port_open_desc">Port is reachable; try connecting via ADB to confirm</string>
+
     <string name="adb_probe_unauthorized_label">Needs authorization</string>
-    <string name="adb_probe_unauthorized_desc">Found an ADB service; confirm authorization on the target device</string>
+
     <string name="adb_probe_available_label">Connectable</string>
-    <string name="adb_probe_available_desc">Found a responsive ADB service</string>
+
     <string name="adb_probe_secure_label">Wireless debugging</string>
-    <string name="adb_probe_secure_desc">Found the Android 11+ wireless debugging secure handshake port</string>
+
     <string name="adb_probe_failed_label">Probe failed</string>
-    <string name="adb_probe_failed_desc">Probe error; you can retry the scan</string>
+
 
     <!-- LAN discovery: subnet source labels -->
     <string name="discovery_source_current_network">Current network</string>
@@ -479,12 +478,12 @@
     <!-- mDNS discovery service types -->
     <string name="mdns_service_pairing_label">Wireless debugging pairing</string>
     <string name="mdns_service_pairing_action">Pair</string>
-    <string name="mdns_service_pairing_desc">Enter the 6-digit pairing code shown on the target device to finish pairing</string>
+
     <string name="mdns_service_connect_label">Wireless debugging connect</string>
     <string name="mdns_service_connect_action">Connect</string>
-    <string name="mdns_service_connect_desc">Paired devices can connect using this port</string>
+
     <string name="mdns_service_legacy_label">Legacy Wi-Fi ADB</string>
-    <string name="mdns_service_legacy_desc">For devices with adb tcpip already enabled</string>
+
 
     <!-- Scan range validation -->
     <string name="scan_range_error_too_many">You can configure up to %1$d subnets</string>

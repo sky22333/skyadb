@@ -2,7 +2,6 @@ package com.sky22333.skyadb.adb
 
 import android.content.Context
 import com.flyfishxu.kadb.cert.KadbCert
-import com.flyfishxu.kadb.cert.KadbCertPolicy
 import com.flyfishxu.kadb.cert.OkioFilePrivateKeyStore
 import java.io.File
 import okio.Path.Companion.toPath
@@ -13,7 +12,6 @@ object AdbIdentityManager {
         val keyFile = File(context.filesDir, "adb_identity/adbkey.pem")
         KadbCert.configure(
             store = OkioFilePrivateKeyStore(keyFile.absolutePath.toPath()),
-            policy = KadbCertPolicy(autoHealInvalidPrivateKey = true),
         )
     }
 }

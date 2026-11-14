@@ -49,7 +49,7 @@ class ScrcpyProtocolTest {
         val packet =
             ScrcpyProtocol.touch(
                 action = 0,
-                pointerId = ScrcpyProtocol.PointerMouse,
+                pointerId = -1L,
                 x = 10,
                 y = 20,
                 screenWidth = 1920,
@@ -61,7 +61,7 @@ class ScrcpyProtocolTest {
         assertEquals(32, packet.size)
         assertEquals(2, buffer.get().toInt())
         assertEquals(0, buffer.get().toInt())
-        assertEquals(ScrcpyProtocol.PointerMouse, buffer.long)
+        assertEquals(-1L, buffer.long)
         assertEquals(10, buffer.int)
         assertEquals(20, buffer.int)
     }

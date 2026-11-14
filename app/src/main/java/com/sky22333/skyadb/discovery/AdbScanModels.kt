@@ -43,16 +43,15 @@ data class AdbScanResult(
 
 enum class AdbProbeState(
     @param:StringRes val labelRes: Int,
-    @param:StringRes val descriptionRes: Int,
     val visible: Boolean,
 ) {
-    PortClosed(R.string.adb_probe_port_closed_label, R.string.adb_probe_port_closed_desc, false),
-    NotAdb(R.string.adb_probe_not_adb_label, R.string.adb_probe_not_adb_desc, false),
-    PortOpen(R.string.adb_probe_port_open_label, R.string.adb_probe_port_open_desc, true),
-    AdbUnauthorized(R.string.adb_probe_unauthorized_label, R.string.adb_probe_unauthorized_desc, true),
-    AdbAvailable(R.string.adb_probe_available_label, R.string.adb_probe_available_desc, true),
-    AdbSecure(R.string.adb_probe_secure_label, R.string.adb_probe_secure_desc, true),
-    Failed(R.string.adb_probe_failed_label, R.string.adb_probe_failed_desc, false),
+    PortClosed(R.string.adb_probe_port_closed_label, false),
+    NotAdb(R.string.adb_probe_not_adb_label, false),
+    PortOpen(R.string.adb_probe_port_open_label, true),
+    AdbUnauthorized(R.string.adb_probe_unauthorized_label, true),
+    AdbAvailable(R.string.adb_probe_available_label, true),
+    AdbSecure(R.string.adb_probe_secure_label, true),
+    Failed(R.string.adb_probe_failed_label, false),
 }
 
 data class AdbScanProgress(

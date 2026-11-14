@@ -47,6 +47,7 @@ class ScrcpyRepository(
         qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
         onVideoSize: (Int, Int) -> Unit,
         onStreamError: (Throwable) -> Unit = {},
+        onAudioError: (Throwable) -> Unit = {},
     ): AdbOperationResult<Unit> =
         withContext(Dispatchers.IO) {
             val token = generation.incrementAndGet()
@@ -71,6 +72,17 @@ class ScrcpyRepository(
                                 options,
                                 audioEnabled,
                                 onVideoSize,
+                                onAudioError = { error ->
+                                    DiagnosticLogger.record(
+                                        module = DiagnosticModule.Mirror,
+                                        operation = "音频流",
+                                        target = kadbManager.currentEndpoint(),
+                                        message = appString(R.string.scrcpy_audio_stream_error),
+                                        suggestion = appString(R.string.scrcpy_start_failed_fallback_suggestion),
+                                        cause = error,
+                                    )
+                                    onAudioError(error)
+                                },
                                 onError = { error, serverLog ->
                                     DiagnosticLogger.record(
                                         module = DiagnosticModule.Mirror,

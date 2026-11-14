@@ -28,7 +28,8 @@ class ScrcpyAudioDecoder(private val stream: AdbStream, private val codecId: Int
             val fields = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN)
             try {
                 // 0/1 are scrcpy's disabled/failed audio handshake sentinels, not codecs.
-                if (codecId == 0 || codecId == 1) return@withContext
+                if (codecId == 0) return@withContext
+                check(codecId != 1) { "Device audio capture failed" }
                 while (running) {
                     currentCoroutineContext().ensureActive()
                     stream.source.readFully(header)

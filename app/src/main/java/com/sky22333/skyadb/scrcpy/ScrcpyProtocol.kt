@@ -23,7 +23,6 @@ object ScrcpyProtocol {
     const val PacketFlagConfig = 1L shl 62
     const val PacketFlagKeyFrame = 1L shl 61
     const val PacketPtsMask = (1L shl 61) - 1
-    const val PointerMouse = -1L
     const val ClipboardTextMaxBytes = 240_000
 
     private const val TypeInjectKeycode = 0

@@ -25,6 +25,12 @@ import androidx.compose.ui.platform.LocalContext
 import com.sky22333.skyadb.data.ThemeMode
 import com.sky22333.skyadb.ui.AdbManagerApp
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
+import com.sky22333.skyadb.ai.AiConfigStore
+import com.sky22333.skyadb.data.StorageReadErrors
+import top.yukonga.miuix.kmp.window.WindowDialog
+import top.yukonga.miuix.kmp.basic.Text
+import com.sky22333.skyadb.ui.components.Button
+import androidx.compose.ui.res.stringResource
 
 class MainActivity : AppCompatActivity() {
     private val usbPermissionAction = "${BuildConfig.APPLICATION_ID}.USB_PERMISSION"
@@ -83,12 +89,19 @@ class MainActivity : AppCompatActivity() {
 
             AdbManagerTheme(darkTheme = darkTheme) {
                 AdbManagerApp()
+                val storageErrors by StorageReadErrors.state.collectAsStateWithLifecycle()
+                if (storageErrors.isNotEmpty()) {
+                    WindowDialog(show = true, onDismissRequest = {}, title = stringResource(R.string.storage_read_failed), summary = stringResource(R.string.storage_read_retry_hint)) {
+                        Button(onClick = StorageReadErrors::retry) { Text(stringResource(R.string.action_retry)) }
+                    }
+                }
             }
         }
         handleUsbIntent(intent)
     }
 
     override fun onDestroy() {
+        if (isFinishing && !isChangingConfigurations) AiConfigStore(this).startNewSessionAfterExit()
         unregisterReceiver(usbReceiver)
         AppServices.usbOtgActions.requestPermission = {}
         super.onDestroy()

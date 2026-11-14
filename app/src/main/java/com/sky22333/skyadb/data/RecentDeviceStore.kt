@@ -2,16 +2,13 @@ package com.sky22333.skyadb.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sky22333.skyadb.model.AdbDevice
-import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
-import com.sky22333.skyadb.model.DeviceType
-import java.io.IOException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.map
 
 private val Context.recentDeviceDataStore by preferencesDataStore(name = "recent_devices")
@@ -20,19 +17,13 @@ class RecentDeviceStore(context: Context) {
     private val dataStore = context.applicationContext.recentDeviceDataStore
 
     val devices: Flow<List<AdbDevice>> = dataStore.data
-        .catch { throwable ->
-            if (throwable is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw throwable
-            }
-        }
+        .retryWhen { throwable, _ -> StorageReadErrors.awaitRetry("recent_devices", throwable) }
+        .onEach { StorageReadErrors.recovered("recent_devices") }
         .map { preferences ->
             preferences[Keys.Devices]
                 .orEmpty()
                 .lineSequence()
-                .mapNotNull(::decodeDevice)
-                .filter { it.linkKind == AdbLinkKind.Wifi }
+                .mapNotNull(RecentDeviceCodec::decode)
                 .toList()
         }
 
@@ -41,13 +32,12 @@ class RecentDeviceStore(context: Context) {
             val current = preferences[Keys.Devices]
                 .orEmpty()
                 .lineSequence()
-                .mapNotNull(::decodeDevice)
-                .filter { it.linkKind == AdbLinkKind.Wifi }
+                .mapNotNull(RecentDeviceCodec::decode)
                 .toList()
             val next = listOf(device) + current.filterNot { it.id == device.id }
             preferences[Keys.Devices] = next
                 .take(MaxRecentDevices)
-                .joinToString(separator = "\n", transform = ::encodeDevice)
+                .joinToString(separator = "\n", transform = RecentDeviceCodec::encode)
         }
     }
 
@@ -57,34 +47,35 @@ class RecentDeviceStore(context: Context) {
         }
     }
 
-    private fun encodeDevice(device: AdbDevice): String {
+    private object Keys {
+        val Devices = stringPreferencesKey("devices")
+    }
+
+    private companion object {
+        const val MaxRecentDevices = 8
+    }
+}
+
+internal object RecentDeviceCodec {
+    fun encode(device: AdbDevice): String {
         return listOf(
             escape(device.id),
             escape(device.name),
             escape(device.host),
             device.port.toString(),
-            device.type.name,
-            device.connectionState.name,
-            escape(device.lastConnectedText),
-            device.linkKind.name,
         ).joinToString("|")
     }
 
-    private fun decodeDevice(value: String): AdbDevice? {
+    fun decode(value: String): AdbDevice? {
         val parts = value.split("|")
-        if (parts.size !in 7..8) return null
+        if (parts.size != 4) return null
         val port = parts[3].toIntOrNull() ?: return null
         return AdbDevice(
             id = unescape(parts[0]),
             name = unescape(parts[1]),
             host = unescape(parts[2]),
             port = port,
-            type = DeviceType.entries.firstOrNull { it.name == parts[4] } ?: DeviceType.Unknown,
             connectionState = ConnectionState.Disconnected,
-            lastConnectedText = unescape(parts[6]),
-            linkKind = parts.getOrNull(7)?.let { name ->
-                AdbLinkKind.entries.firstOrNull { it.name == name }
-            } ?: AdbLinkKind.Wifi,
         )
     }
 
@@ -102,11 +93,4 @@ class RecentDeviceStore(context: Context) {
             .replace("%25", "%")
     }
 
-    private object Keys {
-        val Devices = stringPreferencesKey("devices")
-    }
-
-    private companion object {
-        const val MaxRecentDevices = 8
-    }
 }

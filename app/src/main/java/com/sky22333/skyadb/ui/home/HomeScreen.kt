@@ -39,7 +39,6 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
-import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.AppStatusBadge
 import com.sky22333.skyadb.ui.components.AppIcons
@@ -106,7 +105,6 @@ fun HomeScreen(
             item {
                 ManualConnectSection(
                     endpoint = uiState.endpoint,
-                    defaultPort = uiState.defaultPort,
                     endpointError = uiState.endpointError,
                     connectEnabled = uiState.connectEnabled,
                     operationStatus = uiState.operationStatus,
@@ -216,7 +214,6 @@ private fun UsbOtgDeviceRow(
 @Composable
 private fun ManualConnectSection(
     endpoint: String,
-    defaultPort: Int,
     endpointError: String?,
     connectEnabled: Boolean,
     operationStatus: OperationStatus,
@@ -242,11 +239,7 @@ private fun ManualConnectSection(
             label = stringResource(R.string.home_endpoint_label),
             singleLine = true,
         )
-        Text(
-            text = endpointError ?: stringResource(R.string.home_endpoint_hint, defaultPort.toString()),
-            style = MiuixTheme.textStyles.footnote1,
-            color = if (endpointError == null) MiuixTheme.colorScheme.onSurfaceVariantSummary else MiuixTheme.colorScheme.error,
-        )
+        endpointError?.let { Text(it, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.error) }
         OperationStatusMessage(status = operationStatus)
     }
 }
@@ -339,7 +332,6 @@ private fun ManualConnectSectionEmptyPreview() {
     AdbManagerTheme() {
         ManualConnectSection(
             endpoint = "",
-            defaultPort = 5555,
             endpointError = null,
             connectEnabled = false,
             operationStatus = OperationStatus.Idle,
@@ -355,7 +347,6 @@ private fun ManualConnectSectionErrorPreview() {
     AdbManagerTheme() {
         ManualConnectSection(
             endpoint = "192.168.1.999:70000",
-            defaultPort = 5555,
             endpointError = "请输入正确的 IPv4 地址",
             connectEnabled = false,
             operationStatus = OperationStatus.Failed(
@@ -379,9 +370,7 @@ private fun RecentDevicesSectionPreview() {
                     name = "客厅电视",
                     host = "192.168.1.86",
                     port = 5555,
-                    type = DeviceType.Tv,
                     connectionState = ConnectionState.Connected,
-                    lastConnectedText = "刚刚连接",
                 ),
             ),
             onDeviceClick = {},

@@ -13,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -99,6 +100,8 @@ fun AdbManagerApp() {
     val current = (stack.lastOrNull() as? Route)?.name ?: RootRoute
     val showBottomBar = current == RootRoute
     var aiSettingsOpen by remember { mutableStateOf(false) }
+    val aiListState = rememberLazyListState()
+    val aiFollowsBottom = rememberSaveable { mutableStateOf(true) }
     val showNavigation = showBottomBar && !(selectedTab == AppDestination.Ai.route && aiSettingsOpen)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -238,7 +241,7 @@ fun AdbManagerApp() {
                                     bottomPadding = 0.dp,
                                     onDiagnosticsClick = { navigate(DiagnosticsRoute) },
                                 )
-                                AppDestination.Ai.route -> AiScreen(onSettingsVisibilityChange = { aiSettingsOpen = it })
+                                AppDestination.Ai.route -> AiScreen(onSettingsVisibilityChange = { aiSettingsOpen = it }, listState = aiListState, followState = aiFollowsBottom)
                             }
                         }
                     }

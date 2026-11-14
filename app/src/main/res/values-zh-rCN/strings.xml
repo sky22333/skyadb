@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="storage_read_failed">无法读取应用数据</string>
+    <string name="storage_read_retry_hint">请检查设备存储后重试。</string>
+    <string name="action_retry">重试</string>
     <string name="ai_response_interrupted">[回复已中断]</string>
     <string name="ai_operation_interrupted">操作已中断</string>
     <string name="ai_history_delete">删除此对话？</string>
@@ -15,8 +18,6 @@
     <string name="ai_input_count">%1$d / %2$d 字符</string>
     <string name="ai_input_over_limit">内容过长，请缩短后发送：%1$d / %2$d 字符</string>
     <string name="ai_input_too_long">消息超过 %1$d 字符的上限</string>
-    <string name="ai_draft_read_failed">无法读取对话草稿</string>
-    <string name="ai_draft_save_failed">无法保存对话草稿</string>
     <string name="ai_history">对话历史</string>
     <string name="ai_history_empty">暂无对话</string>
     <string name="ai_history_read_failed">无法读取对话历史</string>
@@ -75,7 +76,6 @@
     <string name="action_connect">连接</string>
     <string name="home_manual_connect_title">手动连接</string>
     <string name="home_endpoint_label">IP 地址:端口</string>
-    <string name="home_endpoint_hint">不填写端口时使用默认端口 %1$s</string>
     <string name="action_wireless_pairing">无线配对</string>
     <string name="action_discover_devices">发现设备</string>
     <string name="home_recent_devices_title">最近设备</string>
@@ -387,11 +387,12 @@
     <string name="repo_device_name_android">Android 设备</string>
     <string name="repo_device_name_usb">USB 设备</string>
     <string name="repo_device_name_fastboot">Fastboot 设备</string>
-    <string name="repo_status_just_connected">刚刚连接</string>
-    <string name="repo_status_fastboot_connected">Fastboot 已连接</string>
+
+
 
     <!-- Scrcpy mirroring -->
     <string name="scrcpy_video_stream_error">屏幕镜像视频流异常</string>
+    <string name="scrcpy_audio_stream_error">音频不可用，视频仍可使用</string>
     <string name="scrcpy_start_failed">屏幕镜像启动失败</string>
     <string name="scrcpy_start_failed_fallback_suggestion">请查看设置里的诊断日志。</string>
     <string name="scrcpy_control_disconnected_suggestion">镜像连接可能已断开，请重新进入屏幕镜像。</string>
@@ -434,15 +435,13 @@
     <string name="discovery_unavailable">自动发现不可用，可继续使用网段扫描。</string>
 
     <!-- Device type / connection state labels -->
-    <string name="device_type_phone">手机</string>
-    <string name="device_type_tablet">平板</string>
-    <string name="device_type_tv">电视</string>
-    <string name="device_type_box">盒子</string>
-    <string name="device_type_unknown">未知设备</string>
+
+
+
+
+
     <string name="connection_state_disconnected">未连接</string>
-    <string name="connection_state_connecting">连接中</string>
     <string name="connection_state_connected">已连接</string>
-    <string name="connection_state_failed">连接失败</string>
     <string name="connection_state_offline">离线</string>
 
     <!-- Download task states -->
@@ -457,19 +456,19 @@
 
     <!-- LAN discovery: ADB probe states -->
     <string name="adb_probe_port_closed_label">未开放</string>
-    <string name="adb_probe_port_closed_desc">目标端口未响应</string>
+
     <string name="adb_probe_not_adb_label">非 ADB</string>
-    <string name="adb_probe_not_adb_desc">端口开放，但未响应 ADB 握手</string>
+
     <string name="adb_probe_port_open_label">端口开放</string>
-    <string name="adb_probe_port_open_desc">端口可连接，可尝试使用 ADB 连接确认</string>
+
     <string name="adb_probe_unauthorized_label">需要授权</string>
-    <string name="adb_probe_unauthorized_desc">发现 ADB 服务，需要在目标设备确认授权</string>
+
     <string name="adb_probe_available_label">可连接</string>
-    <string name="adb_probe_available_desc">发现可响应的 ADB 服务</string>
+
     <string name="adb_probe_secure_label">无线调试</string>
-    <string name="adb_probe_secure_desc">发现 Android 11+ 无线调试安全握手端口</string>
+
     <string name="adb_probe_failed_label">探测失败</string>
-    <string name="adb_probe_failed_desc">探测过程异常，可重试扫描</string>
+
 
     <!-- LAN discovery: subnet source labels -->
     <string name="discovery_source_current_network">当前网络</string>
@@ -479,12 +478,12 @@
     <!-- mDNS discovery service types -->
     <string name="mdns_service_pairing_label">无线调试配对</string>
     <string name="mdns_service_pairing_action">配对</string>
-    <string name="mdns_service_pairing_desc">输入目标设备显示的 6 位配对码后完成配对</string>
+
     <string name="mdns_service_connect_label">无线调试连接</string>
     <string name="mdns_service_connect_action">连接</string>
-    <string name="mdns_service_connect_desc">已配对设备可使用此端口连接</string>
+
     <string name="mdns_service_legacy_label">传统 WiFi ADB</string>
-    <string name="mdns_service_legacy_desc">适用于已开启 adb tcpip 的设备</string>
+
 
     <!-- Scan range validation -->
     <string name="scan_range_error_too_many">最多配置 %1$d 个网段</string>

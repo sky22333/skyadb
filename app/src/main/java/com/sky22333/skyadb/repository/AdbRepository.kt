@@ -15,7 +15,6 @@ import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
-import com.sky22333.skyadb.model.DeviceType
 import com.sky22333.skyadb.model.FastbootDeviceSummary
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.ShellCommandResult
@@ -131,8 +130,6 @@ class DefaultAdbRepository(
                                 if (device.id in connectedIds) {
                                     device.copy(
                                         connectionState = ConnectionState.Connected,
-                                        lastConnectedText =
-                                            appString(R.string.repo_status_just_connected),
                                     )
                                 } else {
                                     device
@@ -161,9 +158,9 @@ class DefaultAdbRepository(
                         name = appString(R.string.repo_device_name_android),
                         host = host,
                         port = port,
-                        type = DeviceType.Unknown,
+
                         connectionState = ConnectionState.Connected,
-                        lastConnectedText = appString(R.string.repo_status_just_connected),
+
                         linkKind = AdbLinkKind.Wifi,
                     )
                 )
@@ -220,9 +217,9 @@ class DefaultAdbRepository(
                                 name = appString(R.string.repo_device_name_usb),
                                 host = "usb-otg",
                                 port = 0,
-                                type = DeviceType.Unknown,
+
                                 connectionState = ConnectionState.Connected,
-                                lastConnectedText = appString(R.string.repo_status_just_connected),
+
                                 linkKind = AdbLinkKind.UsbOtg,
                             )
                         )
@@ -235,10 +232,9 @@ class DefaultAdbRepository(
                                 name = appString(R.string.repo_device_name_fastboot),
                                 host = "fastboot",
                                 port = 0,
-                                type = DeviceType.Unknown,
+
                                 connectionState = ConnectionState.Connected,
-                                lastConnectedText =
-                                    appString(R.string.repo_status_fastboot_connected),
+
                                 linkKind = AdbLinkKind.UsbOtg,
                             )
                         )

@@ -48,6 +48,6 @@ class AiConfigStore(context: Context) {
     fun save(config: AiConfig) = write(file, Json.encodeToString(config))
     internal fun loadHistory(): AiHistory = read(android.util.AtomicFile(java.io.File(file.baseFile.parentFile, "ai-history")))?.let { Json.decodeFromString(it) } ?: AiHistory()
     internal fun saveHistory(history: AiHistory) = write(android.util.AtomicFile(java.io.File(file.baseFile.parentFile, "ai-history")), Json.encodeToString(history))
-    internal fun loadDraft(): String = read(android.util.AtomicFile(java.io.File(file.baseFile.parentFile, "ai-draft"))).orEmpty()
-    @Synchronized internal fun saveDraft(draft: String) = write(android.util.AtomicFile(java.io.File(file.baseFile.parentFile, "ai-draft")), draft)
+    internal fun startNewSessionAfterExit() { java.io.File(file.baseFile.parentFile, "ai-new-session").createNewFile() }
+    internal fun consumeNewSessionAfterExit(): Boolean = java.io.File(file.baseFile.parentFile, "ai-new-session").delete()
 }

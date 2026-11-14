@@ -2,16 +2,15 @@ package com.sky22333.skyadb.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.annotation.StringRes
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
-import java.io.IOException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.map
 
 private val Context.appSettingsDataStore by preferencesDataStore(name = "app_settings")
@@ -35,13 +34,8 @@ class AppSettingsStore(context: Context) {
     private val dataStore = context.applicationContext.appSettingsDataStore
 
     val settings: Flow<AppSettings> = dataStore.data
-        .catch { throwable ->
-            if (throwable is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw throwable
-            }
-        }
+        .retryWhen { throwable, _ -> StorageReadErrors.awaitRetry("settings", throwable) }
+        .onEach { StorageReadErrors.recovered("settings") }
         .map { preferences ->
             AppSettings(
                 defaultPort = preferences[Keys.DefaultPort] ?: 5555,

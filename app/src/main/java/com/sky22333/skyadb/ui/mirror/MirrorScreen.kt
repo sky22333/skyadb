@@ -157,6 +157,10 @@ fun MirrorScreen(
             onClose = onBackClick,
         )
 
+        uiState.audioError?.let { error ->
+            Text(error, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp), color = Color.White)
+        }
+
         AnimatedVisibility(
             visible = controlsVisible,
             modifier = Modifier.align(Alignment.BottomCenter),

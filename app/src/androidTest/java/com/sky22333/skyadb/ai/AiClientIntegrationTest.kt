@@ -15,6 +15,39 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AiClientIntegrationTest {
+    @Test fun clientRemainsUsableAcrossMessages() = runBlocking {
+        val server = ServerSocket(0)
+        val worker = thread(isDaemon = true) {
+            try {
+                repeat(2) { index ->
+                    server.accept().use { socket ->
+                        socket.soTimeout = 10000
+                        val input = socket.getInputStream()
+                        val header = StringBuilder()
+                        while (!header.endsWith("\r\n\r\n")) { val n = input.read(); if (n < 0) break; header.append(n.toChar()) }
+                        var remaining = Regex("(?im)^content-length:\\s*(\\d+)").find(header)?.groupValues?.get(1)?.toInt() ?: 0
+                        val buffer = ByteArray(4096)
+                        while (remaining > 0) { val n = input.read(buffer, 0, minOf(buffer.size, remaining)); if (n < 0) break; remaining -= n }
+                        val payload = stream("""{"index":0,"delta":{"content":"reply-$index"},"finish_reason":null}""", """{"index":0,"delta":{},"finish_reason":"stop"}""").toByteArray()
+                        socket.getOutputStream().apply { write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: ${payload.size}\r\nConnection: close\r\n\r\n".toByteArray()); write(payload); flush() }
+                    }
+                }
+            } finally { server.close() }
+        }
+        val vm = AiViewModel(testAiStore())
+        try {
+            withTimeout(10000) { vm.uiState.first { !it.historyLoading } }
+            val config = AiConfig("http://127.0.0.1:${server.localPort}/v1", "test", "test")
+            vm.saveConfig(config)
+            withTimeout(10000) { vm.uiState.first { it.config == config } }
+            repeat(2) { index ->
+                assertTrue(vm.send("message-$index"))
+                val state = withTimeout(30000) { vm.uiState.first { !it.busy } }
+                assertEquals(null, state.error)
+                assertTrue(state.messages.any { it.text.contains("reply-$index") })
+            }
+        } finally { vm.stop(); server.close(); worker.join(1000) }
+    }
     @Test fun agentCanContinuePastEightToolRounds() = runBlocking {
         val server = ServerSocket(0)
         val worker = thread(isDaemon = true) {

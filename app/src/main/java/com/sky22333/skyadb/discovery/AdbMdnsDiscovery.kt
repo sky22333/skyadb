@@ -5,28 +5,20 @@ import com.sky22333.skyadb.R
 import kotlinx.coroutines.flow.StateFlow
 
 enum class AdbMdnsServiceType(
-    val nsdType: String,
     @param:StringRes val labelRes: Int,
     @param:StringRes val actionLabelRes: Int,
-    @param:StringRes val descriptionRes: Int,
 ) {
     Pairing(
-        nsdType = "_adb-tls-pairing._tcp.",
         labelRes = R.string.mdns_service_pairing_label,
         actionLabelRes = R.string.mdns_service_pairing_action,
-        descriptionRes = R.string.mdns_service_pairing_desc,
     ),
     Connect(
-        nsdType = "_adb-tls-connect._tcp.",
         labelRes = R.string.mdns_service_connect_label,
         actionLabelRes = R.string.mdns_service_connect_action,
-        descriptionRes = R.string.mdns_service_connect_desc,
     ),
     Legacy(
-        nsdType = "_adb._tcp.",
         labelRes = R.string.mdns_service_legacy_label,
         actionLabelRes = R.string.mdns_service_connect_action,
-        descriptionRes = R.string.mdns_service_legacy_desc,
     ),
 }
 
@@ -62,12 +54,4 @@ interface AdbMdnsDiscovery {
     companion object {
         const val DefaultConnectLookupTimeoutMs = 2_500L
     }
-}
-
-fun List<AdbMdnsEndpoint>.connectPortForHost(host: String): Int? {
-    val target = host.trim()
-    if (target.isEmpty()) return null
-    return firstOrNull { endpoint ->
-        endpoint.type == AdbMdnsServiceType.Connect && endpoint.host == target
-    }?.port
 }

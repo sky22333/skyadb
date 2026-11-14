@@ -30,6 +30,7 @@ private constructor(
     private val scope: CoroutineScope,
     private val logLines: ArrayDeque<String>,
     private val onError: (Throwable, String) -> Unit,
+    private val onAudioError: (Throwable) -> Unit,
 ) {
     @Volatile private var audioDecoder: ScrcpyAudioDecoder? = null
 
@@ -54,8 +55,9 @@ private constructor(
                     it.start()
                 }
             }
-                .onFailure {
+                .onFailure { error ->
                     runCatching { audioStream.close() }
+                    if (!stopping && error !is CancellationException) onAudioError(error)
                 }
         }
     }
@@ -121,6 +123,7 @@ private constructor(
             audioEnabled: Boolean,
             onVideoSize: (Int, Int) -> Unit,
             onError: (Throwable, String) -> Unit,
+            onAudioError: (Throwable) -> Unit,
         ): ScrcpySession =
             withContext(Dispatchers.IO) {
                 val serverManager = ScrcpyServerManager(context)
@@ -183,6 +186,7 @@ private constructor(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                             logLines = logs,
                             onError = onError,
+                            onAudioError = onAudioError,
                         )
                         .also { transferred = true }
                 } finally {

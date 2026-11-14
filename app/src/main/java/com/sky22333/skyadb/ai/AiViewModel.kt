@@ -24,6 +24,8 @@ import com.sky22333.skyadb.model.AdbOperationResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,11 +68,11 @@ internal fun inputLength(text: String): Int = text.codePointCount(0, text.length
     data class Result(val call: ToolCall, val output: String, val error: Boolean = false) : Turn
 }
 @Serializable internal data class AiConversation(val id: String, val title: String, val messages: List<AiMessage>, val turns: List<Turn>)
-@Serializable internal data class AiHistory(val currentId: String = "", val conversations: List<AiConversation> = emptyList())
+@Serializable internal data class AiHistory(val currentId: String = "", val conversations: List<AiConversation> = emptyList(), val drafts: Map<String, String> = emptyMap())
 
 class AiViewModel internal constructor(private val store: AiConfigStore, private val testDownloadsDirectory: java.io.File? = null) : ViewModel() {
     constructor() : this(AiConfigStore(AppServices.context))
-    private val httpClient = HttpClient(OkHttp)
+    private val httpClient = LazyResource { HttpClient(OkHttp) }
     private val downloadsDirectory by lazy { testDownloadsDirectory ?: java.io.File(AppServices.context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: AppServices.context.filesDir, "ai-downloads") }
     private val downloads by lazy { NetworkDownloadManager(AppServices.context, persistentDirectory = downloadsDirectory) }
     private val state = MutableStateFlow(AiState())
@@ -78,30 +80,41 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     private val history = mutableListOf<Turn>()
     private var conversations = mutableListOf<AiConversation>()
     private var currentId = UUID.randomUUID().toString()
+    private var historyReadable = false
+    private val drafts = mutableMapOf<String, String>()
     private val writes = Channel<AiHistory>(Channel.CONFLATED)
+    private val writerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
     private var modelJob: Job? = null
     private var draftJob: Job? = null
     private var approval: CompletableDeferred<Boolean>? = null
 
     init {
+        writerScope.launch {
+            for (snapshot in writes) {
+                val result = runCatching { store.saveHistory(snapshot) }
+                result.onFailure { state.update { s -> s.copy(error = appString(R.string.ai_history_save_failed)) } }
+            }
+        }
         viewModelScope.launch {
             val config = withContext(Dispatchers.IO) { runCatching { store.load() } }
             val saved = withContext(Dispatchers.IO) { runCatching { store.loadHistory() } }
-            val draft = withContext(Dispatchers.IO) { runCatching { store.loadDraft() } }
+            val newSession = withContext(Dispatchers.IO) { saved.isSuccess && store.consumeNewSessionAfterExit() }
             config.onSuccess { value -> state.update { it.copy(config = value) } }
                 .onFailure { state.update { s -> s.copy(error = appString(R.string.ai_config_read_failed)) } }
             saved.onSuccess { data ->
+                historyReadable = true
                 conversations = data.conversations.take(10).toMutableList()
-                val current = conversations.firstOrNull { it.id == data.currentId }
-                if (current != null) { currentId = current.id; history.addAll(current.turns); state.update { it.copy(messages = current.messages) }; completeInterruptedCalls() }
-                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }, draft = draft.getOrDefault(""), historyLoading = false) }
-            }.onFailure { state.update { it.copy(historyLoading = false, draft = draft.getOrDefault(""), error = appString(R.string.ai_history_read_failed)) } }
-            draft.onFailure { state.update { s -> s.copy(error = appString(R.string.ai_draft_read_failed)) } }
-            for (snapshot in writes) {
-                val result = withContext(Dispatchers.IO) { runCatching { store.saveHistory(snapshot) } }
-                result.onFailure { state.update { s -> s.copy(error = appString(R.string.ai_history_save_failed)) } }
-            }
+                drafts.putAll(data.drafts)
+                val savedId = data.currentId.ifBlank { currentId }
+                if (!newSession) {
+                    currentId = savedId
+                    val current = conversations.firstOrNull { it.id == currentId }
+                    if (current != null) { history.addAll(current.turns); state.update { it.copy(messages = current.messages) }; completeInterruptedCalls() }
+                }
+                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }, draft = drafts[currentId].orEmpty(), historyLoading = false) }
+                if (newSession) persist()
+            }.onFailure { state.update { it.copy(historyLoading = false, error = appString(R.string.ai_history_read_failed)) } }
         }
     }
     private fun completeInterruptedCalls() {
@@ -127,11 +140,12 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         }
     }
     private fun persist() {
-        if (state.value.historyLoading) return
+        if (state.value.historyLoading || !historyReadable) return
+        if (state.value.draft.isEmpty()) drafts.remove(currentId) else drafts[currentId] = state.value.draft
         val messages = state.value.messages.takeLast(100)
         conversations.removeAll { it.id == currentId }
-        if (messages.isNotEmpty()) {
-            val title = messages.firstOrNull { it.role == "user" }?.text?.lineSequence()?.firstOrNull { it.isNotBlank() }?.trim()?.take(50).orEmpty()
+        if (messages.isNotEmpty() || state.value.draft.isNotBlank()) {
+            val title = (messages.firstOrNull { it.role == "user" }?.text ?: state.value.draft).lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(50).orEmpty()
             conversations.add(0, AiConversation(currentId, title, messages, history.toList()))
         }
         var chars = 0
@@ -146,20 +160,22 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             chars <= 2_000_000 || conversation.id == currentId
         }.toMutableList()
         state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }) }
-        writes.trySend(AiHistory(currentId, conversations.toList()))
+        drafts.keys.retainAll(conversations.map { it.id }.toSet() + currentId)
+        writes.trySend(AiHistory(currentId, conversations.toList(), drafts.toMap()))
     }
     fun selectConversation(id: String) {
         if (state.value.busy || state.value.historyLoading) return
         persist()
         val selected = conversations.firstOrNull { it.id == id } ?: return
         currentId = selected.id; history.clear(); history.addAll(selected.turns); completeInterruptedCalls()
-        state.update { it.copy(messages = selected.messages, attachment = null, attachmentName = "") }
+        state.update { it.copy(messages = selected.messages, draft = drafts[currentId].orEmpty(), attachment = null, attachmentName = "") }
         persist()
     }
     fun deleteConversation(id: String) {
         if (state.value.busy || state.value.historyLoading) return
         conversations.removeAll { it.id == id }
-        if (currentId == id) { currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), attachment = null, attachmentName = "") } }
+        drafts.remove(id)
+        if (currentId == id) { currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") } }
         persist()
     }
     fun saveConfig(config: AiConfig, onSaved: () -> Unit = {}): Boolean {
@@ -181,10 +197,10 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         }
         return true
     }
-    private fun client(config: AiConfig): OpenAILLMClient {
+    private fun client(config: AiConfig, transport: HttpClient): OpenAILLMClient {
         val base = config.baseUrl.trim().trimEnd('/')
         val settings = OpenAIClientSettings(baseUrl = base, chatCompletionsPath = "chat/completions", responsesAPIPath = "responses", modelsPath = "models")
-        return OpenAILLMClient(config.apiKey, settings, KtorKoogHttpClient.Factory(httpClient))
+        return OpenAILLMClient(config.apiKey, settings, KtorKoogHttpClient.Factory(transport))
     }
     fun loadModels(config: AiConfig) {
         if (config.baseUrl.toHttpUrlOrNull() == null) { state.update { it.copy(error = appString(R.string.ai_url_invalid)) }; return }
@@ -234,15 +250,14 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             state.update { if (it.attachment == uri) it.copy(attachmentName = name) else it }
         }
     }
-    override fun onCleared() { httpClient.close() }
+    override fun onCleared() { persist(); writes.close(); httpClient.close() }
     fun updateDraft(text: String) {
         if (state.value.historyLoading || text == state.value.draft) return
         state.update { it.copy(draft = text) }
         draftJob?.cancel()
         draftJob = viewModelScope.launch {
             delay(500)
-            val result = withContext(Dispatchers.IO) { runCatching { store.saveDraft(text) } }
-            result.onFailure { state.update { s -> s.copy(error = appString(R.string.ai_draft_save_failed)) } }
+            persist()
         }
     }
     fun dismissError() { state.update { it.copy(error = null) } }
@@ -284,7 +299,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     }
     fun respond(allow: Boolean) { approval?.complete(allow); approval = null; state.update { it.copy(approval = null) } }
     fun stop() { approval?.cancel(); approval = null; job?.cancel() }
-    fun clear() { if (!state.value.busy && !state.value.historyLoading) { persist(); currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), attachment = null, attachmentName = "") }; persist() } }
+    fun clear() { if (!state.value.busy && !state.value.historyLoading) { draftJob?.cancel(); persist(); currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") }; persist() } }
 
     fun send(text: String): Boolean {
         val input = text
@@ -316,7 +331,9 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                 val selectedName = if (attachment == null) "" else withContext(Dispatchers.IO) {
                     runCatching { AppServices.localFileManager.displayName(attachment) }.getOrElse { attachmentName.ifBlank { attachment.lastPathSegment?.substringAfterLast('/').orEmpty() } }.take(512)
                 }
-                client(config).use { api ->
+                withContext(Dispatchers.IO) {
+                    client(config, httpClient.get()).use { api ->
+                    withContext(Dispatchers.Main.immediate) {
                     val model = LLModel(LLMProvider.OpenAI, config.model, listOf(LLMCapability.Completion, LLMCapability.Tools, if (config.responses) LLMCapability.OpenAIEndpoint.Responses else LLMCapability.OpenAIEndpoint.Completions))
                     while (true) {
                         val request = Prompt.build("skyadb", params = if (config.responses) OpenAIResponsesParams(store = false) else ai.koog.prompt.params.LLMParams()) {
@@ -368,7 +385,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                         history.add(Turn.Assistant(answer.toString(), calls))
                         incompleteMessageId = null
                         persist()
-                        if (calls.isEmpty()) return@use
+                        if (calls.isEmpty()) break
                         for (call in calls) {
                             val item = AiMessage(role = "tool", text = "${call.name}\n${call.args.take(4096)}")
                             state.update { it.copy(messages = (it.messages + item).takeLast(100)) }
@@ -383,6 +400,8 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                             persist()
                         }
                         trimToolHistory()
+                    }
+                    }
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }

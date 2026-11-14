@@ -60,11 +60,9 @@ internal class AiDocuments(private val context: Context, private val tree: Uri) 
                 staging = null
             } catch (error: Throwable) {
                 backup?.let { DocumentsContract.renameDocument(resolver, it, name) }
-                backup = null
                 throw error
             }
             backup?.let { DocumentsContract.deleteDocument(resolver, it) }
-            backup = null
         } finally {
             staging?.let { runCatching { DocumentsContract.deleteDocument(resolver, it) } }
         }

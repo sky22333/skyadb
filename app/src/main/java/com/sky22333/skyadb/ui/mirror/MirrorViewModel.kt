@@ -29,6 +29,7 @@ data class MirrorUiState(
     val status: OperationStatus = OperationStatus.Idle,
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
+    val audioError: String? = null,
 )
 
 class MirrorViewModel(
@@ -113,6 +114,7 @@ class MirrorViewModel(
                                 )
                             }
                         },
+                        onAudioError = { state.update { it.copy(audioError = appString(R.string.scrcpy_audio_stream_error)) } },
                     )
             ) {
                 is AdbOperationResult.Success -> {
