@@ -48,12 +48,13 @@ class AiApprovalIntegrationTest {
             val vm = AiViewModel(testAiStore()); val config = AiConfig("http://127.0.0.1:${server.localPort}/v1", "test", "test")
             withTimeout(10000) { vm.uiState.first { !it.historyLoading } }
             vm.saveConfig(config); withTimeout(10000) { vm.uiState.first { it.config == config } }
-            vm.attach(Uri.fromFile(file)); assertTrue(vm.send("Read my selected file"))
+            vm.attach(Uri.fromFile(file)); assertTrue(vm.send(if (allow) "" else "Read my selected file"))
             withTimeout(20000) { vm.uiState.first { it.approval != null || it.error != null } }
             assertNotNull(vm.uiState.value.approval)
             assertTrue(vm.uiState.value.approval!!.detail.contains(com.sky22333.skyadb.i18n.appString(com.sky22333.skyadb.R.string.ai_read_confirm)))
             vm.attach(null)
-            assertEquals(Uri.fromFile(file), vm.uiState.value.attachment)
+            assertNull(vm.uiState.value.attachment)
+            assertTrue(vm.uiState.value.messages.any { it.role == "user" && it.attachmentName.isNotBlank() })
             assertFalse(requests[0].contains("LOCAL_TEST_CONTENT"))
             assertTrue(requests[0].contains("ai-approval-test.txt"))
             vm.respond(allow)

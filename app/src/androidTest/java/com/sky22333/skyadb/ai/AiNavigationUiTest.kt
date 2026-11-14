@@ -43,8 +43,8 @@ class AiNavigationUiTest {
     @get:Rule val compose = createEmptyComposeRule()
     @Test fun aiTabOpensAndSettingsCanBeDismissed() {
         ParcelFileDescriptor.AutoCloseInputStream(InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("am start -f 0x10008000 -n com.sky22333.skyadb/.MainActivity")).use { it.readBytes() }
-        compose.waitUntil(10000) { compose.onAllNodes(androidx.compose.ui.test.hasText(appString(R.string.ai_nav))).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText(appString(R.string.ai_nav)).performClick()
+        compose.waitUntil(10000) { compose.onAllNodes(androidx.compose.ui.test.hasContentDescription(appString(R.string.ai_nav))).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription(appString(R.string.ai_nav)).performClick()
         compose.onNodeWithText(appString(R.string.ai_title)).assertIsDisplayed()
         compose.onNode(hasSetTextAction()).performTextReplacement("draft")
         compose.onNodeWithContentDescription(appString(R.string.ai_config)).performClick()
@@ -77,6 +77,20 @@ class AiNavigationUiTest {
                 compose.onNodeWithContentDescription(appString(R.string.ai_send)).assertExists()
             }
         } finally { server.close(); worker.join(1000) }
+    }
+
+    @Test fun longMultilineDraftRemainsEditable() {
+        val vm = AiViewModel(testAiStore())
+        runBlocking { withTimeout(10000) { vm.uiState.first { !it.historyLoading } } }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { AdbManagerTheme { AiScreen(vm) } } }
+            val input = (1..30).joinToString("\n") { "测试 line $it: " + "abc123".repeat(8) + " 😀" }
+            compose.onNode(hasSetTextAction()).performTextReplacement(input)
+            compose.waitUntil(10000) { vm.uiState.value.draft == input }
+            compose.onNode(hasSetTextAction()).performTextReplacement(input + " end")
+            compose.waitUntil(10000) { vm.uiState.value.draft == input + " end" }
+            compose.onNodeWithContentDescription(appString(R.string.ai_send)).assertIsDisplayed()
+        }
     }
 
     @Test fun multilineAndOversizeTextRemainsEditable() {

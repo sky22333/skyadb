@@ -13,22 +13,32 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,6 +82,8 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     var downloadToDelete by remember { mutableStateOf<AiDownload?>(null) }
     var downloadToExport by remember { mutableStateOf<AiDownload?>(null) }
     var pendingDeletion by remember { mutableStateOf<AiConversationSummary?>(null) }
+    var composerHeight by remember { mutableIntStateOf(0) }
+    val composerPadding = with(LocalDensity.current) { composerHeight.toDp() }
     val input = state.draft
     val inputSize = remember(input) { inputLength(input) }
     val focusManager = LocalFocusManager.current
@@ -119,89 +131,113 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     if (showConfig) {
         AiConfigPage(state.config, state.models, state.loadingModels, saving = state.savingConfig, onDismiss = ::closeConfig, onFetch = viewModel::loadModels, onClearModels = viewModel::clearModels, onSave = { viewModel.saveConfig(it, ::closeConfig) })
     } else Column(Modifier.fillMaxSize()) {
-        SmallTopAppBar(title = stringResource(R.string.ai_title), actions = {
-            IconButton(onClick = { viewModel.refreshDownloads(); showDownloads = true }, enabled = !state.busy && !state.managingDownload) { Icon(MiuixIcons.Download, stringResource(R.string.ai_downloads)) }
-            IconButton(onClick = { showHistory = true }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.ListView, stringResource(R.string.ai_history)) }
+        SmallTopAppBar(title = stringResource(R.string.ai_title), color = MiuixTheme.colorScheme.background, actions = {
+            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); viewModel.refreshDownloads(); showDownloads = true }, enabled = !state.busy && !state.managingDownload) { Icon(MiuixIcons.Download, stringResource(R.string.ai_downloads)) }
+            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); showHistory = true }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.ListView, stringResource(R.string.ai_history)) }
             IconButton(onClick = { followsBottom = true; viewModel.clear() }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.Add, stringResource(R.string.ai_new)) }
             IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onSettingsVisibilityChange(true); showConfig = true }, enabled = !state.busy) { Icon(MiuixIcons.Settings, stringResource(R.string.ai_config)) }
         })
-        if (state.historyLoading) {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (state.messages.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.ai_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-        } else {
-            LazyColumn(state = messagesListState, modifier = Modifier.weight(1f).fillMaxWidth().testTag("ai_messages"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                items(state.messages, key = { it.id }) { message ->
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = if (message.role == "user") Alignment.End else Alignment.Start) {
-                        when (message.role) {
-                            "assistant" -> EnrichedMarkdownText(markdown = message.text, style = markdownStyle, onLinkClick = { link -> runCatching { uriHandler.openUri(link) } })
-                            "tool" -> {
-                                var expanded by remember(message.id) { mutableStateOf(false) }
-                                val toolName = message.text.substringBefore('\n')
-                                val toolLabel = when (toolName) {
-                                    "download_file" -> stringResource(R.string.ai_tool_download)
-                                    "pull_device_file" -> stringResource(R.string.ai_tool_pull)
-                                    "export_device_apk" -> stringResource(R.string.ai_tool_export_apk)
-                                    "list_authorized_files" -> stringResource(R.string.ai_tool_local_list)
-                                    "read_authorized_file" -> stringResource(R.string.ai_tool_local_read)
-                                    "write_authorized_file" -> stringResource(R.string.ai_tool_local_write)
-                                    "open_local_app" -> stringResource(R.string.ai_tool_open_app)
-                                    "agent_environments" -> stringResource(R.string.ai_agent_environments)
-                                    "agent_discover" -> stringResource(R.string.ai_agent_discover)
-                                    "agent_connect" -> stringResource(R.string.ai_agent_connect)
-                                    "agent_disconnect" -> stringResource(R.string.ai_agent_disconnect)
-                                    "agent_shell" -> stringResource(R.string.ai_agent_shell)
-                                    "agent_screen" -> stringResource(R.string.ai_agent_screen)
-                                    "agent_transfer" -> stringResource(R.string.ai_agent_transfer)
-                                    "get_device_info" -> stringResource(R.string.ai_tool_device)
-                                    "list_remote_files" -> stringResource(R.string.ai_tool_files)
-                                    "run_device_shell" -> stringResource(R.string.ai_tool_shell)
-                                    "upload_selected_file" -> stringResource(R.string.ai_tool_upload)
-                                    "read_selected_file" -> stringResource(R.string.ai_tool_read)
-                                    "list_selected_archive" -> stringResource(R.string.ai_tool_archive_list)
-                                    "read_selected_archive_text" -> stringResource(R.string.ai_tool_archive_read)
-                                    "list_local_files" -> stringResource(R.string.ai_tool_local_list)
-                                    "read_local_file" -> stringResource(R.string.ai_tool_local_read)
-                                    "upload_local_file" -> stringResource(R.string.ai_tool_local_upload)
-                                    else -> toolName
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (state.historyLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (state.messages.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.ai_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
+            } else {
+                LazyColumn(state = messagesListState, modifier = Modifier.fillMaxSize().testTag("ai_messages"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = composerPadding + 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(state.messages, key = { it.id }) { message ->
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = if (message.role == "user") Alignment.End else Alignment.Start) {
+                            when (message.role) {
+                                "assistant" -> EnrichedMarkdownText(markdown = message.text, style = markdownStyle, onLinkClick = { link -> runCatching { uriHandler.openUri(link) } })
+                                "tool" -> {
+                                    var expanded by remember(message.id) { mutableStateOf(false) }
+                                    val toolName = message.text.substringBefore('\n')
+                                    val toolLabel = when (toolName) {
+                                        "download_file" -> stringResource(R.string.ai_tool_download)
+                                        "pull_device_file" -> stringResource(R.string.ai_tool_pull)
+                                        "export_device_apk" -> stringResource(R.string.ai_tool_export_apk)
+                                        "list_authorized_files" -> stringResource(R.string.ai_tool_local_list)
+                                        "read_authorized_file" -> stringResource(R.string.ai_tool_local_read)
+                                        "write_authorized_file" -> stringResource(R.string.ai_tool_local_write)
+                                        "open_local_app" -> stringResource(R.string.ai_tool_open_app)
+                                        "agent_environments" -> stringResource(R.string.ai_agent_environments)
+                                        "agent_discover" -> stringResource(R.string.ai_agent_discover)
+                                        "agent_connect" -> stringResource(R.string.ai_agent_connect)
+                                        "agent_disconnect" -> stringResource(R.string.ai_agent_disconnect)
+                                        "agent_shell" -> stringResource(R.string.ai_agent_shell)
+                                        "agent_screen" -> stringResource(R.string.ai_agent_screen)
+                                        "agent_transfer" -> stringResource(R.string.ai_agent_transfer)
+                                        "get_device_info" -> stringResource(R.string.ai_tool_device)
+                                        "list_remote_files" -> stringResource(R.string.ai_tool_files)
+                                        "run_device_shell" -> stringResource(R.string.ai_tool_shell)
+                                        "upload_selected_file" -> stringResource(R.string.ai_tool_upload)
+                                        "read_selected_file" -> stringResource(R.string.ai_tool_read)
+                                        "list_selected_archive" -> stringResource(R.string.ai_tool_archive_list)
+                                        "read_selected_archive_text" -> stringResource(R.string.ai_tool_archive_read)
+                                        "list_local_files" -> stringResource(R.string.ai_tool_local_list)
+                                        "read_local_file" -> stringResource(R.string.ai_tool_local_read)
+                                        "upload_local_file" -> stringResource(R.string.ai_tool_local_upload)
+                                        else -> toolName
+                                    }
+                                    Text(toolLabel, modifier = Modifier.clickable { expanded = !expanded }, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                    if (expanded) Text(message.text.substringAfter('\n', ""), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
                                 }
-                                Text(toolLabel, modifier = Modifier.clickable { expanded = !expanded }, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                                if (expanded) Text(message.text.substringAfter('\n', ""), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                                "user" -> {
+                                    if (message.attachmentName.isNotBlank()) Text(message.attachmentName, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                                    if (message.text.isNotBlank()) Text(message.text)
+                                }
+                                else -> Text(message.text)
                             }
-                            else -> Text(message.text)
                         }
                     }
                 }
             }
-        }
-        if (state.busy) Text(state.downloadProgress ?: stringResource(R.string.ai_running), modifier = Modifier.padding(horizontal = 20.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
-        if (state.attachment != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(state.attachmentName.ifBlank { stringResource(R.string.ai_attachment) }, modifier = Modifier.weight(1f), maxLines = 1, style = MiuixTheme.textStyles.footnote1)
-            IconButton(onClick = { viewModel.attach(null) }, enabled = !state.busy) { Icon(MiuixIcons.Close, stringResource(R.string.ai_remove_attachment)) }
-        }
-        if (inputSize >= AI_INPUT_LIMIT - 2000) Text(
-            text = stringResource(if (inputSize > AI_INPUT_LIMIT) R.string.ai_input_over_limit else R.string.ai_input_count, inputSize, AI_INPUT_LIMIT),
-            modifier = Modifier.align(Alignment.End).padding(horizontal = 20.dp),
-            style = MiuixTheme.textStyles.footnote1,
-            color = if (inputSize > AI_INPUT_LIMIT) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        )
-        TextField(
-            value = input, onValueChange = viewModel::updateDraft, enabled = !state.historyLoading,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            label = stringResource(R.string.ai_prompt), useLabelAsPlaceholder = true, maxLines = 4,
-            leadingIcon = {
-                IconButton(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !state.busy) { Icon(MiuixIcons.Add, stringResource(R.string.ai_attach)) }
-            },
-            trailingIcon = {
-                IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true; viewModel.updateDraft("") } }, enabled = state.busy || (input.isNotBlank() && inputSize <= AI_INPUT_LIMIT && !state.historyLoading)) {
-                    Icon(if (state.busy) AppIcons.Stop else AppIcons.ArrowUp, stringResource(if (state.busy) R.string.ai_stop else R.string.ai_send))
+            Column(Modifier.align(Alignment.BottomCenter).onSizeChanged { composerHeight = it.height }) {
+                if (state.busy) Text(state.downloadProgress ?: stringResource(R.string.ai_running), modifier = Modifier.padding(horizontal = 20.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                if (state.attachment != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(state.attachmentName.ifBlank { stringResource(R.string.ai_attachment) }, modifier = Modifier.weight(1f), maxLines = 1, style = MiuixTheme.textStyles.footnote1)
+                    IconButton(onClick = { viewModel.attach(null) }, enabled = !state.busy) { Icon(MiuixIcons.Close, stringResource(R.string.ai_remove_attachment)) }
                 }
-            },
-        )
+                if (inputSize >= AI_INPUT_LIMIT - 2000) Text(
+                    text = stringResource(if (inputSize > AI_INPUT_LIMIT) R.string.ai_input_over_limit else R.string.ai_input_count, inputSize, AI_INPUT_LIMIT),
+                    modifier = Modifier.align(Alignment.End).padding(horizontal = 20.dp),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = if (inputSize > AI_INPUT_LIMIT) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                TextField(
+                    value = input, onValueChange = viewModel::updateDraft, enabled = !state.historyLoading,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
+                        .shadow(2.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
+                        .border(1.dp, MiuixTheme.colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(24.dp)),
+                    colors = TextFieldDefaults.textFieldColors(backgroundColor = MiuixTheme.colorScheme.background),
+                    insideMargin = DpSize(16.dp, 8.dp),
+                    label = stringResource(R.string.ai_prompt), useLabelAsPlaceholder = true, maxLines = 4,
+                    leadingIcon = {
+                        IconButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.size(48.dp), enabled = !state.busy) { Icon(MiuixIcons.Add, stringResource(R.string.ai_attach)) }
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true; viewModel.updateDraft("") } }, modifier = Modifier.size(48.dp), enabled = state.busy || ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading)) {
+                            if (state.busy) {
+                                val stopDescription = stringResource(R.string.ai_stop)
+                                Box(
+                                    modifier = Modifier.size(28.dp)
+                                        .background(MiuixTheme.colorScheme.onBackground, CircleShape)
+                                        .semantics { contentDescription = stopDescription },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Box(Modifier.size(9.dp).background(MiuixTheme.colorScheme.background))
+                                }
+                            } else {
+                                Icon(AppIcons.ArrowUp, stringResource(R.string.ai_send), tint = if ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading) MiuixTheme.colorScheme.onBackground else MiuixTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+                            }
+                        }
+                    },
+                )
+            }
+        }
     }
     if (showDownloads) WindowDialog(show = true, onDismissRequest = { showDownloads = false }, title = stringResource(R.string.ai_downloads)) {
         Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {

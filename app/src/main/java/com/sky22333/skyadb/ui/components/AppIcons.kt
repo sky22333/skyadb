@@ -26,7 +26,6 @@ object AppIcons {
     val SkipPrevious = icon("SkipPrevious", "M19 5 L9 12 L19 19 Z M5 5 L5 19")
     val Keyboard = icon("Keyboard", "M3 6 L21 6 L21 18 L3 18 Z M6 9 L7 9 M10 9 L11 9 M14 9 L15 9 M18 9 L19 9 M6 12 L7 12 M10 12 L11 12 M14 12 L15 12 M18 12 L19 12 M7 15 L17 15")
     val ArrowUp = icon("ArrowUp", "M12 20 V4 M5 11 L12 4 L19 11")
-    val Stop = icon("Stop", "M6 6 H18 V18 H6 Z")
 
     private fun icon(name: String, path: String): ImageVector = ImageVector.Builder(
         name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f,

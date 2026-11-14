@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
@@ -33,6 +34,7 @@ fun TextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     textStyle: TextStyle = MiuixTheme.textStyles.main,
     colors: TextFieldColors = TextFieldDefaults.textFieldColors(),
+    insideMargin: DpSize = TextFieldDefaults.InsideMargin,
     cursorBrush: Brush = SolidColor(MiuixTheme.colorScheme.primary),
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
@@ -64,6 +66,7 @@ fun TextField(
         visualTransformation = visualTransformation,
         textStyle = textStyle,
         colors = colors.copy(borderColor = Color.Transparent),
+        insideMargin = insideMargin,
         cursorBrush = cursorBrush,
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,

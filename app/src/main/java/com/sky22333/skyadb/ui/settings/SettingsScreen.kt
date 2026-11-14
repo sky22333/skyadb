@@ -100,7 +100,7 @@ private fun SettingsContent(
     var editing by rememberSaveable { mutableStateOf<SettingField?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = stringResource(R.string.settings_title))
+        TopAppBar(title = stringResource(R.string.settings_title), color = MiuixTheme.colorScheme.background)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

@@ -77,6 +77,7 @@ fun HomeScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = stringResource(R.string.home_title),
+            color = MiuixTheme.colorScheme.background,
             actions = {
                 IconButton(onClick = onPairingClick) {
                     Icon(AppIcons.Wifi, contentDescription = stringResource(R.string.action_wireless_pairing))

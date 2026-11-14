@@ -122,6 +122,7 @@ private fun DeviceContent(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = stringResource(R.string.device_details_title),
+            color = MiuixTheme.colorScheme.background,
             actions = {
                 IconButton(
                     onClick = onRefreshClick,

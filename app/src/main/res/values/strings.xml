@@ -735,6 +735,7 @@
     <string name="ai_stop">Stop</string>
     <string name="ai_new">New chat</string>
     <string name="ai_attach">Select local file</string>
+    <string name="ai_attachment_only_prompt">The user attached a file without a message. Ask what they would like to do with it.</string>
     <string name="ai_attachment">Local file selected</string>
     <string name="ai_remove_attachment">Remove file</string>
     <string name="ai_protocol">API protocol</string>

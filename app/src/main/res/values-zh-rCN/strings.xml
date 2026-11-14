@@ -735,6 +735,7 @@
     <string name="ai_stop">停止</string>
     <string name="ai_new">新对话</string>
     <string name="ai_attach">选择本机文件</string>
+    <string name="ai_attachment_only_prompt">用户只发送了文件，请询问希望如何处理。</string>
     <string name="ai_attachment">已选择本机文件</string>
     <string name="ai_remove_attachment">移除文件</string>
     <string name="ai_protocol">接口协议</string>

@@ -16,6 +16,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -66,11 +67,11 @@ import com.sky22333.skyadb.ui.settings.SettingsScreen
 import com.sky22333.skyadb.ui.shell.ShellScreen
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.NavigationBar
-import top.yukonga.miuix.kmp.basic.NavigationBarDefaults
+import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
@@ -158,6 +159,7 @@ fun AdbManagerApp() {
 
     TabBackHandler(showBottomBar && selectedTab != AppDestination.Home.route && !aiSettingsOpen) { selectTab(AppDestination.Home.route) }
 
+    val bottomNavigationHeight = 54.dp
     Scaffold(
         modifier = Modifier.focusRequester(pageFocusRequester).focusable(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -169,10 +171,13 @@ fun AdbManagerApp() {
                 exit = fadeOut(tween(120)),
             ) {
                 NavigationBar(
-                    color = MiuixTheme.colorScheme.surface,
+                    color = MiuixTheme.colorScheme.background,
+                    showDivider = false,
+                    mode = NavigationBarDisplayMode.IconOnly,
                 ) {
                     bottomDestinations.forEach { destination ->
                         NavigationBarItem(
+                            modifier = Modifier.height(bottomNavigationHeight),
                             selected = selectedTab == destination.route,
                             onClick = { selectTab(destination.route) },
                             icon = destination.icon,
@@ -184,7 +189,7 @@ fun AdbManagerApp() {
         },
     ) { _ ->
         val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val rootBottomPadding = NavigationBarDefaults.ItemHeight + systemBottom + 1.dp
+        val rootBottomPadding = bottomNavigationHeight + systemBottom
         NavDisplay(
             backStack = stack,
             onBack = ::back,
@@ -296,7 +301,7 @@ fun AdbManagerApp() {
 
 private val bottomDestinations = listOf(
     BottomDestination(AppDestination.Home.route, R.string.nav_devices, AppIcons.Device),
-    BottomDestination(AppDestination.Device.route, R.string.nav_details, MiuixIcons.Info),
+    BottomDestination(AppDestination.Device.route, R.string.nav_details, MiuixIcons.GridView),
     BottomDestination(AppDestination.Ai.route, R.string.ai_nav, MiuixIcons.Messages),
     BottomDestination(AppDestination.Settings.route, R.string.nav_settings, MiuixIcons.Settings),
 )
