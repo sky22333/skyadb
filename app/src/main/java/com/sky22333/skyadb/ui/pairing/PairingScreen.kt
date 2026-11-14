@@ -3,8 +3,8 @@ package com.sky22333.skyadb.ui.pairing
 
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.ExpandLess
-import top.yukonga.miuix.kmp.icon.extended.ExpandMore
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
+import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -143,7 +143,8 @@ private fun PairingGuideSection() {
                 style = MiuixTheme.textStyles.subtitle,
             )
             Icon(
-                imageVector = if (expanded) MiuixIcons.ExpandLess else MiuixIcons.ExpandMore,
+                imageVector = MiuixIcons.ChevronBackward,
+                modifier = Modifier.rotate(if (expanded) 90f else 270f),
                 contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
             )
         }

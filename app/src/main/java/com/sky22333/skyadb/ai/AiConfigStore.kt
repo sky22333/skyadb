@@ -12,7 +12,10 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 @Serializable
-data class AiConfig(val baseUrl: String = "", val apiKey: String = "", val model: String = "", val responses: Boolean = false, val autoExecute: Boolean = false, val documentTree: String = "") {
+data class McpServerConfig(val name: String = "", val url: String = "", val token: String = "", val enabled: Boolean = true, val id: String = java.util.UUID.randomUUID().toString())
+
+@Serializable
+data class AiConfig(val baseUrl: String = "", val apiKey: String = "", val model: String = "", val responses: Boolean = false, val autoExecute: Boolean = false, val documentTree: String = "", val mcpServers: List<McpServerConfig> = emptyList()) {
     override fun toString(): String = "AiConfig(baseUrl=$baseUrl, apiKey=[redacted], model=$model, responses=$responses)"
 }
 

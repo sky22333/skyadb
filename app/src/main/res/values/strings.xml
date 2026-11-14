@@ -746,6 +746,8 @@
     <string name="ai_model_list">Available models</string>
     <string name="ai_empty_models">Enter a model ID if the list is unavailable</string>
     <string name="ai_running">Working</string>
+    <string name="ai_tool_finished">Finished</string>
+    <string name="ai_tool_failed">Failed</string>
     <string name="ai_error">AI notice</string>
     <string name="ai_save">Save</string>
     <string name="ai_config_read_failed">Could not read AI settings</string>
@@ -788,4 +790,18 @@
     <string name="ai_agent_disconnect">Disconnect ADB device</string>
     <string name="ai_shell_disclosure">Command output is sent to the configured AI service.</string>
     <string name="ai_screen_disclosure">Screen contents are sent to the configured AI service.</string>
+    <string name="ai_mcp_title">MCP servers</string>
+    <string name="ai_mcp_server">MCP server</string>
+    <string name="ai_mcp_name">Server name</string>
+    <string name="ai_mcp_url">Streamable HTTP URL</string>
+    <string name="ai_mcp_token">Bearer token (optional)</string>
+    <string name="ai_mcp_test">Test connection</string>
+    <string name="ai_mcp_add">Add MCP server</string>
+    <string name="ai_mcp_invalid">Enter a server name and valid MCP URL</string>
+    <string name="ai_mcp_test_ok">Connected · %1$d tools</string>
+    <string name="ai_mcp_test_failed">Could not connect to the MCP server</string>
+    <string name="ai_mcp_unavailable">Connection failed. This service is unavailable for this conversation.</string>
+    <string name="ai_image_unsupported">This image format is not supported. Choose PNG, JPEG, WebP or GIF.</string>
+    <string name="ai_image_too_large">The image must be 10 MB or smaller.</string>
+    <string name="ai_images_too_large">Images in this conversation exceed 20 MB. Start a new conversation or use smaller images.</string>
 </resources>

@@ -18,11 +18,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -43,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
+import com.sky22333.skyadb.ai.McpServerConfig
 import com.sky22333.skyadb.ai.AiConfig
 import com.sky22333.skyadb.ai.AiViewModel
+import com.sky22333.skyadb.ai.AiToolStatus
 import com.sky22333.skyadb.ai.AiConversationSummary
 import com.sky22333.skyadb.ai.AiDownload
 import com.sky22333.skyadb.ai.AI_INPUT_LIMIT
@@ -54,6 +61,9 @@ import com.sky22333.skyadb.ui.components.FlatButton
 import com.sky22333.skyadb.ui.components.AppIcons
 import com.sky22333.skyadb.ui.components.TextField
 import com.sky22333.skyadb.ui.components.PopupAnchor
+import com.sky22333.skyadb.ui.components.SectionHeader
+import com.sky22333.skyadb.ui.theme.AppDimens
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import com.swmansion.enriched.markdown.compose.EnrichedMarkdownText
 import com.swmansion.enriched.markdown.compose.markdownStyle
 import top.yukonga.miuix.kmp.basic.*
@@ -65,6 +75,7 @@ import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
@@ -89,7 +100,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     DisposableEffect(Unit) { onDispose { onSettingsVisibilityChange(false) } }
-    fun closeConfig() { viewModel.clearModels(); showConfig = false; onSettingsVisibilityChange(false) }
+    fun closeConfig() { viewModel.clearModels(); viewModel.clearMcpTest(); showConfig = false; onSettingsVisibilityChange(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) viewModel.attach(uri) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val download = downloadToExport
@@ -129,7 +140,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
         }
     }
     if (showConfig) {
-        AiConfigPage(state.config, state.models, state.loadingModels, saving = state.savingConfig, onDismiss = ::closeConfig, onFetch = viewModel::loadModels, onClearModels = viewModel::clearModels, onSave = { viewModel.saveConfig(it, ::closeConfig) })
+        AiConfigPage(state.config, state.models, state.loadingModels, saving = state.savingConfig, onDismiss = ::closeConfig, onFetch = viewModel::loadModels, onClearModels = viewModel::clearModels, mcpTesting = state.mcpTesting, mcpNotice = state.mcpNotice, mcpNoticeId = state.mcpNoticeId, mcpToolNames = state.mcpToolNames, onMcpChanged = viewModel::clearMcpNotice, onCloseMcp = viewModel::clearMcpTest, onTestMcp = viewModel::testMcp, onSave = { viewModel.saveConfig(it, ::closeConfig) })
     } else Column(Modifier.fillMaxSize()) {
         SmallTopAppBar(title = stringResource(R.string.ai_title), color = MiuixTheme.colorScheme.background, actions = {
             IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); viewModel.refreshDownloads(); showDownloads = true }, enabled = !state.busy && !state.managingDownload) { Icon(MiuixIcons.Download, stringResource(R.string.ai_downloads)) }
@@ -147,7 +158,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                     Text(stringResource(R.string.ai_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
             } else {
-                LazyColumn(state = messagesListState, modifier = Modifier.fillMaxSize().testTag("ai_messages"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = composerPadding + 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                LazyColumn(state = messagesListState, modifier = Modifier.fillMaxSize().testTag("ai_messages"), contentPadding = PaddingValues(start = AppDimens.ScreenPadding, end = AppDimens.ScreenPadding, top = AppDimens.ScreenPadding, bottom = composerPadding + AppDimens.ScreenPadding), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(state.messages, key = { it.id }) { message ->
                         Column(Modifier.fillMaxWidth(), horizontalAlignment = if (message.role == "user") Alignment.End else Alignment.Start) {
                             when (message.role) {
@@ -182,12 +193,27 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                                         "upload_local_file" -> stringResource(R.string.ai_tool_local_upload)
                                         else -> toolName
                                     }
-                                    Text(toolLabel, modifier = Modifier.clickable { expanded = !expanded }, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                    Row(
+                                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { expanded = !expanded }.padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        Text(toolLabel, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                        message.toolStatus?.let { status ->
+                                            Text(stringResource(when (status) {
+                                                AiToolStatus.Running -> R.string.ai_running
+                                                AiToolStatus.Finished -> R.string.ai_tool_finished
+                                                AiToolStatus.Failed -> R.string.ai_tool_failed
+                                                AiToolStatus.Interrupted -> R.string.ai_operation_interrupted
+                                            }), style = MiuixTheme.textStyles.footnote1, color = if (status == AiToolStatus.Failed) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                        }
+                                        Icon(MiuixIcons.ChevronBackward, stringResource(if (expanded) R.string.action_collapse else R.string.action_expand), modifier = Modifier.size(18.dp).rotate(if (expanded) 90f else 270f), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                    }
                                     if (expanded) Text(message.text.substringAfter('\n', ""), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
                                 }
                                 "user" -> {
                                     if (message.attachmentName.isNotBlank()) Text(message.attachmentName, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
-                                    if (message.text.isNotBlank()) Text(message.text)
+                                    if (message.text.isNotBlank()) Text(message.text, modifier = Modifier.widthIn(max = 320.dp))
                                 }
                                 else -> Text(message.text)
                             }
@@ -198,6 +224,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
             Column(Modifier.align(Alignment.BottomCenter).onSizeChanged { composerHeight = it.height }) {
                 if (state.busy) Text(state.downloadProgress ?: stringResource(R.string.ai_running), modifier = Modifier.padding(horizontal = 20.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
                 if (state.attachment != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AttachmentThumbnail(state.attachment!!, state.attachmentName)
                     Text(state.attachmentName.ifBlank { stringResource(R.string.ai_attachment) }, modifier = Modifier.weight(1f), maxLines = 1, style = MiuixTheme.textStyles.footnote1)
                     IconButton(onClick = { viewModel.attach(null) }, enabled = !state.busy) { Icon(MiuixIcons.Close, stringResource(R.string.ai_remove_attachment)) }
                 }
@@ -219,7 +246,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                         IconButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.size(48.dp), enabled = !state.busy) { Icon(MiuixIcons.Add, stringResource(R.string.ai_attach)) }
                     },
                     trailingIcon = {
-                        IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true; viewModel.updateDraft("") } }, modifier = Modifier.size(48.dp), enabled = state.busy || ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading)) {
+                        IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true } }, modifier = Modifier.size(48.dp), enabled = state.busy || ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading)) {
                             if (state.busy) {
                                 val stopDescription = stringResource(R.string.ai_stop)
                                 Box(
@@ -302,14 +329,36 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     }
 }
 
+@Composable
+private fun AttachmentThumbnail(uri: android.net.Uri, name: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<android.graphics.Bitmap?>(null, uri, name) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val resolver = context.contentResolver
+                if (com.sky22333.skyadb.ai.imageMime(resolver.getType(uri), name)?.startsWith("image/") != true) return@runCatching null
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+                var sample = 1
+                while (bounds.outWidth / sample > 96 || bounds.outHeight / sample > 96) sample *= 2
+                resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) }
+            }.getOrNull()
+        }
+    }
+    bitmap?.let {
+        Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(40.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AiConfigPage(initial: AiConfig, models: List<String>, loading: Boolean, saving: Boolean, onDismiss: () -> Unit, onFetch: (AiConfig) -> Unit, onClearModels: () -> Unit, onSave: (AiConfig) -> Unit) {
+private fun AiConfigPage(initial: AiConfig, models: List<String>, loading: Boolean, saving: Boolean, onDismiss: () -> Unit, onFetch: (AiConfig) -> Unit, onClearModels: () -> Unit, mcpTesting: Boolean, mcpNotice: String?, mcpNoticeId: String?, mcpToolNames: List<String>, onMcpChanged: () -> Unit, onCloseMcp: () -> Unit, onTestMcp: (McpServerConfig) -> Unit, onSave: (AiConfig) -> Unit) {
     var config by remember(initial) { mutableStateOf(initial) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
     var directoryError by remember { mutableStateOf(false) }
+    var editingMcp by remember { mutableStateOf<McpServerConfig?>(null) }
     fun releaseTemporaryDirectory() {
         if (config.documentTree.isNotEmpty() && config.documentTree != initial.documentTree) runCatching {
             context.contentResolver.releasePersistableUriPermission(android.net.Uri.parse(config.documentTree), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -333,7 +382,7 @@ private fun AiConfigPage(initial: AiConfig, models: List<String>, loading: Boole
         SmallTopAppBar(title = stringResource(R.string.ai_config), navigationIcon = {
             IconButton(onClick = onBack, enabled = !saving) { Icon(MiuixIcons.Back, stringResource(R.string.action_back)) }
         })
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = AppDimens.ScreenPadding, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(AppDimens.CompactGap)) {
             TextField(value = config.baseUrl, onValueChange = { config = config.copy(baseUrl = it); onClearModels() }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_url), singleLine = true, enabled = !saving)
             TextField(value = config.apiKey, onValueChange = { config = config.copy(apiKey = it); onClearModels() }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_key), singleLine = true, enabled = !saving, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
             TextField(value = config.model, onValueChange = { config = config.copy(model = it) }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_model), singleLine = true, enabled = !saving)
@@ -391,9 +440,98 @@ private fun AiConfigPage(initial: AiConfig, models: List<String>, loading: Boole
                 }
             }
             if (directoryError) Text(stringResource(R.string.ai_directory_failed), color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1)
+            Spacer(Modifier.height(8.dp))
+            SectionHeader(
+                title = stringResource(R.string.ai_mcp_title),
+                trailing = {
+                    IconButton(onClick = { onMcpChanged(); focusManager.clearFocus(); keyboard?.hide(); editingMcp = McpServerConfig() }, enabled = !saving) {
+                        Icon(MiuixIcons.Add, stringResource(R.string.ai_mcp_add))
+                    }
+                },
+            )
+            config.mcpServers.forEach { server ->
+                ArrowPreference(
+                    title = server.name,
+                    insideMargin = PaddingValues(0.dp),
+                    enabled = !saving,
+                    onClick = { onMcpChanged(); focusManager.clearFocus(); keyboard?.hide(); editingMcp = server },
+                    endActions = {
+                        Switch(
+                            checked = server.enabled,
+                            onCheckedChange = { enabled ->
+                                onMcpChanged()
+                                config = config.copy(mcpServers = config.mcpServers.map { if (it.id == server.id) it.copy(enabled = enabled) else it })
+                            },
+                            modifier = Modifier.semantics { contentDescription = server.name },
+                            enabled = !saving,
+                        )
+                    },
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onBack, enabled = !saving, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_cancel)) }
-                Button(onClick = { onSave(config) }, enabled = !saving, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.ai_save)) }
+                Button(onClick = { onSave(config) }, enabled = !saving, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) { Text(stringResource(R.string.ai_save)) }
+            }
+        }
+    }
+    editingMcp?.let { server ->
+        val exists = config.mcpServers.any { it.id == server.id }
+        McpServerEditor(
+            initial = server,
+            isNew = !exists,
+            testing = mcpTesting,
+            notice = mcpNotice.takeIf { mcpNoticeId == server.id },
+            toolNames = if (mcpNoticeId == server.id) mcpToolNames else emptyList(),
+            onChanged = onMcpChanged,
+            onTest = onTestMcp,
+            onDismiss = { onCloseMcp(); editingMcp = null },
+            onSave = { updated ->
+                config = config.copy(mcpServers = if (exists) config.mcpServers.map { if (it.id == updated.id) updated else it } else config.mcpServers + updated)
+                onCloseMcp(); editingMcp = null
+            },
+            onDelete = { config = config.copy(mcpServers = config.mcpServers.filterNot { it.id == server.id }); onCloseMcp(); editingMcp = null },
+        )
+    }
+}
+
+
+@Composable
+private fun McpServerEditor(
+    initial: McpServerConfig,
+    isNew: Boolean,
+    testing: Boolean,
+    notice: String?,
+    toolNames: List<String>,
+    onChanged: () -> Unit,
+    onTest: (McpServerConfig) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (McpServerConfig) -> Unit,
+    onDelete: () -> Unit,
+) {
+    var draft by remember(initial.id) { mutableStateOf(initial) }
+    var invalid by remember(initial.id) { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    fun update(value: McpServerConfig) { draft = value; invalid = false; onChanged() }
+    WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(if (isNew) R.string.ai_mcp_add else R.string.ai_mcp_server)) {
+        Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextField(value = draft.name, onValueChange = { update(draft.copy(name = it)) }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_mcp_name), singleLine = true, enabled = !testing)
+            TextField(value = draft.url, onValueChange = { update(draft.copy(url = it)) }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_mcp_url), singleLine = true, enabled = !testing)
+            TextField(value = draft.token, onValueChange = { update(draft.copy(token = it)) }, modifier = Modifier.fillMaxWidth(), label = stringResource(R.string.ai_mcp_token), singleLine = true, enabled = !testing, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                FlatButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onTest(draft.copy(url = draft.url.trim())) }, enabled = !testing) { Text(stringResource(if (testing) R.string.ai_running else R.string.ai_mcp_test)) }
+                Spacer(Modifier.weight(1f))
+                if (!isNew) FlatButton(onClick = onDelete, enabled = !testing) { Text(stringResource(R.string.action_delete)) }
+            }
+            if (invalid) Text(stringResource(R.string.ai_mcp_invalid), color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1)
+            notice?.let { Text(it, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
+            if (toolNames.isNotEmpty()) Text(toolNames.joinToString(" · "), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.action_cancel)) }
+                Button(onClick = {
+                    val updated = draft.copy(name = draft.name.trim(), url = draft.url.trim())
+                    if (updated.name.isBlank() || updated.url.toHttpUrlOrNull() == null) invalid = true else onSave(updated)
+                }, enabled = !testing, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColorsPrimary()) { Text(stringResource(R.string.action_confirm)) }
             }
         }
     }

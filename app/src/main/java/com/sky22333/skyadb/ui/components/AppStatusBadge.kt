@@ -22,7 +22,7 @@ fun AppStatusBadge(
     val color = when (state) {
         ConnectionState.Connected -> Success
         ConnectionState.Offline -> Warning
-        ConnectionState.Disconnected -> MiuixTheme.colorScheme.outline
+        ConnectionState.Disconnected -> MiuixTheme.colorScheme.onSurfaceVariantSummary
     }
 
     Box(

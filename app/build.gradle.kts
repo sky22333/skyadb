@@ -79,6 +79,11 @@ dependencies {
     implementation(libs.miuix.nav)
     implementation(libs.koog.openai)
     implementation(libs.koog.ktor)
+    implementation(libs.koog.mcp) {
+        exclude(group = "ai.koog", module = "prompt-executor-llms-all")
+        exclude(group = "ai.koog", module = "prompt-executor-llms-all-android")
+        exclude(group = "ai.koog", module = "serialization-jackson")
+    }
     implementation(libs.ktor.okhttp)
     implementation(libs.enriched.markdown)
     implementation(platform(libs.androidx.compose.bom))

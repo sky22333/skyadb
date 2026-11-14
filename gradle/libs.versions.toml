@@ -28,6 +28,7 @@ miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.re
 miuix-nav = { module = "top.yukonga.miuix.kmp:miuix-nav-android", version.ref = "miuix" }
 koog-openai = { module = "ai.koog:prompt-executor-openai-client", version.ref = "koog" }
 koog-ktor = { module = "ai.koog:http-client-ktor", version.ref = "koog" }
+koog-mcp = { module = "ai.koog:agents-mcp-android", version = "1.3.0-beta" }
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 enriched-markdown = { module = "com.swmansion.enriched.markdown:compose", version.ref = "enrichedMarkdown" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }

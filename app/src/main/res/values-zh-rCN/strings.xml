@@ -746,6 +746,8 @@
     <string name="ai_model_list">可用模型</string>
     <string name="ai_empty_models">无模型列表时可手动输入模型 ID</string>
     <string name="ai_running">正在处理</string>
+    <string name="ai_tool_finished">已结束</string>
+    <string name="ai_tool_failed">失败</string>
     <string name="ai_error">AI 提示</string>
     <string name="ai_save">保存</string>
     <string name="ai_config_read_failed">AI 配置读取失败</string>
@@ -788,4 +790,18 @@
     <string name="ai_agent_disconnect">断开 ADB 设备</string>
     <string name="ai_shell_disclosure">命令输出会发送给配置的 AI 服务。</string>
     <string name="ai_screen_disclosure">界面内容会发送给配置的 AI 服务。</string>
+    <string name="ai_mcp_title">MCP 服务</string>
+    <string name="ai_mcp_server">MCP 服务</string>
+    <string name="ai_mcp_name">服务名称</string>
+    <string name="ai_mcp_url">Streamable HTTP 地址</string>
+    <string name="ai_mcp_token">访问令牌（可选）</string>
+    <string name="ai_mcp_test">测试连接</string>
+    <string name="ai_mcp_add">添加 MCP 服务</string>
+    <string name="ai_mcp_invalid">请填写服务名称和有效的 MCP 地址</string>
+    <string name="ai_mcp_test_ok">连接成功 · %1$d 个工具</string>
+    <string name="ai_mcp_test_failed">无法连接 MCP 服务</string>
+    <string name="ai_mcp_unavailable">连接失败，本次对话无法使用此服务。</string>
+    <string name="ai_image_unsupported">不支持此图片格式，请选择 PNG、JPEG、WebP 或 GIF。</string>
+    <string name="ai_image_too_large">图片不能超过 10 MB。</string>
+    <string name="ai_images_too_large">当前对话中的图片合计超过 20 MB，请新建对话或使用更小的图片。</string>
 </resources>

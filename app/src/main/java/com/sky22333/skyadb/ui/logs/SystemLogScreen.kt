@@ -5,14 +5,21 @@ import top.yukonga.miuix.kmp.icon.extended.Clear
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.sky22333.skyadb.ui.components.FlatTabRow
@@ -27,8 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -199,16 +209,44 @@ private fun LogFilters(
 
 @Composable
 private fun LogLine(line: String) {
-    Text(
-        text = line,
+    var expanded by remember(line) { mutableStateOf(false) }
+    var canExpand by remember(line) { mutableStateOf(false) }
+    val context = LocalContext.current
+    val copyLabel = stringResource(R.string.syslog_copy_desc)
+    val copied = stringResource(R.string.syslog_copied_toast)
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(AppDimens.ControlRadius))
+            .combinedClickable(
+                onClickLabel = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand),
+                onLongClickLabel = copyLabel,
+                onClick = { expanded = !expanded },
+                onLongClick = {
+                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                    clipboard.setPrimaryClip(ClipData.newPlainText(copyLabel, line))
+                    Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+                },
+            )
             .padding(vertical = 3.dp),
-        color = MiuixTheme.colorScheme.onSurface,
-        style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
-        maxLines = 3,
-        overflow = TextOverflow.Ellipsis,
-    )
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = line,
+            modifier = Modifier.weight(1f),
+            color = MiuixTheme.colorScheme.onSurface,
+            style = MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace),
+            maxLines = if (expanded) Int.MAX_VALUE else 3,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { if (!expanded) canExpand = it.hasVisualOverflow },
+        )
+        if (canExpand || expanded) Icon(
+            MiuixIcons.ChevronBackward,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp).rotate(if (expanded) 90f else 270f),
+            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
+    }
 }
 
 @Composable

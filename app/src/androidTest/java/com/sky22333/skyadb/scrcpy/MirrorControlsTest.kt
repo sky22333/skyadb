@@ -62,6 +62,12 @@ class MirrorControlsTest {
             compose.onNodeWithContentDescription(hide).assertExists()
             compose.onNodeWithContentDescription(toggle).performClick()
             compose.onNodeWithContentDescription(hide).assertDoesNotExist()
+            compose.onNodeWithContentDescription(appString(R.string.mirror_recent_tasks_desc)).assertExists()
+            compose.onNodeWithContentDescription(appString(R.string.mirror_hide_controls_desc)).performClick()
+            compose.onNodeWithContentDescription(appString(R.string.mirror_recent_tasks_desc)).assertDoesNotExist()
+            compose.onNodeWithContentDescription(appString(R.string.mirror_show_controls_desc)).performClick()
+            compose.onNodeWithContentDescription(appString(R.string.mirror_recent_tasks_desc)).assertExists()
+            Unit
         } finally {
             instrumentation.runOnMainSync { resumed.finish() }
         }

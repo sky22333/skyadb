@@ -6,7 +6,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Home
-import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import top.yukonga.miuix.kmp.icon.extended.Send
 import top.yukonga.miuix.kmp.icon.extended.VolumeUp
 import android.view.KeyEvent
@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -221,7 +222,7 @@ private fun MirrorTopActions(
                 .statusBarsPadding()
                 .padding(12.dp)
                 .wrapContentWidth(Alignment.End)
-                .background(Color.Black.copy(alpha = 0.50f), RoundedCornerShape(8.dp)),
+                .background(Color.Black.copy(alpha = 0.50f), RoundedCornerShape(12.dp)),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -231,7 +232,8 @@ private fun MirrorTopActions(
             onClick = onToggleKeyboard,
         )
         MirrorIconButton(
-            icon = MiuixIcons.More,
+            icon = MiuixIcons.ChevronBackward,
+            rotation = if (controlsVisible) 270f else 90f,
             contentDescription =
                 stringResource(
                     if (controlsVisible) R.string.mirror_hide_controls_desc
@@ -259,7 +261,7 @@ private fun MirrorControls(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
-        cornerRadius = 8.dp,
+        cornerRadius = 12.dp,
         insideMargin = PaddingValues(0.dp),
         colors = CardDefaults.defaultColors(color = Color.Black.copy(alpha = 0.50f), contentColor = Color.White),
     ) {
@@ -341,6 +343,7 @@ private fun MirrorIconButton(
     icon: ImageVector,
     contentDescription: String,
     enabled: Boolean = true,
+    rotation: Float = 0f,
     onClick: () -> Unit,
 ) {
     IconButton(
@@ -351,6 +354,7 @@ private fun MirrorIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
+            modifier = Modifier.rotate(rotation),
             tint = if (enabled) Color.White else Color.White.copy(alpha = 0.38f),
         )
     }

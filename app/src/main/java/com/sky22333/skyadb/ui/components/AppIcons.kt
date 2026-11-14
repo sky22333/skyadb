@@ -17,7 +17,7 @@ object AppIcons {
     val Terminal = icon("Terminal", "M4 4 H20 Q21 4 21 5 V19 Q21 20 20 20 H4 Q3 20 3 19 V5 Q3 4 4 4 M7 9 L10 12 L7 15 M12 15 H17")
     val Remote = icon("Remote", "M8 2 H16 Q18 2 18 4 V20 Q18 22 16 22 H8 Q6 22 6 20 V4 Q6 2 8 2 M12 5 V6 M9 10 H15 M12 7 V13 M9 17 H9.1 M15 17 H15.1")
     val PlayPause = icon("PlayPause", "M4 5 L13 12 L4 19 Z M16 6 V18 M20 6 V18")
-    val RecentTasks = icon("RecentTasks", "M8 3 H20 V16 H18 M5 6 H16 V21 H5 Z")
+    val RecentTasks = icon("RecentTasks", "M6 4 H18 Q20 4 20 6 V18 Q20 20 18 20 H6 Q4 20 4 18 V6 Q4 4 6 4 Z")
     val Power = icon("Power", "M12 2 L12 12 M7.1 5.1 A8 8 0 1 0 16.9 5.1")
     val Wake = icon("Wake", "M12 7 A5 5 0 1 0 12 17 A5 5 0 1 0 12 7 M12 2 L12 4 M12 20 L12 22 M2 12 L4 12 M20 12 L22 12 M5 5 L6.5 6.5 M17.5 17.5 L19 19 M19 5 L17.5 6.5 M6.5 17.5 L5 19")
     val Sleep = icon("Sleep", "M19 15 A8 8 0 0 1 9 5 A8 8 0 1 0 19 15 Z")

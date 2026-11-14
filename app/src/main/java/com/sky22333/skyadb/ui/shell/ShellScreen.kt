@@ -161,7 +161,7 @@ private fun ShellCommandSection(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(AppDimens.CompactGap),
     ) {
         SectionHeader(title = stringResource(R.string.shell_command_input_title))
         TextField(
