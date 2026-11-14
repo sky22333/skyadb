@@ -349,6 +349,8 @@
     <string name="kadb_apk_export_check_exist_suggestion">Make sure the app exists and the device stays connected.</string>
     <string name="kadb_apk_export_single_only_suggestion">Only single-APK apps can be exported. Make sure the app exists and isn\'t a split package.</string>
     <string name="kadb_list_apps_failed">Failed to read the app list</string>
+    <string name="apps_probe_unavailable">App names and icons unavailable; showing package names</string>
+    <string name="apps_probe_unavailable_hint">Check the target connection and try again.</string>
     <string name="kadb_list_apps_suggestion">Make sure the device is still online and allows the pm list packages command.</string>
     <string name="kadb_list_dir_failed">Failed to read the directory</string>
     <string name="kadb_list_dir_suggestion">Make sure the device path exists and the current user has read permission.</string>

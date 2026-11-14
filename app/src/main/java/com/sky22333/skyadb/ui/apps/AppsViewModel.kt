@@ -6,7 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.R
-import com.sky22333.skyadb.apps.AppDisplayEnricher
+import android.graphics.Bitmap
+import com.sky22333.skyadb.apps.DeviceAppsProbe
 import com.sky22333.skyadb.files.LocalFileManager
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
@@ -15,6 +16,10 @@ import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +31,7 @@ data class AppsUiState(
     val query: String = "",
     val filter: AppFilter = AppFilter.All,
     val apps: List<AppInfo> = emptyList(),
+    val iconRevision: Long = 0,
     val pendingAction: AppPendingAction? = null,
     val pendingExportPackage: String? = null,
     val operationStatus: OperationStatus = OperationStatus.Idle,
@@ -74,6 +80,9 @@ class AppsViewModel(
 ) : ViewModel() {
     private val state = MutableStateFlow(AppsUiState())
     val uiState: StateFlow<AppsUiState> = state.asStateFlow()
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var loadJob: Job? = null
+    @Volatile private var probe: DeviceAppsProbe? = null
 
     fun onQueryChanged(value: String) {
         state.update { snapshot -> snapshot.copy(query = value) }
@@ -85,7 +94,10 @@ class AppsViewModel(
 
     fun loadApps(force: Boolean = false) {
         if (!force && state.value.apps.isNotEmpty()) return
-        viewModelScope.launch {
+        val previous = loadJob
+        previous?.cancel()
+        loadJob = viewModelScope.launch {
+            previous?.join()
             state.update { snapshot ->
                 snapshot.copy(
                     loading = true,
@@ -93,35 +105,57 @@ class AppsViewModel(
                         OperationStatus.Running(appString(R.string.apps_loading_list)),
                 )
             }
-            when (val result = adbRepository.listApps()) {
-                is AdbOperationResult.Success -> {
-                    state.update { snapshot ->
-                        snapshot.copy(
-                            apps = result.data,
-                            loading = false,
-                            operationStatus =
-                                OperationStatus.Success(
-                                    appString(R.string.apps_loaded_count, result.data.size)
-                                ),
-                        )
-                    }
-                    val enriched =
-                        withContext(Dispatchers.Default) {
-                            AppDisplayEnricher.enrichWithLocal(AppServices.context, result.data)
-                        }
-                    state.update { snapshot -> snapshot.copy(apps = enriched) }
+            try {
+                val apps = withContext(Dispatchers.IO + NonCancellable) {
+                    runCatching { probe?.close() }
+                    probe = null
+                    val opened = DeviceAppsProbe.open(AppServices.context, AppServices.kadbManager)
+                    probe = opened
+                    opened.list()
                 }
-                is AdbOperationResult.Failure -> {
-                    state.update { snapshot ->
-                        snapshot.copy(
-                            loading = false,
-                            operationStatus =
-                                OperationStatus.Failed(result.message, result.suggestion),
-                        )
-                    }
+                state.update { snapshot ->
+                    snapshot.copy(
+                        apps = apps,
+                        iconRevision = snapshot.iconRevision + 1,
+                        loading = false,
+                        operationStatus = OperationStatus.Success(appString(R.string.apps_loaded_count, apps.size)),
+                    )
+                }
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                withContext(Dispatchers.IO + NonCancellable) {
+                    runCatching { probe?.close() }
+                    probe = null
+                }
+                val fallback = adbRepository.listPackages()
+                state.update { snapshot ->
+                    snapshot.copy(
+                        apps = (fallback as? AdbOperationResult.Success)?.data.orEmpty(),
+                        iconRevision = snapshot.iconRevision + 1,
+                        loading = false,
+                        operationStatus = when (fallback) {
+                            is AdbOperationResult.Success -> OperationStatus.Failed(appString(R.string.apps_probe_unavailable), appString(R.string.apps_probe_unavailable_hint))
+                            is AdbOperationResult.Failure -> OperationStatus.Failed(fallback.message, fallback.suggestion)
+                        },
+                    )
                 }
             }
         }
+    }
+
+    suspend fun loadIcon(packageName: String): Bitmap? =
+        try { probe?.icon(packageName) }
+        catch (_: java.io.IOException) { null }
+        catch (_: IllegalStateException) { null }
+
+    override fun onCleared() {
+        val loading = loadJob
+        cleanupScope.launch {
+            loading?.join()
+            runCatching { probe?.close() }
+            probe = null
+        }
+        super.onCleared()
     }
 
     fun launchApp(packageName: String) {

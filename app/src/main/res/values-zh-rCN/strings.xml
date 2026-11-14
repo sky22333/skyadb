@@ -349,6 +349,8 @@
     <string name="kadb_apk_export_check_exist_suggestion">请确认应用存在，并保持设备连接。</string>
     <string name="kadb_apk_export_single_only_suggestion">仅支持导出单 APK 应用，请确认应用存在且不是拆分安装包。</string>
     <string name="kadb_list_apps_failed">读取应用列表失败</string>
+    <string name="apps_probe_unavailable">无法读取应用名称和图标，已显示包名</string>
+    <string name="apps_probe_unavailable_hint">请检查目标设备连接后重试。</string>
     <string name="kadb_list_apps_suggestion">请确认设备仍在线，并允许执行 pm list packages 命令。</string>
     <string name="kadb_list_dir_failed">读取目录失败</string>
     <string name="kadb_list_dir_suggestion">请确认设备路径存在，并且当前用户有权限读取。</string>

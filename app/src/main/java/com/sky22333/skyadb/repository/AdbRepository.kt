@@ -57,7 +57,7 @@ interface AdbRepository {
         onProgress: ((transferred: Long, total: Long) -> Unit)? = null,
     ): AdbOperationResult<Unit>
 
-    suspend fun listApps(): AdbOperationResult<List<AppInfo>>
+    suspend fun listPackages(): AdbOperationResult<List<AppInfo>>
 
     suspend fun launchApp(packageName: String): AdbOperationResult<Unit>
 
@@ -333,9 +333,7 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Install, "安装 APK", apkFile.name)
     }
 
-    override suspend fun listApps(): AdbOperationResult<List<AppInfo>> {
-        return kadbManager.listApps().logFailure(DiagnosticModule.Apps, "读取应用列表")
-    }
+    override suspend fun listPackages(): AdbOperationResult<List<AppInfo>> = kadbManager.listPackages()
 
     override suspend fun launchApp(packageName: String): AdbOperationResult<Unit> {
         return kadbManager

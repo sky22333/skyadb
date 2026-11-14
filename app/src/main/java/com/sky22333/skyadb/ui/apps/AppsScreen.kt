@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import top.yukonga.miuix.kmp.basic.Icon
@@ -39,11 +41,15 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.Bitmap
+import top.yukonga.miuix.kmp.icon.extended.GridView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -53,7 +59,6 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.ui.components.EmptyState
-import com.sky22333.skyadb.ui.components.PackageAppIcon
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -88,6 +93,7 @@ fun AppsScreen(
         onQueryChanged = viewModel::onQueryChanged,
         onFilterChanged = viewModel::onFilterChanged,
         onRefreshClick = { viewModel.loadApps(force = true) },
+        loadIcon = viewModel::loadIcon,
         onLaunchClick = viewModel::launchApp,
         onStopClick = viewModel::forceStopApp,
         onSetEnabledClick = viewModel::setAppEnabled,
@@ -99,13 +105,14 @@ fun AppsScreen(
 }
 
 @Composable
-private fun AppsContent(
+internal fun AppsContent(
     bottomPadding: Dp = 0.dp,
     uiState: AppsUiState,
     onBackClick: () -> Unit,
     onQueryChanged: (String) -> Unit,
     onFilterChanged: (AppFilter) -> Unit,
     onRefreshClick: () -> Unit,
+    loadIcon: suspend (String) -> Bitmap?,
     onLaunchClick: (String) -> Unit,
     onStopClick: (String) -> Unit,
     onSetEnabledClick: (AppInfo, Boolean) -> Unit,
@@ -176,6 +183,8 @@ private fun AppsContent(
                 ) { app ->
                     AppItemRow(
                         app = app,
+                        iconRevision = uiState.iconRevision,
+                        loadIcon = loadIcon,
                         onLaunchClick = onLaunchClick,
                         onStopClick = onStopClick,
                         onSetEnabledClick = onSetEnabledClick,
@@ -260,6 +269,8 @@ private fun PendingActionDialog(
 @Composable
 private fun AppItemRow(
     app: AppInfo,
+    iconRevision: Long,
+    loadIcon: suspend (String) -> Bitmap?,
     onLaunchClick: (String) -> Unit,
     onStopClick: (String) -> Unit,
     onSetEnabledClick: (AppInfo, Boolean) -> Unit,
@@ -274,7 +285,14 @@ private fun AppItemRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PackageAppIcon(packageName = app.packageName, modifier = Modifier.size(36.dp))
+        val icon by produceState<Bitmap?>(null, app.packageName, loadIcon, iconRevision) {
+            value = loadIcon(app.packageName)
+        }
+        Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            val bitmap = icon
+            if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize())
+            else Icon(MiuixIcons.GridView, contentDescription = null, modifier = Modifier.size(20.dp), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = app.label,
@@ -365,6 +383,7 @@ private fun AppsContentPreview() {
             onQueryChanged = {},
             onFilterChanged = {},
             onRefreshClick = {},
+            loadIcon = { null },
             onLaunchClick = {},
             onStopClick = {},
             onSetEnabledClick = { _, _ -> },

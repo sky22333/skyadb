@@ -4,6 +4,32 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val probeClasses = layout.buildDirectory.dir("probe/classes")
+val probeAssets = layout.buildDirectory.dir("generated/probeAssets")
+val compileAppProbe = tasks.register<JavaCompile>("compileAppProbe") {
+    source = fileTree("src/probe/java") { include("*.java") }
+    classpath = files(androidComponents.sdkComponents.bootClasspath)
+    destinationDirectory = probeClasses
+    sourceCompatibility = "8"
+    targetCompatibility = "8"
+    options.encoding = "UTF-8"
+}
+val dexAppProbe = tasks.register<JavaExec>("dexAppProbe") {
+    dependsOn(compileAppProbe)
+    val output = probeAssets.map { it.dir("probe") }
+    inputs.dir(probeClasses)
+    outputs.dir(output)
+    classpath = files(androidComponents.sdkComponents.sdkDirectory.map { it.file("build-tools/${android.buildToolsVersion}/lib/d8.jar") })
+    mainClass = "com.android.tools.r8.D8"
+    doFirst {
+        output.get().asFile.mkdirs()
+        args = listOf("--min-api", "21", "--output", output.get().asFile.absolutePath,
+            probeClasses.get().file("SkyAppsProbe.class").asFile.absolutePath)
+    }
+}
+android.sourceSets.getByName("main").assets.directories.add(probeAssets.get().asFile.absolutePath)
+tasks.named("preBuild").configure { dependsOn(dexAppProbe) }
+
 android {
     namespace = "com.sky22333.skyadb"
     compileSdk = 37

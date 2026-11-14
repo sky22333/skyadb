@@ -6,7 +6,6 @@ import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.usb.KadbUsb
 import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.R
-import com.sky22333.skyadb.apps.AppDisplayEnricher
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
@@ -481,36 +480,25 @@ class KadbManager {
             }
         }
 
-    suspend fun listApps(): AdbOperationResult<List<AppInfo>> =
-        withContext(Dispatchers.IO) {
-            val kadb =
-                activeKadb
-                    ?: return@withContext AdbOperationResult.Failure(
-                        message = appString(R.string.kadb_not_connected),
-                        suggestion = appString(R.string.kadb_connect_before_list_apps_suggestion),
-                    )
-
-            operationCatching {
-                val disabledPackages =
-                    parsePackageNames(kadb.shell("pm list packages -d").output).toSet()
-                val userPackages =
-                    parsePackageList(kadb.shell("pm list packages -3").output, isSystem = false)
-                val systemPackages =
-                    parsePackageList(kadb.shell("pm list packages -s").output, isSystem = true)
-                AdbOperationResult.Success(
-                    (userPackages + systemPackages)
-                        .map { app -> app.copy(enabled = app.packageName !in disabledPackages) }
-                        .sortedWith(compareBy<AppInfo> { !it.enabled }.thenBy { it.packageName })
-                )
+    /** Preserve package management when a target cannot start the metadata probe. */
+    suspend fun listPackages(): AdbOperationResult<List<AppInfo>> = withContext(Dispatchers.IO) {
+        val client = activeKadb ?: return@withContext AdbOperationResult.Failure(
+            appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_list_apps_suggestion))
+        operationCatching {
+            fun names(command: String): List<String> {
+                val result = client.shell(command)
+                check(result.exitCode == 0) { "Package listing failed" }
+                return result.output.lineSequence().filter { it.startsWith("package:") }
+                    .map { it.removePrefix("package:").trim() }.filter { it.isNotEmpty() }.toList()
             }
-                .getOrElse { error ->
-                    AdbOperationResult.Failure(
-                        message = appString(R.string.kadb_list_apps_failed),
-                        suggestion = appString(R.string.kadb_list_apps_suggestion),
-                        cause = error,
-                    )
-                }
+            val disabled = names("pm list packages -d").toSet()
+            val users = names("pm list packages -3").map { AppInfo(it, it, false, it !in disabled) }
+            val system = names("pm list packages -s").map { AppInfo(it, it, true, it !in disabled) }
+            AdbOperationResult.Success((users + system).sortedBy { it.packageName })
+        }.getOrElse { error ->
+            AdbOperationResult.Failure(appString(R.string.kadb_list_apps_failed), appString(R.string.kadb_list_apps_suggestion), error)
         }
+    }
 
     suspend fun listFiles(remotePath: String): AdbOperationResult<List<RemoteFileEntry>> =
         withContext(Dispatchers.IO) {
@@ -820,26 +808,6 @@ class KadbManager {
                 ?.trim()
 
         return if (level.isNullOrBlank()) appString(R.string.unknown) else "$level%"
-    }
-
-    private fun parsePackageList(output: String, isSystem: Boolean): List<AppInfo> {
-        return parsePackageNames(output).map { packageName ->
-            AppInfo(
-                packageName = packageName,
-                label = AppDisplayEnricher.fallbackLabel(packageName),
-                isSystem = isSystem,
-            )
-        }
-    }
-
-    private fun parsePackageNames(output: String): List<String> {
-        return output
-            .lineSequence()
-            .map { it.trim() }
-            .filter { it.startsWith("package:") }
-            .map { it.removePrefix("package:") }
-            .filter { it.isNotBlank() }
-            .toList()
     }
 
     private fun parseApkPaths(output: String): List<String> {
