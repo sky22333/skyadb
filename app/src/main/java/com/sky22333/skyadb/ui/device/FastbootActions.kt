@@ -24,8 +24,8 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
@@ -58,7 +58,7 @@ internal fun FastbootActions(panel: FastbootPanel?, currentSlot: String?, onClos
                         TextField(value = state.partition, onValueChange = model::partition, label = stringResource(R.string.fb_partition), modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !state.busy)
                         val options = listOf(stringResource(R.string.fb_slot_default), "A", "B")
                         PopupAnchor {
-                            OverlayDropdownPreference(items = options, selectedIndex = listOf("", "a", "b").indexOf(state.slot).coerceAtLeast(0), title = stringResource(R.string.fb_select_slot), enabled = !state.busy, onSelectedIndexChange = { model.slot(listOf("", "a", "b")[it]) })
+                            WindowDropdownPreference(items = options, selectedIndex = listOf("", "a", "b").indexOf(state.slot).coerceAtLeast(0), title = stringResource(R.string.fb_select_slot), enabled = !state.busy, onSelectedIndexChange = { model.slot(listOf("", "a", "b")[it]) })
                         }
                         if (state.partition.isNotEmpty() && invalidPartition) Text(stringResource(R.string.fb_invalid_partition), color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1)
                     }
@@ -79,7 +79,7 @@ internal fun FastbootActions(panel: FastbootPanel?, currentSlot: String?, onClos
                                     DropdownItem(text = stringResource(R.string.fb_boot), onClick = { model.selectEntry(entry, FastbootPanel.Boot) }),
                                     DropdownItem(text = stringResource(R.string.fb_export), onClick = { exportEntry = entry; exporter.launch(com.sky22333.skyadb.validation.FileNamePolicy.sanitize(entry.name.substringAfterLast('/'))) }),
                                 ))
-                                PopupAnchor { OverlayIconDropdownMenu(entry = choices, enabled = !state.busy) { Text(stringResource(R.string.fb_open)) } }
+                                PopupAnchor { WindowIconDropdownMenu(entry = choices, enabled = !state.busy) { Text(stringResource(R.string.fb_open)) } }
                             }
                         }
                     }
@@ -87,7 +87,7 @@ internal fun FastbootActions(panel: FastbootPanel?, currentSlot: String?, onClos
                 FastbootPanel.Slot -> {
                     Text(stringResource(R.string.fb_current_slot, currentSlot?.uppercase() ?: "—"))
                     PopupAnchor {
-                        OverlayDropdownPreference(items = listOf("A", "B"), selectedIndex = when (state.slot) { "a" -> 0; "b" -> 1; else -> -1 }, title = stringResource(R.string.fb_select_slot), showValue = state.slot.isNotEmpty(), enabled = !state.busy, onSelectedIndexChange = { model.slot(listOf("a", "b")[it]) })
+                        WindowDropdownPreference(items = listOf("A", "B"), selectedIndex = when (state.slot) { "a" -> 0; "b" -> 1; else -> -1 }, title = stringResource(R.string.fb_select_slot), showValue = state.slot.isNotEmpty(), enabled = !state.busy, onSelectedIndexChange = { model.slot(listOf("a", "b")[it]) })
                     }
                 }
             }
