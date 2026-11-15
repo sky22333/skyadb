@@ -16,6 +16,7 @@ import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.FastbootDeviceSummary
+import com.sky22333.skyadb.model.RebootMode
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.ShellCommandResult
 import com.sky22333.skyadb.usb.UsbOtgHost
@@ -43,6 +44,8 @@ interface AdbRepository {
     suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String>
 
     suspend fun runFastbootCommand(command: String): AdbOperationResult<String>
+
+    suspend fun reboot(mode: RebootMode, deviceId: String): AdbOperationResult<String>
 
     suspend fun fastbootSummary(): AdbOperationResult<FastbootDeviceSummary>
 
@@ -261,6 +264,46 @@ class DefaultAdbRepository(
                 clearClosedFastbootSession()
             }
         }
+
+    suspend fun fastbootCommand(command: String, expectedSession: String): AdbOperationResult<String> =
+        connectionMutex.withLock {
+            if (kadbManager.sessionKind() != AdbSessionKind.UsbFastboot || fastbootOtgManager.currentSessionId() != expectedSession) {
+                return@withLock AdbOperationResult.Failure(appString(R.string.repo_not_fastboot), appString(R.string.fastboot_connect_via_usb_otg_suggestion))
+            }
+            try { fastbootOtgManager.sendCommand(command) } finally { clearClosedFastbootSession() }
+        }
+
+    suspend fun fastbootImage(action: String, partition: String, stream: java.io.FileInputStream, size: Long, maxChunkSize: Long?, expectedSession: String, onProgress: (Long, Long) -> Unit): AdbOperationResult<String> =
+        connectionMutex.withLock {
+            if (kadbManager.sessionKind() != AdbSessionKind.UsbFastboot || fastbootOtgManager.currentSessionId() != expectedSession) {
+                return@withLock AdbOperationResult.Failure(appString(R.string.repo_not_fastboot), appString(R.string.fastboot_connect_via_usb_otg_suggestion))
+            }
+            try { fastbootOtgManager.image(action, partition, stream, size, maxChunkSize, expectedSession, onProgress) }
+            finally { clearClosedFastbootSession() }
+        }
+
+    suspend fun fastbootPull(action: String, partition: String, file: File, expectedSession: String, onProgress: (Long, Long) -> Unit): AdbOperationResult<String> =
+        connectionMutex.withLock {
+            if (kadbManager.sessionKind() != AdbSessionKind.UsbFastboot || fastbootOtgManager.currentSessionId() != expectedSession) {
+                return@withLock AdbOperationResult.Failure(appString(R.string.repo_not_fastboot), appString(R.string.fastboot_connect_via_usb_otg_suggestion))
+            }
+            try { fastbootOtgManager.pull(action, partition, file, expectedSession, onProgress) }
+            finally { clearClosedFastbootSession() }
+        }
+
+    override suspend fun reboot(mode: RebootMode, deviceId: String): AdbOperationResult<String> = connectionMutex.withLock {
+        if (recentDeviceState.value.none { it.id == deviceId && it.connectionState == ConnectionState.Connected }) {
+            return@withLock AdbOperationResult.Failure(appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion))
+        }
+        val result = when (kadbManager.sessionKind()) {
+            AdbSessionKind.UsbFastboot -> fastbootOtgManager.sendCommand(mode.fastbootCommand)
+            AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> kadbManager.reboot(mode.adbTarget)
+            AdbSessionKind.None -> return@withLock AdbOperationResult.Failure(appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion))
+        }
+        if (result is AdbOperationResult.Success) withContext(NonCancellable) { disconnectLocked() }
+        else clearClosedFastbootSession()
+        result
+    }
 
     override suspend fun fastbootSummary(): AdbOperationResult<FastbootDeviceSummary> =
         connectionMutex.withLock {

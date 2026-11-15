@@ -34,7 +34,8 @@ internal class AiDocuments(private val context: Context, private val tree: Uri) 
     fun list(path: String): String = children(resolve(parts(path))).joinToString("\n") {
         "${if (it.mime == DocumentsContract.Document.MIME_TYPE_DIR) "dir" else "file"} ${it.name.replace('\n', ' ')}"
     }
-    fun read(path: String): java.io.InputStream = requireNotNull(resolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, resolve(parts(path)))))
+    fun uri(path: String): Uri = DocumentsContract.buildDocumentUriUsingTree(tree, resolve(parts(path)))
+    fun read(path: String): java.io.InputStream = requireNotNull(resolver.openInputStream(uri(path)))
     suspend fun write(path: String, content: String) = replace(path) { it.write(content.toByteArray(Charsets.UTF_8)) }
 
     suspend fun replace(path: String, write: suspend (java.io.OutputStream) -> Unit) {

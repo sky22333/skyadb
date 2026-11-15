@@ -113,7 +113,7 @@ class AiDeviceFileAuditTest {
         }
         try {
             source.writeBytes(byteArrayOf(1, 2, 3))
-            AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/sample.apk", emptyMap())
+            AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/sample.apk", emptyMap(), null)
             val apk = requireNotNull(find("sample.apk", prefix = true)); created += apk
             val mime = resolver.getType(apk)
             println("AUDIT_PROVIDER authority=${tree.authority} mime=$mime")
@@ -121,7 +121,7 @@ class AiDeviceFileAuditTest {
             val destination = requireNotNull(DocumentsContract.createDocument(resolver, folderUri, "application/octet-stream", "overwrite.bin")); created += destination
             requireNotNull(resolver.openOutputStream(destination, "wt")).use { it.write(original) }
             RandomAccessFile(source, "rw").use { it.setLength(64L * 1024 * 1024) }
-            val job = async(Dispatchers.IO) { AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/overwrite.bin", emptyMap()) }
+            val job = async(Dispatchers.IO) { AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/overwrite.bin", emptyMap(), null) }
             var observedPartial = false
             withTimeout(30000) {
                 while (job.isActive) {
@@ -146,7 +146,7 @@ class AiDeviceFileAuditTest {
             assertTrue("Did not observe a transfer in progress; retry on this provider", observedPartial)
             assertArrayEquals("Interrupted overwrite must preserve the original file", original, after)
             source.writeBytes("replacement".toByteArray())
-            AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/overwrite.bin", emptyMap())
+            AgentTools.transfer(config, "app", source.absolutePath, "authorized", "$folderName/overwrite.bin", emptyMap(), null)
             val replacement = requireNotNull(find("overwrite.bin"))
             assertArrayEquals("replacement".toByteArray(), requireNotNull(resolver.openInputStream(replacement)).use { it.readBytes() })
         } finally {

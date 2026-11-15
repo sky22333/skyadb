@@ -67,7 +67,12 @@ class AgentToolsIntegrationTest {
                         while (offset < length) { val n = input.read(data, offset, length - offset); if (n < 0) break; offset += n }
                         requests.add(data.toString(Charsets.UTF_8))
                         val calls = when (index) {
-                            0 -> """{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_0","type":"function","function":{"name":"agent_environments","arguments":"{}"}}]},"finish_reason":null}"""
+                            0 -> {
+                                val calls = (0 until 9).joinToString(",") { index ->
+                                    """{"index":$index,"id":"env_$index","type":"function","function":{"name":"agent_environments","arguments":"{}"}}"""
+                                }
+                                """{"index":0,"delta":{"role":"assistant","tool_calls":[$calls]},"finish_reason":null}"""
+                            }
                             1 -> """{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"agent_shell","arguments":"{\"environment\":\"app\",\"command\":\"printf AGENT_OK\"}"}}]},"finish_reason":null}"""
                             else -> """{"index":0,"delta":{"content":"complete"},"finish_reason":null}"""
                         }
@@ -88,6 +93,7 @@ class AgentToolsIntegrationTest {
             val done = withTimeout(30000) { vm.uiState.first { !it.busy } }
             assertNull(done.error)
             assertTrue(done.messages.any { it.text.contains("complete") })
+            assertEquals(9, done.messages.count { it.role == "tool" && it.text.startsWith("agent_environments\n") })
             assertTrue(requests.last().contains("AGENT_OK"))
         } finally { vm.stop(); server.close(); worker.join(1000) }
     }
@@ -110,7 +116,17 @@ class AgentToolsIntegrationTest {
         try {
             val bytes = ByteArray(100_000) { (it % 256).toByte() }
             source.writeBytes(bytes)
-            AgentTools.transfer(AiConfig(), "app", source.absolutePath, "app", target.absolutePath, emptyMap())
+            AgentTools.transfer(AiConfig(), "app", source.absolutePath, "app", target.absolutePath, emptyMap(), null)
+            assertArrayEquals(bytes, target.readBytes())
+        } finally { source.delete(); target.delete() }
+    }
+    @Test fun transfersSelectedAttachmentToAppEnvironment() = runBlocking {
+        val source = File.createTempFile("agent-selected-", ".bin", AppServices.context.cacheDir)
+        val target = File.createTempFile("agent-dest-", ".bin", AppServices.context.cacheDir)
+        try {
+            val bytes = ByteArray(32_000) { it.toByte() }
+            source.writeBytes(bytes)
+            AgentTools.transfer(AiConfig(), "selected", "", "app", target.absolutePath, emptyMap(), android.net.Uri.fromFile(source))
             assertArrayEquals(bytes, target.readBytes())
         } finally { source.delete(); target.delete() }
     }

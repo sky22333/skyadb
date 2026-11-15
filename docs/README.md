@@ -12,9 +12,9 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 
 - 无线调试配对：输入配对 IP、配对端口、配对码后调用 Kadb Pairing。
 - 手动连接设备：输入目标设备 IP 和 ADB 端口。
-- USB OTG：识别 ADB / Fastboot 接口，授权后连接；Fastboot 命令页提供设备摘要、重启快捷按钮、手动查询和结果复制。
+- USB OTG：识别 ADB / Fastboot 接口，授权后连接；Fastboot 设备页提供镜像刷写、临时启动、固件 ZIP 浏览和槽位管理；命令页提供设备摘要、命令查询和结果复制。
 - 最近设备：保存 WiFi 设备记录，支持点击回填 IP 和端口；USB 总线地址仅用于当前插入，不持久化。
-- 设备详情：读取品牌、型号、Android 版本、SDK、ABI、分辨率、电池信息。
+- 设备详情：点击设备名称查看 Android 信息或 Fastboot 摘要；点击连接状态选择重启到系统、Bootloader、Recovery 或 fastbootd。
 - 应用管理：通过目标设备探针获取真实应用名称和图标，支持用户应用、系统应用分类、搜索、启动、停止和卸载；图标按需加载。
 - APK 安装：选择本机 APK 并安装到已连接设备。
 - 在线下载：从 HTTP / HTTPS 链接下载 APK 或普通文件，支持进度、取消、下载后安装或推送。
@@ -47,7 +47,7 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 | Kadb / kadb-mdns | 2.1.5 / 2.1.4 |
 | scrcpy-server | 5.0.1 |
 | OkHttp / Okio | 5.5.0 / 3.18.2 |
-| fastboot-java / Timber | 1.2.0 / 5.0.1 |
+| fastboot-kt / Timber | 1.0.3（本地模块） / 5.0.1 |
 | Koog OpenAI / MCP | 1.3.0 / 1.3.0-beta |
 | Ktor OkHttp / enriched-markdown | 3.3.3 / 0.3.0 |
 | JUnit / AndroidX Test Runner / AndroidX Test JUnit | 4.13.2 / 1.7.0 / 1.3.0 |
@@ -130,15 +130,14 @@ skyadb/
 - 连接、断开、设备信息刷新和最近设备状态合并由仓库串行管理；授权等待受超时与取消控制，失败或取消会关闭待连接实例。
 - ADB 身份由 `AdbIdentityManager` 配置持久化存储，密钥在 IO 操作时按需加载。
 - 远端目录使用 `openSync().list()`，由 Kadb 协商 Sync v1/v2。文件下载写入目标同目录临时文件，成功后原子替换；失败保留已有文件。
-- Fastboot 连接、命令、摘要读取和释放在 IO 线程串行执行。`fastboot-java` 复用命令构造能力；其传输接口不返回实际读写长度，应用通过 `FastbootUsbChannel` 校验 USB 接口声明、bulk 端点和完整写入，使用 `FastbootProtocol` 接收响应。
-- Fastboot 按实际包长读取最多 256 字节的响应，持续接收 `INFO` / `TEXT`，直到 `OKAY` / `FAIL`，不重发命令。普通命令总超时 10 秒，连接探测和单个摘要查询总超时 3 秒；接收按最多 250 ms 的等待片段检查取消。协议异常、超时、取消或未支持的 `DATA` 阶段关闭连接并清理会话；正常 `FAIL` 保留连接和错误输出。
+- Fastboot 使用本地 fastboot-kt 模块和 USB bulk 传输；会话内串行执行命令，协议异常或取消时关闭连接。镜像从文件流式读取，超过设备下载限制时转换或拆分为 Sparse 分片。
 - Fastboot 输出缓存上限为 64 KiB，超出时标记截断并继续排空响应，保留终态。UI 在命令结束后一次更新输出，显示区域限制高度并支持双向滚动；命令结果和设备摘要均可复制。
 - 进入 Fastboot 命令页时读取产品型号、序列号、Bootloader 版本、当前槽位和 `is-userspace`，并支持手动刷新；不轮询或持久化摘要。不支持的变量显示“设备未提供”，不根据 `secure` 猜测解锁状态。
-- Fastboot 快捷按钮支持重启到系统、Bootloader、Recovery 和 fastbootd，实际可用性取决于设备。仅收到成功终态后显示指令已确认并清理当前连接；设备重新枚举后由用户在首页连接，不自动重放指令。
+- Fastboot 快捷按钮支持重启到系统、Bootloader、Recovery 和 fastbootd，实际可用性取决于设备。仅收到成功终态后显示指令已确认并清理当前连接；设备重新枚举后可从首页或 AI 工具重新连接，不自动重放指令。
 - 单 Activity 应用入口使用 `singleTask`，USB 重新接入通过 `onNewIntent` 刷新设备列表，保留当前命令页和导航状态，避免模式切换堆叠 Activity。
 - 命令输入由 `CommandInputParser` 统一解析，只去除开头完整的客户端名称（支持 `.exe`），ADB Shell 正文的参数、引号和操作符保留。前缀与当前连接模式不一致时拒绝执行，不自动切换设备。
-- Fastboot 命令页使用对应标题和示例。`fastboot getvar product`、`fastboot erase cache`、`fastboot set_active b` 分别通过库构造为 `getvar:product`、`erase:cache`、`set_active:b`；支持 `fastboot reboot` 及带重启目标的写法，原始协议和 OEM 命令可直接输入。
-- `devices` 属于主机枚举操作，提示用户到首页查看设备；桌面选设备参数、交互式 Shell 参数和未实现的客户端文件传输流程在发送前提示。命令页不提供完整桌面 adb / fastboot 客户端兼容层，不支持镜像上传和刷写。
+- Fastboot 命令页使用对应标题和示例。`fastboot getvar product`、`fastboot erase cache`、`fastboot set_active b` 分别转换为 `getvar:product`、`erase:cache`、`set_active:b`；支持 `fastboot reboot` 及带重启目标的写法，原始协议和 OEM 命令可直接输入。
+- `devices` 属于主机枚举操作，提示用户到首页查看设备；桌面选设备参数、交互式 Shell 参数和未实现的客户端文件传输流程在发送前提示。命令页不提供完整桌面 adb / fastboot 客户端兼容层；设备页和 AI 均可使用本地镜像执行 Fastboot 刷写。
 - `ScrcpySession` 管理官方 server 及视频、音频、控制流；镜像退出只关闭自己的流，不关闭共享的 Kadb 连接。
 - `MediaCodecPump` 在独立 HandlerThread 上串行管理解码器，输出不依赖下一次网络输入。输入采用反压，支持设备声明的低延迟解码；音频按实际输出格式创建 AudioTrack，解码 PCM 直接通过 ByteBuffer 写入。
 - Surface 重建时保留 scrcpy 会话，重建视频解码器并发送 `RESET_VIDEO`，等待关键帧恢复画面；旧 Surface 的迟到回调与新解码器隔离。
@@ -150,9 +149,9 @@ skyadb/
 - 模型接入使用 Koog 的 OpenAI 兼容客户端，支持自定义 Base URL、API Key、模型列表、Chat Completions 和 Responses；模型、服务端对工具调用及图片的支持情况取决于提供商。
 - 历史对话和草稿加密保存在本机；主动退出后再次进入默认新对话，历史仍可访问。后台返回保留当前会话。
 - 图片通过支持多模态的模型接口发送；普通附件由 AI 工具按用户授权读取或传输，文件内容不会因为选择附件就全部自动发送给模型。
-- AI 能发现并复用已连接设备或最近的 WiFi 设备，也可管理其他 ADB 会话。本机 Shell 受应用自身 UID 和 Android 权限约束；授权目录使用系统文件选择器，不依赖 Root 或 Shizuku。
+- AI 能发现并复用已连接设备或最近的 WiFi 设备，也可管理其他 ADB 会话。AI 可发现并连接 USB ADB 和 Fastboot 设备、查询和执行协议命令，从本地文件、附件或授权目录流式刷写、暂存或启动镜像，并可在设备支持时读取暂存数据或分区。固件 ZIP 支持列出并提取条目到应用下载目录；设备重启后重新发现并连接。本机 Shell 受应用自身 UID 和 Android 权限约束；授权目录使用系统文件选择器，不依赖 Root 或 Shizuku。
 - MCP 通过 Streamable HTTP 发现工具。工具执行可选择逐次确认或自动执行；AI 下载复用现有下载服务，提供进度、取消及文件导出。
-- 当前没有内置 AI 联网搜索或网页读取，也没有 AI Fastboot 镜像刷写；设备连接、模型服务和 MCP 服务可用性由实际环境决定。
+- 当前没有内置 AI 联网搜索或网页读取；设备连接、模型服务和 MCP 服务可用性由实际环境决定。
 
 ## UI 与交互规范
 
@@ -241,7 +240,7 @@ Debug 使用本地调试签名；未配置发布签名时，本地 Release APK �
 - mDNS 自动发现依赖局域网 multicast / DNS-SD 支持，部分路由器、访客网络、热点隔离、跨网段场景可能无法发现服务；此时用户可继续使用网段扫描或在设置中手动配置网段。
 - 局域网扫描依赖网络拓扑，手机热点、旁路由、访客网络、跨网段场景需要用户在设置中手动配置网段。
 - 本机应用安装到目标设备当前只支持用户应用的单 APK 导出；Split APK / App Bundle 不在当前范围。
-- Shell 是单条命令执行，不是交互式终端。Fastboot 不支持镜像上传、刷写及完整桌面客户端流程。
+- Shell 是单条命令执行，不是交互式终端。Fastboot 不支持完整桌面客户端流程。
 - 应用探针依赖目标设备 ADB shell 和 Android 系统 API；目标环境不兼容或连接异常时不能保证获取所有名称和图标。
 - AI 图片理解、工具调用及 MCP 功能取决于所选模型、服务端及用户授予的权限；本机 Shell 不具备系统或 Root 权限。
 - 设备断线后的主动心跳和自动重连当前未作为常驻功能实现，避免增加耗电和后台复杂度。

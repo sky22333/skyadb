@@ -84,7 +84,7 @@
     <!-- Device screen -->
     <string name="device_details_title">Device details</string>
     <string name="device_refresh_info_desc">Refresh device info</string>
-    <string name="device_connect_hint">Connect a device, then tap its status for details</string>
+    <string name="device_connect_hint">Tap name for details, status to reboot</string>
     <string name="section_quick_actions">Quick actions</string>
     <string name="section_system_info">System info</string>
     <string name="device_info_brand">Brand</string>
@@ -219,6 +219,7 @@
     <string name="fastboot_bootloader_version">Bootloader version</string>
     <string name="fastboot_slot">Active slot</string>
     <string name="fastboot_mode">Mode</string>
+    <string name="device_rebooting">Sending reboot command…</string>
     <string name="fastboot_reboot_to">Reboot to</string>
     <string name="fastboot_reboot_system">System</string>
     <string name="fastboot_reboot_bootloader">Bootloader</string>
@@ -806,4 +807,32 @@
     <string name="ai_image_unsupported">This image format is not supported. Choose PNG, JPEG, WebP or GIF.</string>
     <string name="ai_image_too_large">The image must be 10 MB or smaller.</string>
     <string name="ai_images_too_large">Images in this conversation exceed 20 MB. Start a new conversation or use smaller images.</string>
+    <string name="fb_flash">Flash image</string>
+    <string name="fb_boot">Boot image</string>
+    <string name="fb_archive">Firmware ZIP</string>
+    <string name="fb_slot">Slot management</string>
+    <string name="fb_images">Images</string>
+    <string name="fb_device">Device management</string>
+    <string name="fb_choose_image">Choose image</string>
+    <string name="fb_choose_zip">Choose ZIP</string>
+    <string name="fb_partition">Partition name</string>
+    <string name="fb_slot_default">Device default</string>
+    <string name="fb_confirm_flash">Flash image to %1$s?</string>
+    <string name="fb_confirm_boot">Boot the selected image?</string>
+    <string name="fb_start">Start</string>
+    <string name="fb_action_cancelled">Operation cancelled.</string>
+    <string name="fb_preparing">Preparing…</string>
+    <string name="fb_file_empty">No file selected</string>
+    <string name="fb_open">Actions</string>
+    <string name="fb_archive_empty">No files in this archive</string>
+    <string name="fb_select_slot">Choose target slot</string>
+    <string name="fb_current_slot">Current slot: %1$s</string>
+    <string name="fb_slot_confirm">Switch active slot to %1$s?</string>
+    <string name="fb_invalid_partition">Enter a partition name without a slot suffix when selecting A or B.</string>
+    <string name="fb_done">Close</string>
+    <string name="fb_cancelled_partial">Cancelled. Earlier sparse pieces may already have been written.</string>
+    <string name="fb_progress">Transfer: %1$d%% · %2$s/s</string>
+    <string name="fb_export">Save to device</string>
+    <string name="fb_exported">File saved.</string>
+    <string name="fb_export_incomplete">File export was interrupted or failed; the destination may be incomplete.</string>
 </resources>

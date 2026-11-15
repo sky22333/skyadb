@@ -55,7 +55,9 @@ class AgentSessions(private val primary: KadbManager) {
         requireNotNull(managers[id]) { "Unknown device: $id" }
     }
     suspend fun list(): List<Device> = mutex.withLock { buildList {
-        primary.currentEndpoint()?.let { add(Device("active", it, primary.isConnected())) }
+        if (primary.sessionKind() != com.sky22333.skyadb.adb.AdbSessionKind.UsbFastboot) {
+            primary.currentEndpoint()?.let { add(Device("active", it, primary.isConnected())) }
+        }
         devices.values.forEach { add(it.copy(connected = managers[it.id]?.isConnected() == true)) }
     } }
 }

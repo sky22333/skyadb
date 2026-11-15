@@ -88,12 +88,14 @@ internal object AgentTools {
             }
         }
     }
-    suspend fun transfer(config: AiConfig, source: String, sourcePath: String, destination: String, destinationPath: String, handles: Map<String, DeviceHandle>): String {
-        require(sourcePath.isNotBlank() && destinationPath.isNotBlank()) { "Source and destination paths are required" }
+    suspend fun transfer(config: AiConfig, source: String, sourcePath: String, destination: String, destinationPath: String, handles: Map<String, DeviceHandle>, selected: Uri?): String {
+        require((source == "selected" || sourcePath.isNotBlank()) && destinationPath.isNotBlank()) { "Source and destination paths are required" }
+        require(destination != "selected") { "Selected attachment is read-only" }
         require(source != destination || sourcePath != destinationPath) { "Source and destination are identical" }
         val temp = withContext(Dispatchers.IO) { File.createTempFile("agent-transfer-", ".tmp", AppServices.context.cacheDir) }
         try {
             when (source) {
+                "selected" -> withContext(Dispatchers.IO) { requireNotNull(AppServices.context.contentResolver.openInputStream(requireNotNull(selected) { "No local file selected" })).use { input -> temp.outputStream().use { output -> copy(input, output) } } }
                 "app" -> withContext(Dispatchers.IO) { File(sourcePath).inputStream().use { input -> temp.outputStream().use { output -> copy(input, output) } } }
                 "authorized" -> withContext(Dispatchers.IO) { documents(config).read(sourcePath).use { input -> temp.outputStream().use { output -> copy(input, output) } } }
                 else -> onDevice(source, handles) { manager ->

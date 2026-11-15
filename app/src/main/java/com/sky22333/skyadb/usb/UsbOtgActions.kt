@@ -1,6 +1,9 @@
 package com.sky22333.skyadb.usb
 
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
@@ -16,6 +19,8 @@ class UsbOtgActions(
     private val permissionEvents = Channel<UsbPermissionEvent>(Channel.BUFFERED)
 
     val events: Flow<UsbPermissionEvent> = permissionEvents.receiveAsFlow()
+    private val permissionResult = MutableStateFlow<UsbPermissionEvent?>(null)
+    val latestPermissionResult: StateFlow<UsbPermissionEvent?> = permissionResult.asStateFlow()
 
     var requestPermission: (deviceName: String) -> Unit = {}
 
@@ -24,21 +29,25 @@ class UsbOtgActions(
     }
 
     fun askPermission(deviceName: String) {
+        permissionResult.value = null
         requestPermission(deviceName)
     }
 
     fun onPermissionGranted(deviceName: String) {
         host.refresh()
+        permissionResult.value = UsbPermissionEvent.Granted(deviceName)
         permissionEvents.trySend(UsbPermissionEvent.Granted(deviceName))
     }
 
     fun onPermissionDenied(deviceName: String) {
         host.refresh()
+        permissionResult.value = UsbPermissionEvent.Denied(deviceName)
         permissionEvents.trySend(UsbPermissionEvent.Denied(deviceName))
     }
 
     fun onDeviceDetached(deviceName: String) {
         host.refresh()
+        permissionResult.value = UsbPermissionEvent.Detached(deviceName)
         permissionEvents.trySend(UsbPermissionEvent.Detached(deviceName))
     }
 }

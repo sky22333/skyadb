@@ -22,6 +22,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -270,6 +271,27 @@ class KadbManager {
                 } ?: throw SocketTimeoutException("Shell command timed out")
             }.getOrElse { error -> AdbOperationResult.Failure(appString(R.string.kadb_command_failed), appString(R.string.kadb_command_failed_suggestion), error) }
         }
+
+    suspend fun reboot(target: String): AdbOperationResult<String> = withContext(Dispatchers.IO) {
+        sessionMutex.withLock {
+            val client = activeKadb ?: return@withLock AdbOperationResult.Failure(
+                appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion),
+            )
+            operationCatching {
+                withTimeoutOrNull(10_000) {
+                    runInterruptible {
+                        val stream = client.open("reboot:$target")
+                        runCatching { stream.close() }
+                    }
+                    true
+                }
+                    ?: throw SocketTimeoutException("Reboot request timed out")
+                AdbOperationResult.Success("")
+            }.getOrElse { error ->
+                AdbOperationResult.Failure(appString(R.string.kadb_command_failed), error.message ?: appString(R.string.kadb_command_failed_suggestion), error)
+            }
+        }
+    }
 
     suspend fun fetchDeviceInfo(): AdbOperationResult<DeviceInfo> =
         withContext(Dispatchers.IO) {

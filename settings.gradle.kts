@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "skyadb"
-include(":app")
+include(":app", ":fastboot")

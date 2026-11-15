@@ -1,6 +1,5 @@
 package com.sky22333.skyadb.validation
 
-import com.rv882.fastbootjava.FastbootCommand
 
 /** Normalize pasted client commands once, before dispatching to the current transport. */
 object CommandInputParser {
@@ -61,16 +60,12 @@ object CommandInputParser {
                 "set_active" -> {
                     if (!SingleArgument.matches(arguments))
                         return Result.Rejected(Error.FastbootSyntax)
-                    when (verb) {
-                        "getvar" -> FastbootCommand.getVar(arguments)
-                        "erase" -> FastbootCommand.erase(arguments)
-                        else -> FastbootCommand.setActiveSlot(arguments)
-                    }.toString()
+                    "$verb:$arguments"
                 }
                 "reboot" ->
                     when (arguments) {
-                        "" -> FastbootCommand.reboot().toString()
-                        "bootloader" -> FastbootCommand.rebootBootloader().toString()
+                        "" -> "reboot"
+                        "bootloader" -> "reboot-bootloader"
                         "fastboot",
                         "recovery" -> "reboot-$arguments"
                         else -> return Result.Rejected(Error.FastbootSyntax)

@@ -96,9 +96,10 @@ internal class DeviceAppsProbe private constructor(private val stream: AdbStream
                     }
                     context.assets.open("probe/classes.dex").use { client.push(it.source(), DEX, 420, System.currentTimeMillis()) }
                     context.assets.open(ScrcpyConstants.ServerAssetPath).use { client.push(it.source(), SERVER, 420, System.currentTimeMillis()) }
-                    val command = "trap 'rm -f $DEX $SERVER' EXIT; CLASSPATH=$DEX:$SERVER app_process / SkyAppsProbe"
+                    val command = "trap 'rm -f $DEX $SERVER' EXIT; CLASSPATH=$DEX:$SERVER app_process / SkyAppsProbe 2>/dev/null"
                     stream = client.open("shell:$command")
-                    check(stream.source.readUtf8Line() == "READY") { "Probe failed to start" }
+                    val greeting = stream.source.readUtf8Line()
+                    check(greeting == "READY") { "Probe failed to start: $greeting" }
                     DeviceAppsProbe(stream)
                 } catch (error: Throwable) {
                     runCatching { stream?.close() }

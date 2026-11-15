@@ -39,13 +39,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +55,11 @@ import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.DeviceInfo
 import com.sky22333.skyadb.model.OperationStatus
+import com.sky22333.skyadb.model.RebootMode
+import com.sky22333.skyadb.ui.components.PopupAnchor
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import com.sky22333.skyadb.ui.components.AppStatusBadge
 import com.sky22333.skyadb.ui.components.Button
 import top.yukonga.miuix.kmp.window.WindowDialog
@@ -79,6 +84,7 @@ fun DeviceScreen(
     viewModel: DeviceViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var fastbootPanel by rememberSaveable { mutableStateOf<FastbootPanel?>(null) }
 
     DeviceContent(
         bottomPadding = bottomPadding,
@@ -94,11 +100,14 @@ fun DeviceScreen(
         onMirrorClick = onMirrorClick,
         onLogsClick = onLogsClick,
         onRefreshClick = viewModel::refreshDeviceInfo,
+        onReboot = viewModel::reboot,
+        onFastbootAction = { fastbootPanel = it },
     )
+    FastbootActions(panel = fastbootPanel, currentSlot = uiState.fastbootSummary?.values?.get("current-slot"), onClosed = { fastbootPanel = null }, onRefresh = viewModel::refreshDeviceInfo)
 }
 
 @Composable
-private fun DeviceContent(
+internal fun DeviceContent(
     bottomPadding: Dp = 0.dp,
     uiState: DeviceUiState,
     onAppsClick: () -> Unit,
@@ -112,12 +121,15 @@ private fun DeviceContent(
     onMirrorClick: () -> Unit,
     onLogsClick: () -> Unit,
     onRefreshClick: () -> Unit,
+    onReboot: (RebootMode) -> Unit,
+    onFastbootAction: (FastbootPanel) -> Unit = {},
 ) {
     var showInfo by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(uiState.connectionState) {
         if (uiState.connectionState != ConnectionState.Connected) showInfo = false
     }
     val infoLabel = stringResource(R.string.section_system_info)
+    val rebootLabel = stringResource(R.string.fastboot_reboot_to)
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -165,7 +177,12 @@ private fun DeviceContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f).then(
+                            if (uiState.connectionState == ConnectionState.Connected) Modifier.clickable(role = Role.Button, onClickLabel = infoLabel) {
+                                showInfo = true
+                                onRefreshClick()
+                            } else Modifier
+                        )) {
                             Text(
                                 text = uiState.deviceName,
                                 style = MiuixTheme.textStyles.title3,
@@ -177,34 +194,57 @@ private fun DeviceContent(
                                 style = MiuixTheme.textStyles.body2,
                             )
                         }
-                        AppStatusBadge(
-                            state = uiState.connectionState,
-                            modifier = if (uiState.connectionState == ConnectionState.Connected) {
-                                Modifier.clip(CircleShape).clickable(role = Role.Button, onClickLabel = infoLabel) {
-                                    showInfo = true
-                                    if (uiState.sessionKind != AdbSessionKind.UsbFastboot) onRefreshClick()
+                        if (uiState.connectionState == ConnectionState.Connected && !uiState.rebooting) {
+                            val entries = DropdownEntry(RebootMode.entries.map { mode ->
+                                DropdownItem(text = stringResource(mode.label), onClick = { onReboot(mode) })
+                            })
+                            PopupAnchor {
+                                OverlayIconDropdownMenu(entry = entries, modifier = Modifier.semantics { contentDescription = rebootLabel }) {
+                                    AppStatusBadge(state = uiState.connectionState)
                                 }
-                            } else Modifier,
-                        )
+                            }
+                        } else {
+                            AppStatusBadge(state = uiState.connectionState)
+                        }
                     }
                 }
             }
 
-            item { SectionHeader(title = stringResource(R.string.section_quick_actions)) }
-            item {
-                QuickActionGrid(
-                    sessionKind = uiState.sessionKind,
-                    onAppsClick = onAppsClick,
-                    onLocalAppsClick = onLocalAppsClick,
-                    onInstallClick = onInstallClick,
-                    onDownloadClick = onDownloadClick,
-                    onFilesClick = onFilesClick,
-                    onScreenshotClick = onScreenshotClick,
-                    onShellClick = onShellClick,
-                    onRemoteClick = onRemoteClick,
-                    onMirrorClick = onMirrorClick,
-                    onLogsClick = onLogsClick,
-                )
+            if (uiState.rebootStatus != OperationStatus.Idle) {
+                item { DeviceRefreshStatus(status = uiState.rebootStatus) }
+            }
+            if (uiState.sessionKind == AdbSessionKind.UsbFastboot) {
+                item { SectionHeader(title = stringResource(R.string.fb_images)) }
+                item {
+                    ActionGrid(listOf(
+                        QuickActionSpec(stringResource(R.string.fb_flash), AppIcons.Install) { onFastbootAction(FastbootPanel.Flash) },
+                        QuickActionSpec(stringResource(R.string.fb_boot), AppIcons.Power) { onFastbootAction(FastbootPanel.Boot) },
+                        QuickActionSpec(stringResource(R.string.fb_archive), MiuixIcons.Folder) { onFastbootAction(FastbootPanel.Archive) },
+                    ), columns = 3)
+                }
+                item { SectionHeader(title = stringResource(R.string.fb_device)) }
+                item {
+                    ActionGrid(listOf(
+                        QuickActionSpec(stringResource(R.string.fb_slot), MiuixIcons.GridView) { onFastbootAction(FastbootPanel.Slot); onRefreshClick() },
+                        QuickActionSpec(stringResource(R.string.fastboot_console_title), AppIcons.Terminal, onShellClick),
+                    ))
+                }
+            } else {
+                item { SectionHeader(title = stringResource(R.string.section_quick_actions)) }
+                item {
+                    QuickActionGrid(
+                        onAppsClick = onAppsClick,
+                        onLocalAppsClick = onLocalAppsClick,
+                        onInstallClick = onInstallClick,
+                        onDownloadClick = onDownloadClick,
+                        onFilesClick = onFilesClick,
+                        onScreenshotClick = onScreenshotClick,
+                        onShellClick = onShellClick,
+                        onRemoteClick = onRemoteClick,
+                        onMirrorClick = onMirrorClick,
+                        onLogsClick = onLogsClick,
+                    )
+                }
             }
 
             if (!showInfo && uiState.refreshStatus is OperationStatus.Failed) {
@@ -250,7 +290,17 @@ private fun DeviceInfoDialog(visible: Boolean, uiState: DeviceUiState, onDismiss
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (uiState.sessionKind == AdbSessionKind.UsbFastboot) {
-                Text(stringResource(R.string.repo_fastboot_no_device_info_suggestion))
+                DeviceRefreshStatus(uiState.refreshStatus)
+                val labels = listOf(R.string.fastboot_product, R.string.fastboot_serial, R.string.fastboot_bootloader_version, R.string.fastboot_slot, R.string.fastboot_mode)
+                val unavailable = stringResource(R.string.fastboot_not_provided)
+                com.sky22333.skyadb.model.FastbootDeviceSummary.Variables.zip(labels).forEach { (key, label) ->
+                    val raw = uiState.fastbootSummary?.values?.get(key)
+                    val value = if (key == "is-userspace") when (raw) { "yes" -> "fastbootd"; "no" -> "Bootloader"; else -> unavailable } else raw ?: unavailable
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(stringResource(label), modifier = Modifier.weight(1f), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.body2)
+                        Text(value, modifier = Modifier.weight(1f), textAlign = TextAlign.End, style = MiuixTheme.textStyles.body2)
+                    }
+                }
             } else {
                 DeviceRefreshStatus(uiState.refreshStatus)
                 val rows = listOf(
@@ -287,7 +337,6 @@ private fun DeviceInfoDialog(visible: Boolean, uiState: DeviceUiState, onDismiss
 
 @Composable
 private fun QuickActionGrid(
-    sessionKind: AdbSessionKind,
     onAppsClick: () -> Unit,
     onLocalAppsClick: () -> Unit,
     onInstallClick: () -> Unit,
@@ -300,11 +349,7 @@ private fun QuickActionGrid(
     onLogsClick: () -> Unit,
 ) {
     val shellLabel = stringResource(R.string.nav_shell)
-    val actions = when (sessionKind) {
-        AdbSessionKind.UsbFastboot -> listOf(
-            QuickActionSpec(stringResource(R.string.fastboot_console_title), AppIcons.Terminal, onShellClick),
-        )
-        AdbSessionKind.None, AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> listOf(
+    val actions = listOf(
             QuickActionSpec(stringResource(R.string.action_apps), MiuixIcons.GridView, onAppsClick),
             QuickActionSpec(stringResource(R.string.nav_local_apps), AppIcons.DeviceApps, onLocalAppsClick),
             QuickActionSpec(stringResource(R.string.action_install_apk), AppIcons.Install, onInstallClick),
@@ -316,10 +361,14 @@ private fun QuickActionGrid(
             QuickActionSpec(stringResource(R.string.action_system_log), MiuixIcons.Notes, onLogsClick),
             QuickActionSpec(stringResource(R.string.nav_screenshot), MiuixIcons.ScreenCapture, onScreenshotClick),
         )
-    }
 
+    ActionGrid(actions)
+}
+
+@Composable
+private fun ActionGrid(actions: List<QuickActionSpec>, columns: Int = 2) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        actions.chunked(2).forEach { rowActions ->
+        actions.chunked(columns).forEach { rowActions ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -332,9 +381,7 @@ private fun QuickActionGrid(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                if (rowActions.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                repeat(columns - rowActions.size) { Spacer(modifier = Modifier.weight(1f)) }
             }
         }
     }
@@ -363,6 +410,7 @@ private fun DeviceContentDisconnectedPreview() {
             onMirrorClick = {},
             onLogsClick = {},
             onRefreshClick = {},
+            onReboot = {},
         )
     }
 }
@@ -397,6 +445,7 @@ private fun DeviceContentConnectedPreview() {
             onMirrorClick = {},
             onLogsClick = {},
             onRefreshClick = {},
+            onReboot = {},
         )
     }
 }

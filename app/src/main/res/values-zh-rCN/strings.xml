@@ -84,7 +84,7 @@
     <!-- Device screen -->
     <string name="device_details_title">设备详情</string>
     <string name="device_refresh_info_desc">刷新设备信息</string>
-    <string name="device_connect_hint">连接设备后，点击状态查看设备信息</string>
+    <string name="device_connect_hint">点击名称查看信息，点击状态重启</string>
     <string name="section_quick_actions">快捷操作</string>
     <string name="section_system_info">系统信息</string>
     <string name="device_info_brand">品牌</string>
@@ -219,6 +219,7 @@
     <string name="fastboot_bootloader_version">Bootloader 版本</string>
     <string name="fastboot_slot">当前槽位</string>
     <string name="fastboot_mode">运行模式</string>
+    <string name="device_rebooting">正在发送重启指令…</string>
     <string name="fastboot_reboot_to">重启到</string>
     <string name="fastboot_reboot_system">正常系统</string>
     <string name="fastboot_reboot_bootloader">Bootloader</string>
@@ -806,4 +807,32 @@
     <string name="ai_image_unsupported">不支持此图片格式，请选择 PNG、JPEG、WebP 或 GIF。</string>
     <string name="ai_image_too_large">图片不能超过 10 MB。</string>
     <string name="ai_images_too_large">当前对话中的图片合计超过 20 MB，请新建对话或使用更小的图片。</string>
+    <string name="fb_flash">刷写镜像</string>
+    <string name="fb_boot">临时启动</string>
+    <string name="fb_archive">固件 ZIP</string>
+    <string name="fb_slot">槽位管理</string>
+    <string name="fb_images">镜像操作</string>
+    <string name="fb_device">设备管理</string>
+    <string name="fb_choose_image">选择镜像</string>
+    <string name="fb_choose_zip">选择 ZIP</string>
+    <string name="fb_partition">分区名称</string>
+    <string name="fb_slot_default">设备默认</string>
+    <string name="fb_confirm_flash">将镜像刷写到 %1$s？</string>
+    <string name="fb_confirm_boot">临时启动所选镜像？</string>
+    <string name="fb_start">开始</string>
+    <string name="fb_action_cancelled">操作已取消。</string>
+    <string name="fb_preparing">正在准备…</string>
+    <string name="fb_file_empty">尚未选择文件</string>
+    <string name="fb_open">操作</string>
+    <string name="fb_archive_empty">压缩包中没有文件</string>
+    <string name="fb_select_slot">选择目标槽位</string>
+    <string name="fb_current_slot">当前槽位：%1$s</string>
+    <string name="fb_slot_confirm">切换活动槽位到 %1$s？</string>
+    <string name="fb_invalid_partition">请选择有效分区；选择 A 或 B 时，分区名不要带槽位后缀。</string>
+    <string name="fb_done">关闭</string>
+    <string name="fb_cancelled_partial">操作已取消，之前的 Sparse 分片可能已经写入。</string>
+    <string name="fb_progress">传输进度：%1$d%% · %2$s/秒</string>
+    <string name="fb_export">保存到本机</string>
+    <string name="fb_exported">文件已保存。</string>
+    <string name="fb_export_incomplete">文件导出中断或失败，目标文件可能不完整。</string>
 </resources>

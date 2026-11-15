@@ -125,7 +125,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kadb)
     implementation(libs.kadb.mdns)
-    implementation(libs.fastboot.java)
+    implementation(project(":fastboot"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
     implementation(libs.okio)

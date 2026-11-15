@@ -74,8 +74,8 @@ class HomeViewModel(
         viewModelScope.launch {
             AppServices.usbOtgActions.events.collect { event ->
                 when (event) {
-                    is UsbPermissionEvent.Granted -> connectUsbOtg(event.deviceName)
-                    is UsbPermissionEvent.Denied -> {
+                    is UsbPermissionEvent.Granted -> if (state.value.connectingUsbDeviceName == event.deviceName) connectUsbOtg(event.deviceName)
+                    is UsbPermissionEvent.Denied -> if (state.value.connectingUsbDeviceName == event.deviceName) {
                         state.value =
                             state.value.copy(
                                 connectingUsbDeviceName = null,
