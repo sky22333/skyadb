@@ -68,13 +68,14 @@ class InstallApkViewModel(
                     return@launch
                 }
             if (selectedUri != uri) return@launch
+            val isApk = isApkFileName(name)
             state.update { snapshot ->
                 snapshot.copy(
                     selectedName = name,
                     selectedUriText = uri.toString(),
-                    installEnabled = name.endsWith(".apk", ignoreCase = true),
+                    installEnabled = isApk,
                     operationStatus =
-                        if (name.endsWith(".apk", ignoreCase = true)) {
+                        if (isApk) {
                             OperationStatus.Idle
                         } else {
                             OperationStatus.Failed(
@@ -197,3 +198,6 @@ class InstallApkViewModel(
         }
     }
 }
+
+internal fun isApkFileName(name: String): Boolean =
+    name.matches(Regex("(?i).*\\.apk(?:\\.[0-9]+)?"))
