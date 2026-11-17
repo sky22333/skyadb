@@ -179,13 +179,30 @@ class HomeViewModel(
 
     fun onRecentDeviceDelete(device: AdbDevice) {
         viewModelScope.launch {
-            state.value = state.value.copy(
-                operationStatus = when (val result = adbRepository.removeDevice(device.id)) {
+            val targetId = when (device.linkKind) {
+                AdbLinkKind.Wifi -> AdbEndpoint.format(device.host, device.port)
+                AdbLinkKind.UsbOtg -> device.id
+            }
+            val result = adbRepository.removeDevice(device.id)
+            val snapshot = state.value
+            val status = when (result) {
                     is AdbOperationResult.Success -> OperationStatus.Success(
                         appString(R.string.home_device_deleted, device.name)
                     )
                     is AdbOperationResult.Failure -> OperationStatus.Failed(result.message, result.suggestion)
+            }
+            val devices = if (result is AdbOperationResult.Success) {
+                snapshot.recentDevices.filterNot {
+                    it.id == device.id || it.id == targetId
                 }
+            } else {
+                snapshot.recentDevices
+            }
+            state.value = snapshot.copy(
+                recentDevices = devices,
+                canDisconnect = devices.any { it.connectionState == ConnectionState.Connected } ||
+                    adbRepository.sessionKind() != AdbSessionKind.None,
+                operationStatus = status,
             )
         }
     }

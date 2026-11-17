@@ -122,6 +122,7 @@ class DefaultAdbRepository(
     private val recentDeviceState = MutableStateFlow(emptyList<AdbDevice>())
     private val deviceInfoState = MutableStateFlow(DeviceInfo())
     private val activeDeviceState = MutableStateFlow<String?>(null)
+    private val deletedDeviceIds = mutableSetOf<String>()
 
     override val recentDevices: Flow<List<AdbDevice>> = recentDeviceState.asStateFlow()
     override val selectedDeviceInfo: Flow<DeviceInfo> = deviceInfoState.asStateFlow()
@@ -143,7 +144,7 @@ class DefaultAdbRepository(
                         }
                     recentDeviceState.value =
                         activeUsb +
-                            devices.map { device ->
+                            devices.filterNot { it.id in deletedDeviceIds }.map { device ->
                                 if (device.id in connectedIds) {
                                     device.copy(
                                         connectionState = ConnectionState.Connected,
@@ -575,11 +576,21 @@ class DefaultAdbRepository(
 
     override suspend fun removeDevice(deviceId: String): AdbOperationResult<Unit> =
         connectionMutex.withLock {
-            if (kadbManager.sessions().any { it.id == deviceId }) {
+            val matchingIds = (recentDeviceState.value.map { it.id } + deviceId)
+                .filter { it == deviceId || AdbEndpoint.sameAuthority(it, deviceId) }
+                .toSet()
+            deletedDeviceIds += matchingIds
+            val connectedIds = kadbManager.sessions()
+                .map { it.id }
+                .filter { it in matchingIds || AdbEndpoint.sameAuthority(it, deviceId) }
+            connectedIds.forEach { disconnectDeviceLocked(it) }
+            if (connectedIds.isEmpty() && kadbManager.currentEndpoint() == deviceId) {
                 disconnectDeviceLocked(deviceId)
             }
-            recentDeviceState.value = recentDeviceState.value.filterNot { it.id == deviceId }
-            recentDeviceStore.remove(deviceId)
+            recentDeviceState.value = recentDeviceState.value.filterNot {
+                it.id in matchingIds || AdbEndpoint.sameAuthority(it.id, deviceId)
+            }
+            recentDeviceStore.remove(matchingIds)
             syncConnectionState()
             AdbOperationResult.Success(Unit)
         }
@@ -595,6 +606,7 @@ class DefaultAdbRepository(
         recentDeviceState.value.firstOrNull { it.id == deviceId }?.name
 
     private suspend fun persistConnectedDevice(connectedDevice: AdbDevice, preserveName: Boolean = false) {
+        deletedDeviceIds -= connectedDevice.id
         recentDeviceState.value = upsertRecentDevice(connectedDevice)
         if (connectedDevice.linkKind == AdbLinkKind.Wifi) {
             recentDeviceStore.upsert(
