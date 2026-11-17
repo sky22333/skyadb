@@ -39,6 +39,7 @@ import kotlinx.coroutines.withContext
 interface AdbRepository {
     val recentDevices: Flow<List<AdbDevice>>
     val selectedDeviceInfo: Flow<DeviceInfo>
+    val activeDeviceId: Flow<String?>
 
     suspend fun connect(host: String, port: Int): AdbOperationResult<String>
 
@@ -93,9 +94,19 @@ interface AdbRepository {
 
     suspend fun disconnect()
 
+    suspend fun selectDevice(deviceId: String): AdbOperationResult<Unit>
+
+    suspend fun disconnectDevice(deviceId: String): AdbOperationResult<Unit>
+
+    suspend fun renameDevice(deviceId: String, name: String): AdbOperationResult<Unit>
+
+    suspend fun removeDevice(deviceId: String): AdbOperationResult<Unit>
+
     fun sessionKind(): AdbSessionKind
 
     fun isActiveUsbDevice(deviceName: String): Boolean
+
+    fun deviceDisplayName(deviceId: String): String?
 }
 
 class DefaultAdbRepository(
@@ -110,9 +121,11 @@ class DefaultAdbRepository(
     private val connectionMutex = Mutex()
     private val recentDeviceState = MutableStateFlow(emptyList<AdbDevice>())
     private val deviceInfoState = MutableStateFlow(DeviceInfo())
+    private val activeDeviceState = MutableStateFlow<String?>(null)
 
     override val recentDevices: Flow<List<AdbDevice>> = recentDeviceState.asStateFlow()
     override val selectedDeviceInfo: Flow<DeviceInfo> = deviceInfoState.asStateFlow()
+    override val activeDeviceId: Flow<String?> = activeDeviceState.asStateFlow()
 
     init {
         scope.launch {
@@ -142,11 +155,11 @@ class DefaultAdbRepository(
                 }
             }
         }
+        activeDeviceState.value = kadbManager.currentEndpoint()
     }
 
     override suspend fun connect(host: String, port: Int): AdbOperationResult<String> =
         connectionMutex.withLock {
-            disconnectLocked()
             val socketHost = AdbEndpoint.hostForSocket(host)
             val endpoint = AdbEndpoint.format(socketHost, port)
             val settings = settingsStore.settings.first()
@@ -158,19 +171,22 @@ class DefaultAdbRepository(
                     socketTimeoutMillis = settings.commandTimeoutSeconds * 1_000,
                 )
             if (result is AdbOperationResult.Success) {
+                val existingName = recentDeviceState.value.firstOrNull { it.id == endpoint }?.name
                 persistConnectedDevice(
                     AdbDevice(
                         id = endpoint,
-                        name = appString(R.string.repo_device_name_android),
+                        name = existingName ?: appString(R.string.repo_device_name_android),
                         host = socketHost,
                         port = port,
 
                         connectionState = ConnectionState.Connected,
 
                         linkKind = AdbLinkKind.Wifi,
-                    )
+                    ),
+                    preserveName = existingName != null,
                 )
             }
+            syncConnectionState()
             return@withLock result.logFailure(DiagnosticModule.WifiAdb, "连接设备", endpoint)
         }
 
@@ -189,7 +205,6 @@ class DefaultAdbRepository(
                 )
             }
 
-            disconnectLocked()
             val settings = settingsStore.settings.first()
             val mode =
                 usbOtgHost.attachments.value.firstOrNull { it.deviceName == deviceName }?.mode
@@ -200,13 +215,18 @@ class DefaultAdbRepository(
 
             val result =
                 when (mode) {
-                    UsbOtgMode.Adb ->
+                    UsbOtgMode.Adb -> {
+                        if (fastbootOtgManager.currentDeviceName() != null) {
+                            fastbootOtgManager.disconnect()
+                        }
+                        kadbManager.disconnectFastbootSessions()
                         kadbManager.connectUsb(
                             usbManager = usbOtgHost.usbManager(),
                             device = device,
                             connectTimeoutMillis = settings.connectionTimeoutSeconds * 1_000,
                             socketTimeoutMillis = settings.commandTimeoutSeconds * 1_000,
                         )
+                    }
                     UsbOtgMode.Fastboot ->
                         fastbootOtgManager.connect(
                             usbManager = usbOtgHost.usbManager(),
@@ -217,36 +237,43 @@ class DefaultAdbRepository(
             if (result is AdbOperationResult.Success) {
                 when (mode) {
                     UsbOtgMode.Adb -> {
+                        val endpoint = "usb-otg:$deviceName"
+                        val existingName = recentDeviceState.value.firstOrNull { it.id == endpoint }?.name
                         persistConnectedDevice(
                             AdbDevice(
-                                id = "usb-otg:$deviceName",
-                                name = appString(R.string.repo_device_name_usb),
+                                id = endpoint,
+                                name = existingName ?: appString(R.string.repo_device_name_usb),
                                 host = "usb-otg",
                                 port = 0,
 
                                 connectionState = ConnectionState.Connected,
 
                                 linkKind = AdbLinkKind.UsbOtg,
-                            )
+                            ),
+                            preserveName = existingName != null,
                         )
                     }
                     UsbOtgMode.Fastboot -> {
                         kadbManager.markUsbFastbootSession(deviceName)
+                        val endpoint = "fastboot:$deviceName"
+                        val existingName = recentDeviceState.value.firstOrNull { it.id == endpoint }?.name
                         persistConnectedDevice(
                             AdbDevice(
-                                id = "fastboot:$deviceName",
-                                name = appString(R.string.repo_device_name_fastboot),
+                                id = endpoint,
+                                name = existingName ?: appString(R.string.repo_device_name_fastboot),
                                 host = "fastboot",
                                 port = 0,
 
                                 connectionState = ConnectionState.Connected,
 
                                 linkKind = AdbLinkKind.UsbOtg,
-                            )
+                            ),
+                            preserveName = existingName != null,
                         )
                     }
                 }
             }
+            syncConnectionState()
 
             return@withLock result.logFailure(DiagnosticModule.UsbOtg, "USB OTG 连接", deviceName)
         }
@@ -295,7 +322,10 @@ class DefaultAdbRepository(
         }
 
     override suspend fun reboot(mode: RebootMode, deviceId: String): AdbOperationResult<String> = connectionMutex.withLock {
-        if (recentDeviceState.value.none { it.id == deviceId && it.connectionState == ConnectionState.Connected }) {
+        if (kadbManager.currentEndpoint() != deviceId) {
+            return@withLock AdbOperationResult.Failure(appString(R.string.home_device_unavailable), appString(R.string.home_device_unavailable_hint))
+        }
+        if (kadbManager.sessions().none { it.id == deviceId }) {
             return@withLock AdbOperationResult.Failure(appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion))
         }
         val result = when (kadbManager.sessionKind()) {
@@ -303,7 +333,7 @@ class DefaultAdbRepository(
             AdbSessionKind.Wifi, AdbSessionKind.UsbAdb -> kadbManager.reboot(mode.adbTarget)
             AdbSessionKind.None -> return@withLock AdbOperationResult.Failure(appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion))
         }
-        if (result is AdbOperationResult.Success) withContext(NonCancellable) { disconnectLocked() }
+        if (result is AdbOperationResult.Success) withContext(NonCancellable) { disconnectActiveLocked() }
         else clearClosedFastbootSession()
         result
     }
@@ -322,7 +352,7 @@ class DefaultAdbRepository(
             kadbManager.sessionKind() == AdbSessionKind.UsbFastboot &&
                 fastbootOtgManager.currentDeviceName() == null
         ) {
-            withContext(NonCancellable) { disconnectLocked() }
+            withContext(NonCancellable) { disconnectActiveLocked() }
         }
     }
 
@@ -354,7 +384,10 @@ class DefaultAdbRepository(
             deviceInfoState.value = result.data
         } else {
             deviceInfoState.value = DeviceInfo()
-            markConnectedDevices(ConnectionState.Offline)
+            val activeId = kadbManager.currentEndpoint()
+            recentDeviceState.value = recentDeviceState.value.map { device ->
+                if (device.id == activeId) device.copy(connectionState = ConnectionState.Offline) else device
+            }
         }
         return result.logFailure(DiagnosticModule.WifiAdb, "刷新设备信息")
     }
@@ -467,19 +500,88 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Screenshot, "截图")
     }
 
-    override suspend fun disconnect() = connectionMutex.withLock { disconnectLocked() }
+    override suspend fun disconnect() = connectionMutex.withLock { disconnectActiveLocked() }
 
-    private suspend fun disconnectLocked() {
-        kadbManager.disconnect()
-        fastbootOtgManager.disconnect()
-        kadbManager.clearUsbFastbootSession()
-        val next =
-            recentDeviceState.value.map {
-                it.copy(connectionState = ConnectionState.Disconnected)
-            }
-        recentDeviceState.value = next
+    private suspend fun disconnectActiveLocked() {
+        val activeId = kadbManager.currentEndpoint()
+        if (activeId != null && kadbManager.sessionKind() == AdbSessionKind.UsbFastboot) {
+            fastbootOtgManager.disconnect()
+            kadbManager.clearUsbFastbootSession()
+        }
+        if (activeId != null) kadbManager.disconnectSession(activeId)
+        syncConnectionState()
         deviceInfoState.value = DeviceInfo()
     }
+
+    override suspend fun selectDevice(deviceId: String): AdbOperationResult<Unit> =
+        connectionMutex.withLock {
+            if (!kadbManager.selectSession(deviceId)) {
+                syncConnectionState()
+                return@withLock AdbOperationResult.Failure(
+                    message = appString(R.string.home_device_unavailable),
+                    suggestion = appString(R.string.home_device_unavailable_hint),
+                )
+            }
+            syncConnectionState()
+            deviceInfoState.value = DeviceInfo()
+            scope.launch {
+                connectionMutex.withLock { refreshDeviceInfoLocked() }
+            }
+            AdbOperationResult.Success(Unit)
+        }
+
+    override suspend fun disconnectDevice(deviceId: String): AdbOperationResult<Unit> =
+        connectionMutex.withLock {
+            disconnectDeviceLocked(deviceId)
+            AdbOperationResult.Success(Unit)
+        }
+
+    private suspend fun disconnectDeviceLocked(deviceId: String) {
+        val wasActive = kadbManager.currentEndpoint() == deviceId
+        val sessionKind = kadbManager.sessions().firstOrNull { it.id == deviceId }?.kind
+        if (sessionKind == AdbSessionKind.UsbFastboot) {
+            fastbootOtgManager.disconnect()
+            kadbManager.clearUsbFastbootSession()
+        }
+        kadbManager.disconnectSession(deviceId)
+        syncConnectionState()
+        if (wasActive) deviceInfoState.value = DeviceInfo()
+    }
+
+    override suspend fun renameDevice(deviceId: String, name: String): AdbOperationResult<Unit> =
+        connectionMutex.withLock {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty() || trimmed.length > MaxDeviceNameLength) {
+                return@withLock AdbOperationResult.Failure(
+                    message = appString(R.string.home_device_name_invalid),
+                    suggestion = appString(R.string.home_device_name_invalid_hint),
+                )
+            }
+            val device = recentDeviceState.value.firstOrNull { it.id == deviceId }
+                ?: return@withLock AdbOperationResult.Failure(
+                    message = appString(R.string.home_device_unavailable),
+                    suggestion = appString(R.string.home_device_unavailable_hint),
+                )
+            val renamed = device.copy(name = trimmed)
+            recentDeviceState.value = recentDeviceState.value.map {
+                if (it.id == deviceId) renamed else it
+            }
+            if (renamed.linkKind == AdbLinkKind.Wifi) {
+                recentDeviceStore.upsert(renamed.copy(connectionState = ConnectionState.Disconnected))
+            }
+            AdbOperationResult.Success(Unit)
+        }
+
+    override suspend fun removeDevice(deviceId: String): AdbOperationResult<Unit> =
+        connectionMutex.withLock {
+            if (kadbManager.sessions().any { it.id == deviceId }) {
+                disconnectDeviceLocked(deviceId)
+            }
+            recentDeviceState.value = recentDeviceState.value.filterNot { it.id == deviceId }
+            recentDeviceStore.remove(deviceId)
+            syncConnectionState()
+            AdbOperationResult.Success(Unit)
+        }
 
     override fun sessionKind(): AdbSessionKind = kadbManager.sessionKind()
 
@@ -488,7 +590,10 @@ class DefaultAdbRepository(
             fastbootOtgManager.currentDeviceName() == deviceName
     }
 
-    private suspend fun persistConnectedDevice(connectedDevice: AdbDevice) {
+    override fun deviceDisplayName(deviceId: String): String? =
+        recentDeviceState.value.firstOrNull { it.id == deviceId }?.name
+
+    private suspend fun persistConnectedDevice(connectedDevice: AdbDevice, preserveName: Boolean = false) {
         recentDeviceState.value = upsertRecentDevice(connectedDevice)
         if (connectedDevice.linkKind == AdbLinkKind.Wifi) {
             recentDeviceStore.upsert(
@@ -505,7 +610,7 @@ class DefaultAdbRepository(
                         .filter { it != unknown }
                         .joinToString(" ")
                         .ifBlank { appString(R.string.repo_device_name_android) }
-                val namedDevice = connectedDevice.copy(name = deviceName)
+                val namedDevice = connectedDevice.copy(name = if (preserveName) connectedDevice.name else deviceName)
                 recentDeviceState.value = upsertRecentDevice(namedDevice)
                 if (namedDevice.linkKind == AdbLinkKind.Wifi) {
                     recentDeviceStore.upsert(
@@ -517,25 +622,30 @@ class DefaultAdbRepository(
     }
 
     private fun upsertRecentDevice(device: AdbDevice): List<AdbDevice> {
-        val others =
-            recentDeviceState.value.filter { it.id != device.id && it.linkKind == AdbLinkKind.Wifi }
-        return (listOf(device) + others).take(MaxRecentDevices)
+        val others = recentDeviceState.value.filter { it.id != device.id }
+        val connected = others.filter { it.connectionState == ConnectionState.Connected }
+        val disconnected = others
+            .filterNot { it.connectionState == ConnectionState.Connected }
+            .take((MaxRecentDevices - connected.size - 1).coerceAtLeast(0))
+        return listOf(device) + connected + disconnected
     }
 
-    private fun markConnectedDevices(connectionState: ConnectionState) {
-        val next =
-            recentDeviceState.value.map { device ->
-                if (device.connectionState == ConnectionState.Connected) {
-                    device.copy(connectionState = connectionState)
-                } else {
-                    device
-                }
+    private fun syncConnectionState() {
+        val connectedIds = kadbManager.sessions().map { it.id }.toSet()
+        recentDeviceState.value = recentDeviceState.value.map { device ->
+            when {
+                device.id in connectedIds -> device.copy(connectionState = ConnectionState.Connected)
+                device.connectionState == ConnectionState.Connected ->
+                    device.copy(connectionState = ConnectionState.Disconnected)
+                else -> device
             }
-        recentDeviceState.value = next
+        }
+        activeDeviceState.value = kadbManager.currentEndpoint()
     }
 
     private companion object {
         const val MaxRecentDevices = 8
+        const val MaxDeviceNameLength = 80
     }
 }
 

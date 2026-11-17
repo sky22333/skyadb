@@ -35,6 +35,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import okio.source
 
 enum class AdbSessionKind {
@@ -43,6 +46,13 @@ enum class AdbSessionKind {
     UsbAdb,
     UsbFastboot,
 }
+
+data class AdbSessionInfo(
+    val id: String,
+    val kind: AdbSessionKind,
+    val host: String?,
+    val port: Int?,
+)
 
 internal fun parseDeviceProperties(output: String): Map<String, String> =
     output.lineSequence().mapNotNull { line ->
@@ -54,6 +64,9 @@ internal fun parseDeviceProperties(output: String): Map<String, String> =
 class KadbManager {
     private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sessionMutex = Mutex()
+    private val managedSessions = linkedMapOf<String, ManagedSession>()
+    @Volatile private var activeSessionId: String? = null
+    @Volatile private var sessionSnapshot: List<AdbSessionInfo> = emptyList()
     @Volatile private var activeKadb: Kadb? = null
     @Volatile private var activeEndpoint: String? = null
     @Volatile private var wifiHost: String? = null
@@ -62,6 +75,18 @@ class KadbManager {
     @Volatile private var wifiSocketTimeoutMillis: Int = 30_000
 
     @Volatile private var sessionKind: AdbSessionKind = AdbSessionKind.None
+    private val activeEndpointState = MutableStateFlow<String?>(null)
+    val activeEndpointFlow: StateFlow<String?> = activeEndpointState.asStateFlow()
+
+    private data class ManagedSession(
+        val id: String,
+        val kadb: Kadb?,
+        val kind: AdbSessionKind,
+        val host: String? = null,
+        val port: Int? = null,
+        val connectTimeoutMillis: Int = 10_000,
+        val socketTimeoutMillis: Int = 30_000,
+    )
 
     internal fun sessionToken(): Any? = activeKadb
 
@@ -81,15 +106,24 @@ class KadbManager {
     ): AdbOperationResult<String> =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                disconnectAdbOnlyLocked()
                 val socketHost = AdbEndpoint.hostForSocket(host)
+                val endpoint = AdbEndpoint.format(socketHost, port)
+                managedSessions[endpoint]?.let { existing ->
+                    if (existing.kind == AdbSessionKind.Wifi && existing.kadb?.connectionCheck() == true) {
+                        setActiveLocked(existing)
+                        return@withLock AdbOperationResult.Success(endpoint)
+                    }
+                    val wasActive = activeSessionId == endpoint
+                    disconnectSessionLocked(endpoint)
+                    if (wasActive) setActiveLocked(managedSessions.values.lastOrNull())
+                }
                 openKadbSessionLocked(
                     host = socketHost,
                     port = port,
                     connectTimeoutMillis = connectTimeoutMillis,
                     socketTimeoutMillis = socketTimeoutMillis,
                     sessionKind = AdbSessionKind.Wifi,
-                    endpoint = AdbEndpoint.format(socketHost, port),
+                    endpoint = endpoint,
                 )
             }
         }
@@ -102,21 +136,21 @@ class KadbManager {
         sessionKind: AdbSessionKind,
         endpoint: String,
     ): AdbOperationResult<String> {
-        activeKadb?.close()
-        activeKadb = null
         return operationCatching {
             val kadb = Kadb.create(host, port, connectTimeoutMillis, socketTimeoutMillis)
             try {
                 probeConnection(kadb, maxOf(connectTimeoutMillis, socketTimeoutMillis))
-                activeKadb = kadb
-                activeEndpoint = endpoint
-                this.sessionKind = sessionKind
-                if (sessionKind == AdbSessionKind.Wifi) {
-                    wifiHost = host
-                    wifiPort = port
-                    wifiConnectTimeoutMillis = connectTimeoutMillis
-                    wifiSocketTimeoutMillis = socketTimeoutMillis
-                }
+                val session = ManagedSession(
+                    id = endpoint,
+                    kadb = kadb,
+                    kind = sessionKind,
+                    host = host.takeIf { sessionKind == AdbSessionKind.Wifi },
+                    port = port.takeIf { sessionKind == AdbSessionKind.Wifi },
+                    connectTimeoutMillis = connectTimeoutMillis,
+                    socketTimeoutMillis = socketTimeoutMillis,
+                )
+                managedSessions[endpoint] = session
+                setActiveLocked(session)
                 AdbOperationResult.Success(endpoint)
             } catch (error: Throwable) {
                 kadb.close()
@@ -140,7 +174,7 @@ class KadbManager {
     ): AdbOperationResult<String> =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                disconnectLocked()
+                disconnectKindsLocked(setOf(AdbSessionKind.UsbAdb, AdbSessionKind.UsbFastboot))
                 operationCatching {
                     check(usbManager.hasPermission(device)) {
                         appString(R.string.repo_usb_permission_missing)
@@ -148,12 +182,17 @@ class KadbManager {
                     val client = KadbUsb.create(AppServices.context, device)
                     try {
                         probeConnection(client, maxOf(connectTimeoutMillis, socketTimeoutMillis))
-                        activeKadb = client
-                        activeEndpoint = "usb-otg:${device.deviceName}"
-                        wifiHost = null
-                        wifiPort = null
-                        sessionKind = AdbSessionKind.UsbAdb
-                        AdbOperationResult.Success(activeEndpoint!!)
+                        val endpoint = "usb-otg:${device.deviceName}"
+                        val session = ManagedSession(
+                            id = endpoint,
+                            kadb = client,
+                            kind = AdbSessionKind.UsbAdb,
+                            connectTimeoutMillis = connectTimeoutMillis,
+                            socketTimeoutMillis = socketTimeoutMillis,
+                        )
+                        managedSessions[endpoint] = session
+                        setActiveLocked(session)
+                        AdbOperationResult.Success(endpoint)
                     } catch (error: Throwable) {
                         client.close()
                         throw error
@@ -749,26 +788,94 @@ class KadbManager {
 
     suspend fun disconnect() =
         withContext(Dispatchers.IO) {
-            sessionMutex.withLock { disconnectLocked() }
+            sessionMutex.withLock {
+                activeSessionId?.let { disconnectSessionLocked(it) }
+                setActiveLocked(managedSessions.values.lastOrNull())
+            }
         }
 
-    private fun disconnectLocked() {
-        activeKadb?.close()
+    suspend fun disconnectSession(id: String): Boolean =
+        withContext(Dispatchers.IO) {
+            sessionMutex.withLock {
+                val wasActive = activeSessionId == id
+                if (!disconnectSessionLocked(id)) return@withLock false
+                if (wasActive) setActiveLocked(managedSessions.values.lastOrNull())
+                true
+            }
+        }
+
+    suspend fun disconnectFastbootSessions() =
+        withContext(Dispatchers.IO) {
+            sessionMutex.withLock {
+                disconnectKindsLocked(setOf(AdbSessionKind.UsbFastboot))
+                if (activeSessionId == null) setActiveLocked(managedSessions.values.lastOrNull())
+            }
+        }
+
+    suspend fun selectSession(id: String): Boolean =
+        withContext(Dispatchers.IO) {
+            sessionMutex.withLock {
+                val session = managedSessions[id] ?: return@withLock false
+                if (session.kind != AdbSessionKind.UsbFastboot && session.kadb?.connectionCheck() != true) {
+                    val wasActive = activeSessionId == id
+                    disconnectSessionLocked(id)
+                    if (wasActive) setActiveLocked(managedSessions.values.lastOrNull())
+                    return@withLock false
+                }
+                setActiveLocked(session)
+                true
+            }
+        }
+
+    fun sessions(): List<AdbSessionInfo> = sessionSnapshot
+
+    private fun setActiveLocked(session: ManagedSession?) {
+        activeSessionId = session?.id
+        activeKadb = session?.kadb
+        activeEndpoint = session?.id
+        activeEndpointState.value = session?.id
+        sessionKind = session?.kind ?: AdbSessionKind.None
+        wifiHost = session?.host
+        wifiPort = session?.port
+        wifiConnectTimeoutMillis = session?.connectTimeoutMillis ?: 10_000
+        wifiSocketTimeoutMillis = session?.socketTimeoutMillis ?: 30_000
+        updateSessionSnapshotLocked()
+    }
+
+    private fun clearActiveLocked() {
+        activeSessionId = null
         activeKadb = null
         activeEndpoint = null
+        activeEndpointState.value = null
         wifiHost = null
         wifiPort = null
         sessionKind = AdbSessionKind.None
+        updateSessionSnapshotLocked()
     }
 
-    private fun disconnectAdbOnlyLocked() {
-        activeKadb?.close()
-        activeKadb = null
-        activeEndpoint = null
-        wifiHost = null
-        wifiPort = null
-        if (sessionKind == AdbSessionKind.Wifi || sessionKind == AdbSessionKind.UsbAdb) {
-            sessionKind = AdbSessionKind.None
+    private fun disconnectSessionLocked(id: String): Boolean {
+        val removed = managedSessions.remove(id) ?: return false
+        removed.kadb?.close()
+        if (activeSessionId == id) clearActiveLocked() else updateSessionSnapshotLocked()
+        return true
+    }
+
+    private fun disconnectKindsLocked(kinds: Set<AdbSessionKind>) {
+        val ids = managedSessions.values.filter { it.kind in kinds }.map { it.id }
+        ids.forEach { disconnectSessionLocked(it) }
+        if (activeSessionId == null) {
+            setActiveLocked(managedSessions.values.lastOrNull())
+        }
+    }
+
+    private fun updateSessionSnapshotLocked() {
+        sessionSnapshot = managedSessions.values.map { session ->
+            AdbSessionInfo(
+                id = session.id,
+                kind = session.kind,
+                host = session.host,
+                port = session.port,
+            )
         }
     }
 
@@ -786,18 +893,25 @@ class KadbManager {
     suspend fun markUsbFastbootSession(deviceName: String) =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                disconnectAdbOnlyLocked()
-                activeEndpoint = "fastboot:$deviceName"
-                sessionKind = AdbSessionKind.UsbFastboot
+                disconnectKindsLocked(setOf(AdbSessionKind.UsbAdb, AdbSessionKind.UsbFastboot))
+                val endpoint = "fastboot:$deviceName"
+                val session = ManagedSession(
+                    id = endpoint,
+                    kadb = null,
+                    kind = AdbSessionKind.UsbFastboot,
+                )
+                managedSessions[endpoint] = session
+                setActiveLocked(session)
             }
         }
 
     suspend fun clearUsbFastbootSession() =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                if (sessionKind == AdbSessionKind.UsbFastboot) {
-                    activeEndpoint = null
-                    sessionKind = AdbSessionKind.None
+                val id = activeSessionId
+                if (id != null && managedSessions[id]?.kind == AdbSessionKind.UsbFastboot) {
+                    disconnectSessionLocked(id)
+                    setActiveLocked(managedSessions.values.lastOrNull())
                 }
             }
         }

@@ -9,6 +9,7 @@ import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbDevice
 import com.sky22333.skyadb.model.AdbEndpoint
+import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.OperationStatus
@@ -27,6 +28,7 @@ data class HomeUiState(
     val endpoint: String = "",
     val defaultPort: Int = 5555,
     val recentDevices: List<AdbDevice> = emptyList(),
+    val activeDeviceId: String? = null,
     val usbAttachments: List<UsbOtgAttachment> = emptyList(),
     val endpointError: String? = null,
     val connectEnabled: Boolean = false,
@@ -54,6 +56,11 @@ class HomeViewModel(
                             devices.any { it.connectionState == ConnectionState.Connected } ||
                                 adbRepository.sessionKind() != AdbSessionKind.None,
                     )
+            }
+        }
+        viewModelScope.launch {
+            adbRepository.activeDeviceId.collect { deviceId ->
+                state.value = state.value.copy(activeDeviceId = deviceId)
             }
         }
         viewModelScope.launch {
@@ -104,7 +111,62 @@ class HomeViewModel(
     }
 
     fun onRecentDeviceSelected(device: AdbDevice) {
-        updateForm(AdbEndpoint.format(device.host, device.port))
+        connectionJob?.cancel()
+        connectionJob = null
+        if (device.linkKind == AdbLinkKind.Wifi) {
+            updateForm(AdbEndpoint.format(device.host, device.port))
+        }
+        when {
+            device.connectionState == ConnectionState.Connected &&
+                device.id != state.value.activeDeviceId -> selectDevice(device)
+            device.connectionState != ConnectionState.Connected &&
+                device.linkKind == AdbLinkKind.Wifi -> onConnectClicked()
+            device.connectionState != ConnectionState.Connected &&
+                device.linkKind == AdbLinkKind.UsbOtg ->
+                onUsbConnectClicked(device.id.substringAfter(':'))
+        }
+    }
+
+    fun onRecentDeviceDisconnect(device: AdbDevice) {
+        viewModelScope.launch {
+            state.value = state.value.copy(
+                operationStatus = when (val result = adbRepository.disconnectDevice(device.id)) {
+                    is AdbOperationResult.Success -> OperationStatus.Success(
+                        appString(R.string.home_device_disconnected, device.name)
+                    )
+                    is AdbOperationResult.Failure -> OperationStatus.Failed(result.message, result.suggestion)
+                }
+            )
+        }
+    }
+
+    fun onRecentDeviceRename(device: AdbDevice, name: String) {
+        viewModelScope.launch {
+            val result = adbRepository.renameDevice(device.id, name)
+            state.value = state.value.copy(
+                operationStatus = when (result) {
+                    is AdbOperationResult.Success ->
+                        OperationStatus.Success(
+                            appString(R.string.home_device_renamed, name.trim())
+                        )
+                    is AdbOperationResult.Failure ->
+                        OperationStatus.Failed(result.message, result.suggestion)
+                }
+            )
+        }
+    }
+
+    fun onRecentDeviceDelete(device: AdbDevice) {
+        viewModelScope.launch {
+            state.value = state.value.copy(
+                operationStatus = when (val result = adbRepository.removeDevice(device.id)) {
+                    is AdbOperationResult.Success -> OperationStatus.Success(
+                        appString(R.string.home_device_deleted, device.name)
+                    )
+                    is AdbOperationResult.Failure -> OperationStatus.Failed(result.message, result.suggestion)
+                }
+            )
+        }
     }
 
     fun onDiscoveredEndpointSelected(host: String, port: Int) {
@@ -127,7 +189,6 @@ class HomeViewModel(
             adbRepository.disconnect()
             state.value =
                 state.value.copy(
-                    canDisconnect = false,
                     connectingUsbDeviceName = null,
                     operationStatus =
                         OperationStatus.Success(appString(R.string.home_disconnected)),
@@ -190,7 +251,16 @@ class HomeViewModel(
 
     fun onUsbConnectClicked(deviceName: String) {
         val attachment =
-            state.value.usbAttachments.firstOrNull { it.deviceName == deviceName } ?: return
+            state.value.usbAttachments.firstOrNull { it.deviceName == deviceName }
+                ?: run {
+                    state.value = state.value.copy(
+                        operationStatus = OperationStatus.Failed(
+                            appString(R.string.repo_usb_device_disconnected),
+                            appString(R.string.repo_usb_device_disconnected_suggestion),
+                        )
+                    )
+                    return
+                }
         if (!attachment.hasPermission) {
             state.value =
                 state.value.copy(
@@ -208,11 +278,11 @@ class HomeViewModel(
     private suspend fun onUsbDeviceDetached(deviceName: String) {
         val connecting = state.value.connectingUsbDeviceName == deviceName
         if (adbRepository.isActiveUsbDevice(deviceName)) {
-            adbRepository.disconnect()
+            adbRepository.disconnectDevice("usb-otg:$deviceName")
+            adbRepository.disconnectDevice("fastboot:$deviceName")
             state.value =
                 state.value.copy(
                     connectingUsbDeviceName = null,
-                    canDisconnect = false,
                     operationStatus =
                         OperationStatus.Success(appString(R.string.repo_usb_device_disconnected)),
                 )
@@ -273,6 +343,28 @@ class HomeViewModel(
                         )
                 }
             }
+        }
+    }
+
+    private fun selectDevice(device: AdbDevice) {
+        connectionJob?.cancel()
+        state.value = state.value.copy(
+            operationStatus = OperationStatus.Running(
+                appString(R.string.home_switching_device, device.name)
+            )
+        )
+        connectionJob = viewModelScope.launch {
+            val result = adbRepository.selectDevice(device.id)
+            state.value = state.value.copy(
+                operationStatus = when (result) {
+                    is AdbOperationResult.Success ->
+                        OperationStatus.Success(
+                            appString(R.string.home_switch_device_success, device.name)
+                        )
+                    is AdbOperationResult.Failure ->
+                        OperationStatus.Failed(result.message, result.suggestion)
+                }
+            )
         }
     }
 

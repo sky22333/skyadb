@@ -48,7 +48,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 @Serializable enum class AiToolStatus { Running, Finished, Failed, Interrupted }
 @Serializable data class AiMessage(val id: String = UUID.randomUUID().toString(), val role: String, val text: String, val attachmentName: String = "", val toolStatus: AiToolStatus? = null)
 data class AiApproval(val title: String, val detail: String)
-data class AiConversationSummary(val id: String, val title: String)
+data class AiConversationSummary(val id: String, val title: String, val deviceId: String = "", val deviceName: String = "")
 data class AiDownload(val file: java.io.File, val name: String, val size: Long)
 data class AiState(
     val config: AiConfig = AiConfig(), val messages: List<AiMessage> = emptyList(),
@@ -70,7 +70,14 @@ internal fun inputLength(text: String): Int = text.codePointCount(0, text.length
     @Serializable
     data class Result(val call: ToolCall, val output: String, val error: Boolean = false) : Turn
 }
-@Serializable internal data class AiConversation(val id: String, val title: String, val messages: List<AiMessage>, val turns: List<Turn>)
+@Serializable internal data class AiConversation(
+    val id: String,
+    val title: String,
+    val messages: List<AiMessage>,
+    val turns: List<Turn>,
+    val deviceId: String = "",
+    val deviceName: String = "",
+)
 @Serializable internal data class AiHistory(val currentId: String = "", val conversations: List<AiConversation> = emptyList(), val drafts: Map<String, String> = emptyMap())
 
 class AiViewModel internal constructor(private val store: AiConfigStore, private val testDownloadsDirectory: java.io.File? = null) : ViewModel() {
@@ -85,6 +92,8 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     private var currentId = UUID.randomUUID().toString()
     private var historyReadable = false
     private val drafts = mutableMapOf<String, String>()
+    private var currentDeviceId = ""
+    private var currentDeviceName = ""
     private val writes = Channel<AiHistory>(Channel.CONFLATED)
     private val writerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
@@ -118,9 +127,15 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                 if (!newSession) {
                     currentId = savedId
                     val current = conversations.firstOrNull { it.id == currentId }
-                    if (current != null) { history.addAll(current.turns); state.update { it.copy(messages = current.messages) }; completeInterruptedCalls() }
+                    if (current != null) {
+                        currentDeviceId = current.deviceId
+                        currentDeviceName = current.deviceName
+                        history.addAll(current.turns)
+                        state.update { it.copy(messages = current.messages) }
+                        completeInterruptedCalls()
+                    }
                 }
-                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }, draft = drafts[currentId].orEmpty(), historyLoading = false) }
+                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title, c.deviceId, c.deviceName) }, draft = drafts[currentId].orEmpty(), historyLoading = false) }
                 if (newSession) persist()
             }.onFailure { state.update { it.copy(historyLoading = false, error = appString(R.string.ai_history_read_failed)) } }
         }
@@ -155,7 +170,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (messages.isNotEmpty() || state.value.draft.isNotBlank()) {
             val firstUser = messages.firstOrNull { it.role == "user" }
             val title = (firstUser?.text?.ifBlank { firstUser.attachmentName } ?: state.value.draft).lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(50).orEmpty()
-            conversations.add(0, AiConversation(currentId, title, messages, history.toList()))
+            conversations.add(0, AiConversation(currentId, title, messages, history.toList(), currentDeviceId, currentDeviceName))
         }
         var chars = 0
         conversations = conversations.take(10).takeWhile { conversation ->
@@ -168,7 +183,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             }
             chars <= 2_000_000 || conversation.id == currentId
         }.toMutableList()
-        state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }) }
+        state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title, c.deviceId, c.deviceName) }) }
         drafts.keys.retainAll(conversations.map { it.id }.toSet() + currentId)
         writes.trySend(AiHistory(currentId, conversations.toList(), drafts.toMap()))
     }
@@ -176,7 +191,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (state.value.busy || state.value.historyLoading) return
         persist()
         val selected = conversations.firstOrNull { it.id == id } ?: return
-        currentId = selected.id; conversationAttachment = null; imageReferences.clear(); history.clear(); history.addAll(selected.turns); completeInterruptedCalls()
+        currentId = selected.id; currentDeviceId = selected.deviceId; currentDeviceName = selected.deviceName; conversationAttachment = null; imageReferences.clear(); history.clear(); history.addAll(selected.turns); completeInterruptedCalls()
         state.update { it.copy(messages = selected.messages, draft = drafts[currentId].orEmpty(), attachment = null, attachmentName = "") }
         persist()
     }
@@ -184,7 +199,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (state.value.busy || state.value.historyLoading) return
         conversations.removeAll { it.id == id }
         drafts.remove(id)
-        if (currentId == id) { currentId = UUID.randomUUID().toString(); conversationAttachment = null; imageReferences.clear(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") } }
+        if (currentId == id) { currentId = UUID.randomUUID().toString(); currentDeviceId = ""; currentDeviceName = ""; conversationAttachment = null; imageReferences.clear(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") } }
         persist()
     }
     fun saveConfig(config: AiConfig, onSaved: () -> Unit = {}): Boolean {
@@ -342,7 +357,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     }
     fun respond(allow: Boolean) { approval?.complete(allow); approval = null; state.update { it.copy(approval = null) } }
     fun stop() { approval?.cancel(); approval = null; job?.cancel() }
-    fun clear() { if (!state.value.busy && !state.value.historyLoading) { draftJob?.cancel(); persist(); currentId = UUID.randomUUID().toString(); conversationAttachment = null; imageReferences.clear(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") }; persist() } }
+    fun clear() { if (!state.value.busy && !state.value.historyLoading) { draftJob?.cancel(); persist(); currentId = UUID.randomUUID().toString(); currentDeviceId = ""; currentDeviceName = ""; conversationAttachment = null; imageReferences.clear(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachment = null, attachmentName = "") }; persist() } }
 
     fun send(text: String): Boolean {
         val input = text
@@ -352,6 +367,23 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (config.baseUrl.toHttpUrlOrNull() == null || config.model.isBlank()) { state.update { it.copy(error = appString(R.string.ai_config_required)) }; return false }
         val token = AppServices.kadbManager.sessionToken()
         val endpoint = AppServices.kadbManager.currentEndpoint()
+        if (currentDeviceId.isNotBlank() && endpoint != null && endpoint != currentDeviceId) {
+            draftJob?.cancel()
+            val pendingDraft = state.value.draft
+            state.update { it.copy(draft = "") }
+            persist()
+            state.update { it.copy(messages = emptyList(), draft = pendingDraft) }
+            currentId = UUID.randomUUID().toString()
+            currentDeviceId = endpoint
+            currentDeviceName = AppServices.adbRepository.deviceDisplayName(endpoint) ?: endpoint
+            conversationAttachment = null
+            imageReferences.clear()
+            history.clear()
+        }
+        if (currentDeviceId.isBlank()) {
+            currentDeviceId = endpoint.orEmpty()
+            currentDeviceName = endpoint?.let { AppServices.adbRepository.deviceDisplayName(it) } ?: endpoint.orEmpty()
+        }
         val selectedAttachment = state.value.attachment
         val attachment = selectedAttachment ?: conversationAttachment
         val attachmentName = state.value.attachmentName

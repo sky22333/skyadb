@@ -83,6 +83,7 @@
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
     <string name="action_disconnect">Disconnect</string>
+    <string name="action_edit">Edit</string>
     <string name="home_refresh_usb_desc">Refresh USB devices</string>
     <string name="device_authorized">Authorized</string>
     <string name="device_unauthorized">Pending authorization</string>
@@ -94,6 +95,12 @@
     <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
     <string name="home_no_recent_devices">No device history</string>
+    <string name="home_current_device">Current device</string>
+    <string name="home_device_actions">Device actions</string>
+    <string name="home_edit_device_title">Edit device name</string>
+    <string name="home_device_name_label">Device name</string>
+    <string name="home_delete_device_title">Delete %1$s?</string>
+    <string name="home_delete_device_confirm">Remove this device from recent devices? If it is connected, the connection will also be closed.</string>
 
     <!-- Device screen -->
     <string name="device_details_title">Device details</string>
@@ -616,6 +623,18 @@
     <string name="home_waiting_usb_permission">Waiting for USB permission\u2026</string>
     <string name="home_usb_otg_connecting">Connecting to %1$s device via USB OTG\u2026</string>
     <string name="home_usb_connect_success">USB connected: %1$s</string>
+    <string name="home_device_unavailable">This device is no longer connected</string>
+    <string name="home_device_unavailable_hint">Reconnect it and try again.</string>
+    <string name="home_device_name_invalid">Invalid device name</string>
+    <string name="home_device_name_invalid_hint">Enter a name between 1 and 80 characters.</string>
+    <string name="home_device_disconnected">Disconnected: %1$s</string>
+    <string name="home_device_renamed">Device renamed: %1$s</string>
+    <string name="home_device_deleted">Device deleted: %1$s</string>
+    <string name="home_switching_device">Switching to %1$s\u2026</string>
+    <string name="home_switch_device_success">Switched to %1$s</string>
+    <string name="ai_conversation_device">Device: %1$s</string>
+    <string name="ai_conversation_device_with_id">%1$s (%2$s)</string>
+    <string name="ai_conversation_no_device">No device recorded</string>
 
     <!-- ViewModel operation status: Device discovery -->
     <string name="discovery_cannot_scan_lan">Cannot scan the LAN</string>

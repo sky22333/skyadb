@@ -7,7 +7,6 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
-import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.FastbootDeviceSummary
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -46,10 +45,8 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
     init {
         viewModelScope.launch {
             var previousId: String? = null
-            adbRepository.recentDevices.collect { devices ->
+            adbRepository.activeDeviceId.collect { connectedId ->
                 val kind = adbRepository.sessionKind()
-                val connectedId =
-                    devices.firstOrNull { it.connectionState == ConnectionState.Connected }?.id
                 deviceId = connectedId
                 state.update { snapshot ->
                     snapshot.copy(

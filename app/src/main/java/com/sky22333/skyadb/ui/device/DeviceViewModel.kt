@@ -16,6 +16,7 @@ import com.sky22333.skyadb.repository.AdbRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class DeviceUiState(
@@ -45,15 +46,20 @@ class DeviceViewModel(
         }
 
         viewModelScope.launch {
-            adbRepository.recentDevices.collect { devices ->
-                val connected = devices.firstOrNull { it.connectionState == ConnectionState.Connected }
-                if (connected != null) {
+            combine(adbRepository.recentDevices, adbRepository.activeDeviceId) { devices, activeId ->
+                devices to activeId
+            }.collect { (devices, activeId) ->
+                val previousId = state.value.deviceId
+                val active = devices.firstOrNull { it.id == activeId }
+                if (activeId != null) {
                     state.value = state.value.copy(
-                        deviceName = connected.name,
-                        deviceId = connected.id,
-                        connectionState = connected.connectionState,
+                        deviceName = active?.name ?: activeId,
+                        deviceId = activeId,
+                        connectionState = ConnectionState.Connected,
                         sessionKind = adbRepository.sessionKind(),
-                        rebootStatus = if (state.value.connectionState != ConnectionState.Connected && !state.value.rebooting) OperationStatus.Idle else state.value.rebootStatus,
+                        info = if (previousId != activeId) DeviceInfo() else state.value.info,
+                        fastbootSummary = if (previousId != activeId) null else state.value.fastbootSummary,
+                        rebootStatus = if (previousId != activeId && !state.value.rebooting) OperationStatus.Idle else state.value.rebootStatus,
                     )
                 } else {
                     state.value = state.value.copy(

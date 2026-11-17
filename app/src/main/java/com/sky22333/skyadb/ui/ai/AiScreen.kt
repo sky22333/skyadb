@@ -296,7 +296,29 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
             if (state.conversations.isEmpty()) Text(stringResource(R.string.ai_history_empty))
             state.conversations.forEach { conversation ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(conversation.title, modifier = Modifier.weight(1f).clickable { followsBottom = true; viewModel.selectConversation(conversation.id); showHistory = false }.padding(vertical = 12.dp), maxLines = 2)
+                    Column(
+                        modifier = Modifier.weight(1f).clickable {
+                            followsBottom = true
+                            viewModel.selectConversation(conversation.id)
+                            showHistory = false
+                        }.padding(vertical = 12.dp),
+                    ) {
+                        Text(conversation.title, maxLines = 2)
+                        val deviceLabel = when {
+                            conversation.deviceName.isNotBlank() && conversation.deviceId.isNotBlank() ->
+                                stringResource(R.string.ai_conversation_device_with_id, conversation.deviceName, conversation.deviceId)
+                            conversation.deviceName.isNotBlank() -> conversation.deviceName
+                            conversation.deviceId.isNotBlank() -> conversation.deviceId
+                            else -> stringResource(R.string.ai_conversation_no_device)
+                        }
+                        Text(
+                            text = stringResource(R.string.ai_conversation_device, deviceLabel),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            style = MiuixTheme.textStyles.footnote1,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     IconButton(onClick = { showHistory = false; pendingDeletion = conversation }) { Icon(MiuixIcons.Delete, stringResource(R.string.action_delete)) }
                 }
             }
