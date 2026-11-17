@@ -67,6 +67,8 @@ import com.sky22333.skyadb.model.MirrorConnectionMode
 import com.sky22333.skyadb.model.MirrorTransport
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.scrcpy.MirrorStats
+import com.sky22333.skyadb.scrcpy.MirrorSpeed
+import com.sky22333.skyadb.scrcpy.MirrorSpeedFormatter
 
 @Composable
 fun MirrorScreen(
@@ -273,6 +275,13 @@ private fun MirrorStatsBar(
                 R.string.mirror_connection_dedicated
             else R.string.mirror_connection_shared
         )
+    val speedLabel =
+        when (val speed = MirrorSpeedFormatter.format(stats.bytesPerSecond)) {
+            is MirrorSpeed.KilobytesPerSecond ->
+                stringResource(R.string.mirror_stats_speed_kbps, speed.value)
+            is MirrorSpeed.MegabytesPerSecond ->
+                stringResource(R.string.mirror_stats_speed_mbps, speed.value)
+        }
     val decoderLabel =
         if (stats.decoderName.isBlank()) stringResource(R.string.mirror_decoder_unknown)
         else stats.decoderName
@@ -318,7 +327,7 @@ private fun MirrorStatsBar(
             Text(
                 text = stringResource(
                     R.string.mirror_stats_pipeline,
-                    stats.bitrateMbps,
+                    speedLabel,
                     stats.queueDepth,
                     stats.latencyGrowthMs,
                     stats.keyFrameRequests,

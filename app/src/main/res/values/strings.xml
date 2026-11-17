@@ -43,7 +43,9 @@
     <string name="mirror_video_codec_h265">H.265</string>
     <string name="mirror_stats_frames">Received %1$d · Decoded %2$d · Dropped %3$d</string>
     <string name="mirror_stats_rates">RX %1$.1f FPS · Decode %2$.1f FPS</string>
-    <string name="mirror_stats_pipeline">%1$.2f Mbps · Queue %2$d · +%3$d ms · Resets %4$d</string>
+    <string name="mirror_stats_speed_kbps">%1$d KB/s</string>
+    <string name="mirror_stats_speed_mbps">%1$.2f MB/s</string>
+    <string name="mirror_stats_pipeline">%1$s · Queue %2$d · +%3$d ms · Resets %4$d</string>
     <string name="mirror_stats_connection">%1$s · %2$s · %3$s</string>
     <string name="mirror_transport_wifi">WiFi</string>
     <string name="mirror_transport_usb">USB</string>
@@ -87,7 +89,7 @@
     <string name="action_connecting">Connecting\u2026</string>
     <string name="action_connect">Connect</string>
     <string name="home_manual_connect_title">Manual connection</string>
-    <string name="home_endpoint_label">IP address:port</string>
+    <string name="home_endpoint_label">IP/domain:port</string>
     <string name="action_wireless_pairing">Pair</string>
     <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
@@ -294,10 +296,10 @@
     <string name="action_collapse">Collapse</string>
     <string name="action_expand">Expand</string>
     <string name="pairing_guide_step1">Enable wireless debugging on the target device and choose pairing code pairing.</string>
-    <string name="pairing_guide_step2">Enter the IP, temporary port, and 6-digit pairing code from the pairing dialog.</string>
+    <string name="pairing_guide_step2">Enter the IP/domain, temporary port, and 6-digit pairing code from the pairing dialog.</string>
     <string name="pairing_guide_step3">After pairing succeeds, tap \"Go connect\" and confirm the address to connect.</string>
     <string name="pairing_info_title">Pairing info</string>
-    <string name="pairing_ip_label">Pairing IP</string>
+    <string name="pairing_ip_label">Pairing IP/domain</string>
     <string name="pairing_port_label">Pairing port</string>
     <string name="pairing_code_label">Pairing code</string>
     <string name="action_go_connect">Go connect</string>
@@ -506,7 +508,7 @@
     <string name="scan_range_error_invalid">Invalid format or range too large: %1$s</string>
 
     <!-- Input validation -->
-    <string name="error_ipv4_invalid">Please enter a valid IPv4/IPv6 address</string>
+    <string name="error_ipv4_invalid">Please enter a valid IP address or domain name</string>
     <string name="error_port_not_number">%1$s must be numeric</string>
     <string name="error_port_out_of_range">%1$s must be between 1-65535</string>
     <string name="error_url_scheme">Please enter a link starting with http:// or https://</string>
@@ -568,7 +570,7 @@
     <!-- ViewModel operation status: Pairing -->
     <string name="pairing_autofill_hint">Filled in the auto-discovered pairing address. Please enter the 6-digit pairing code.</string>
     <string name="pairing_cannot_start">Cannot start pairing</string>
-    <string name="pairing_check_fields">Check that the pairing IP, pairing port, and 6-digit pairing code are correct.</string>
+    <string name="pairing_check_fields">Check that the pairing IP/domain, pairing port, and 6-digit pairing code are correct.</string>
     <string name="pairing_pairing_with">Pairing with %1$s:%2$s</string>
     <string name="pairing_finding_port">Finding connect port\u2026</string>
     <string name="pairing_success_port_found">Paired successfully, found connect port %1$d.</string>

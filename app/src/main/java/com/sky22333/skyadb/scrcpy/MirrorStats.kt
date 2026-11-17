@@ -12,7 +12,7 @@ data class MirrorStats(
     val droppedFrames: Long = 0,
     val receiveFps: Double = 0.0,
     val decodeFps: Double = 0.0,
-    val bitrateMbps: Double = 0.0,
+    val bytesPerSecond: Double = 0.0,
     val queueDepth: Int = 0,
     val latencyGrowthMs: Long = 0,
     val keyFrameRequests: Long = 0,
@@ -113,9 +113,9 @@ class MirrorStatsTracker(
                 } else {
                     0.0
                 }
-            val bitrateMbps =
+            val bytesPerSecond =
                 if (elapsedSeconds > 0.0) {
-                    (receivedBytes - sampleReceivedBytes) * 8.0 / elapsedSeconds / 1_000_000.0
+                    (receivedBytes - sampleReceivedBytes) / elapsedSeconds
                 } else {
                     0.0
                 }
@@ -134,7 +134,7 @@ class MirrorStatsTracker(
                 droppedFrames = droppedFrames,
                 receiveFps = receiveFps,
                 decodeFps = decodeFps,
-                bitrateMbps = bitrateMbps,
+                bytesPerSecond = bytesPerSecond,
                 queueDepth = (submittedFrames - decodedFrames).coerceAtLeast(0L).toInt(),
                 latencyGrowthMs = latencyGrowthMs,
                 keyFrameRequests = keyFrameRequests,

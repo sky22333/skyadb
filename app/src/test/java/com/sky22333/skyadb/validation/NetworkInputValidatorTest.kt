@@ -21,6 +21,24 @@ class NetworkInputValidatorTest {
     }
 
     @Test
+    fun endpointParsesDnsAndIdnNames() {
+        val explicit = NetworkInputValidator.endpoint("ADB.Example.COM.:12345", 5555)
+        assertTrue(explicit.isValid)
+        assertEquals("adb.example.com", explicit.host)
+        assertEquals(12345, explicit.port)
+
+        val defaultPort = NetworkInputValidator.endpoint("localhost", 5555)
+        assertTrue(defaultPort.isValid)
+        assertEquals("localhost", defaultPort.host)
+        assertEquals(5555, defaultPort.port)
+
+        val idn = NetworkInputValidator.endpoint("BÜCHER.example:37125", 5555)
+        assertTrue(idn.isValid)
+        assertEquals("xn--bcher-kva.example", idn.host)
+        assertEquals(37125, idn.port)
+    }
+
+    @Test
     fun endpointParsesBracketedAndBareIpv6() {
         val explicit = NetworkInputValidator.endpoint("[2001:db8::1]:37125", 5555)
         assertTrue(explicit.isValid)
@@ -68,8 +86,15 @@ class NetworkInputValidatorTest {
             "192.168.1.20:65536",
             "192.168.1.20:12:3",
             "192.168.1.999:5555",
-            "example.com",
-            "example.com:5555",
+            "192.168.1",
+            "999",
+            "-example.com",
+            "example-.com",
+            "example..com",
+            "example_com:5555",
+            "https://example.com:5555",
+            "example.com/path:5555",
+            "[example.com]:5555",
             ":5555",
             "[::1",
             "::1]",
@@ -96,13 +121,20 @@ class NetworkInputValidatorTest {
         assertNull(NetworkInputValidator.ipError("2001:db8::1"))
         assertNull(NetworkInputValidator.ipError("[2001:db8::1]"))
         assertNull(NetworkInputValidator.ipError("fe80::1%wlan0"))
+        assertNull(NetworkInputValidator.ipError("ADB.Example.COM."))
+        assertNull(NetworkInputValidator.ipError("BÜCHER.example"))
+        assertNull(NetworkInputValidator.ipError("localhost"))
     }
 
     @Test
     fun ipError_rejectsInvalidAddressesAndBrackets() {
         assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("192.168.1.999"))
         assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("192.168.1"))
-        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("example.com"))
+        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("999"))
+        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("-example.com"))
+        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("example..com"))
+        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("https://example.com"))
+        assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("example.com/path"))
         assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("2001:db8::1::2"))
         assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("[2001:db8::1"))
         assertEquals(R.string.error_ipv4_invalid, NetworkInputValidator.ipError("[192.168.1.1]"))
@@ -113,7 +145,10 @@ class NetworkInputValidatorTest {
         assertEquals("2001:db8::1", NetworkInputValidator.normalizeHost("[2001:db8::1]"))
         assertEquals("fe80::1%wlan0", NetworkInputValidator.normalizeHost("[fe80::1%wlan0]"))
         assertEquals("192.168.1.2", NetworkInputValidator.normalizeHost("192.168.1.2"))
+        assertEquals("adb.example.com", NetworkInputValidator.normalizeHost("ADB.Example.COM."))
+        assertEquals("xn--bcher-kva.example", NetworkInputValidator.normalizeHost("BÜCHER.example"))
         assertNull(NetworkInputValidator.normalizeHost("[::1]:5555"))
+        assertNull(NetworkInputValidator.normalizeHost("192.168.1.999"))
     }
 
     @Test

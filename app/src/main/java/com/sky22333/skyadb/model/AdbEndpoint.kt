@@ -1,5 +1,8 @@
 package com.sky22333.skyadb.model
 
+import java.net.IDN
+import java.util.Locale
+
 /** Formats and compares ADB network endpoints without losing IPv6 information. */
 data class AdbEndpoint(
     val host: String,
@@ -26,32 +29,44 @@ data class AdbEndpoint(
             return if (socketHost.contains(':')) "[$socketHost]:$port" else "$socketHost:$port"
         }
 
-        /** Accepts a bare or bracketed IP literal and returns the socket host. */
+        /** Accepts an IPv4/IPv6 literal or DNS host name and returns the socket host. */
         fun normalizeHost(value: String): String? {
             val trimmed = value.trim()
             if (trimmed.isEmpty()) return null
-            if ('[' !in trimmed && ']' !in trimmed) return trimmed.takeIf { isValidIp(it) }
-            if (trimmed.length < 2 || trimmed.first() != '[' || trimmed.last() != ']') return null
-            val inner = trimmed.substring(1, trimmed.length - 1)
-            if (inner.isEmpty() || '[' in inner || ']' in inner) return null
-            if (':' !in inner) return null
-            return inner.takeIf { isValidIp(it) }
+            if (trimmed.first() == '[' || trimmed.last() == ']') {
+                if (trimmed.length < 2 || trimmed.first() != '[' || trimmed.last() != ']') return null
+                val inner = trimmed.substring(1, trimmed.length - 1)
+                if (inner.isEmpty() || '[' in inner || ']' in inner || ':' !in inner) return null
+                return inner.takeIf { isValidIp(it) }
+            }
+            if ('[' in trimmed || ']' in trimmed || ':' in trimmed) {
+                return trimmed.takeIf { isValidIp(it) }
+            }
+            if (isValidIp(trimmed)) return trimmed
+            if (resemblesIpv4Literal(trimmed)) return null
+            return normalizeDnsHost(trimmed)
         }
 
         fun isValidIp(value: String): Boolean = parseComparableHost(value) != null
 
-        /** Compares IP literals while ignoring IPv6 compression and letter case. */
+        fun isValidHost(value: String): Boolean = normalizeHost(value) != null
+
+        /** Compares hosts while normalizing IP and DNS representations. */
         fun sameHost(left: String, right: String): Boolean {
             val leftHost = parseComparableHost(left)
             val rightHost = parseComparableHost(right)
-            if (leftHost == null || rightHost == null) {
-                return hostForSocket(left).equals(hostForSocket(right), ignoreCase = true)
+            if (leftHost != null || rightHost != null) {
+                if (leftHost == null || rightHost == null) return false
+                if (leftHost.addressKey != rightHost.addressKey) return false
+                if (leftHost.zone != null && rightHost.zone != null) {
+                    return leftHost.zone.equals(rightHost.zone, ignoreCase = true)
+                }
+                return true
             }
-            if (leftHost.addressKey != rightHost.addressKey) return false
-            if (leftHost.zone != null && rightHost.zone != null) {
-                return leftHost.zone.equals(rightHost.zone, ignoreCase = true)
-            }
-            return true
+            val normalizedLeft = normalizeHost(left)
+            val normalizedRight = normalizeHost(right)
+            if (normalizedLeft != null && normalizedRight != null) return normalizedLeft == normalizedRight
+            return hostForSocket(left).equals(hostForSocket(right), ignoreCase = true)
         }
 
         /** Compares already formatted authorities such as 192.168.1.2:5555 or [::1]:5555. */
@@ -66,6 +81,28 @@ data class AdbEndpoint(
             val addressKey: String,
             val zone: String?,
         )
+
+        private fun normalizeDnsHost(value: String): String? {
+            if (value.any { it == '/' || it == '\\' || it.isWhitespace() }) return null
+            val withoutTrailingDot = if (value.endsWith('.')) value.dropLast(1) else value
+            if (withoutTrailingDot.isEmpty()) return null
+            val ascii = try {
+                IDN.toASCII(withoutTrailingDot, IDN.USE_STD3_ASCII_RULES)
+            } catch (_: IllegalArgumentException) {
+                return null
+            }
+            if (ascii.isEmpty() || ascii.length > MAX_DNS_HOST_LENGTH) return null
+            val labels = ascii.split('.')
+            if (labels.any { !isValidDnsLabel(it) }) return null
+            return ascii.lowercase(Locale.ROOT)
+        }
+
+        private fun isValidDnsLabel(label: String): Boolean =
+            label.length in 1..MAX_DNS_LABEL_LENGTH && label.first() != '-' && label.last() != '-' &&
+                label.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' }
+
+        private fun resemblesIpv4Literal(value: String): Boolean =
+            value.isNotEmpty() && value.all { it in '0'..'9' || it == '.' }
 
         private fun parseComparableHost(value: String): ComparableHost? {
             val socketHost = hostForSocket(value)
@@ -166,5 +203,8 @@ data class AdbEndpoint(
         }
 
         private fun Char.isHexDigit(): Boolean = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
+
+        private const val MAX_DNS_HOST_LENGTH = 253
+        private const val MAX_DNS_LABEL_LENGTH = 63
     }
 }

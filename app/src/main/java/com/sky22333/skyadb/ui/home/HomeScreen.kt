@@ -349,7 +349,7 @@ private fun ManualConnectSectionErrorPreview() {
     AdbManagerTheme() {
         ManualConnectSection(
             endpoint = "192.168.1.999:70000",
-            endpointError = "请输入正确的 IPv4/IPv6 地址",
+            endpointError = "请输入正确的 IP 地址或域名",
             connectEnabled = false,
             operationStatus = OperationStatus.Failed(
                 text = "无法发起连接",

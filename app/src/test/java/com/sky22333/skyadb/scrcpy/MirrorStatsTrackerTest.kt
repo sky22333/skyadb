@@ -7,7 +7,7 @@ import org.junit.Test
 
 class MirrorStatsTrackerTest {
     @Test
-    fun snapshotReportsCountersRatesAndBitrate() {
+    fun snapshotReportsCountersRatesAndThroughput() {
         val tracker = MirrorStatsTracker(MirrorTransport.Wifi, MirrorConnectionMode.Dedicated)
         val start = 1_000_000_000L
 
@@ -33,7 +33,7 @@ class MirrorStatsTrackerTest {
         assertEquals(1L, stats.droppedFrames)
         assertEquals(2.0, stats.receiveFps, 0.001)
         assertEquals(2.0, stats.decodeFps, 0.001)
-        assertEquals(0.016, stats.bitrateMbps, 0.0001)
+        assertEquals(2_000.0, stats.bytesPerSecond, 0.001)
         assertEquals(0, stats.queueDepth)
         assertEquals(0L, stats.latencyGrowthMs)
         assertEquals(1L, stats.keyFrameRequests)

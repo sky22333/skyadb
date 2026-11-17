@@ -43,7 +43,9 @@
     <string name="mirror_video_codec_h265">H.265</string>
     <string name="mirror_stats_frames">接收 %1$d · 解码 %2$d · 丢帧 %3$d</string>
     <string name="mirror_stats_rates">接收 %1$.1f FPS · 解码 %2$.1f FPS</string>
-    <string name="mirror_stats_pipeline">%1$.2f Mbps · 队列 %2$d · +%3$d ms · 重置 %4$d</string>
+    <string name="mirror_stats_speed_kbps">%1$d KB/s</string>
+    <string name="mirror_stats_speed_mbps">%1$.2f MB/s</string>
+    <string name="mirror_stats_pipeline">%1$s · 队列 %2$d · +%3$d ms · 重置 %4$d</string>
     <string name="mirror_stats_connection">%1$s · %2$s · %3$s</string>
     <string name="mirror_transport_wifi">WiFi</string>
     <string name="mirror_transport_usb">USB</string>
@@ -87,7 +89,7 @@
     <string name="action_connecting">连接中\u2026</string>
     <string name="action_connect">连接</string>
     <string name="home_manual_connect_title">手动连接</string>
-    <string name="home_endpoint_label">IP 地址:端口</string>
+    <string name="home_endpoint_label">IP/域名:端口</string>
     <string name="action_wireless_pairing">无线配对</string>
     <string name="action_discover_devices">发现设备</string>
     <string name="home_recent_devices_title">最近设备</string>
@@ -294,10 +296,10 @@
     <string name="action_collapse">收起</string>
     <string name="action_expand">展开</string>
     <string name="pairing_guide_step1">目标设备开启无线调试，选择配对码配对。</string>
-    <string name="pairing_guide_step2">填写配对窗口中的 IP、临时端口和 6 位配对码。</string>
+    <string name="pairing_guide_step2">填写配对窗口中的 IP/域名、临时端口和 6 位配对码。</string>
     <string name="pairing_guide_step3">配对成功后点「去连接」，确认地址后连接。</string>
     <string name="pairing_info_title">配对信息</string>
-    <string name="pairing_ip_label">配对 IP</string>
+    <string name="pairing_ip_label">配对 IP/域名</string>
     <string name="pairing_port_label">配对端口</string>
     <string name="pairing_code_label">配对码</string>
     <string name="action_go_connect">去连接</string>
@@ -506,7 +508,7 @@
     <string name="scan_range_error_invalid">格式错误或范围过大：%1$s</string>
 
     <!-- Input validation -->
-    <string name="error_ipv4_invalid">请输入正确的 IPv4/IPv6 地址</string>
+    <string name="error_ipv4_invalid">请输入正确的 IP 地址或域名</string>
     <string name="error_port_not_number">%1$s只能填写数字</string>
     <string name="error_port_out_of_range">%1$s范围应为 1-65535</string>
     <string name="error_url_scheme">请输入以 http:// 或 https:// 开头的链接</string>
@@ -568,7 +570,7 @@
     <!-- ViewModel operation status: Pairing -->
     <string name="pairing_autofill_hint">已填入自动发现的配对地址，请输入 6 位配对码。</string>
     <string name="pairing_cannot_start">无法发起配对</string>
-    <string name="pairing_check_fields">请检查配对 IP、配对端口和 6 位配对码是否正确。</string>
+    <string name="pairing_check_fields">请检查配对 IP/域名、配对端口和 6 位配对码是否正确。</string>
     <string name="pairing_pairing_with">正在配对 %1$s:%2$s</string>
     <string name="pairing_finding_port">正在查找连接端口\u2026</string>
     <string name="pairing_success_port_found">配对成功，已找到连接端口 %1$d。</string>

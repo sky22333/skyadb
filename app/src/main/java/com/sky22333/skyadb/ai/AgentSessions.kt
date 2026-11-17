@@ -17,8 +17,8 @@ class AgentSessions(private val primary: KadbManager) {
 
     suspend fun connect(id: String, host: String, port: Int): AdbOperationResult<Device> = mutex.withLock {
         require(id.matches(Regex("[A-Za-z0-9_-]{1,32}")) && id !in setOf("active", "app", "authorized")) { "Invalid or reserved device ID" }
-        val socketHost = AdbEndpoint.hostForSocket(host)
-        require(AdbEndpoint.isValidIp(socketHost) && socketHost.length <= 255 && port in 1..65535) { "Invalid ADB endpoint" }
+        require(AdbEndpoint.isValidHost(host) && port in 1..65535) { "Invalid ADB endpoint" }
+        val socketHost = requireNotNull(AdbEndpoint.normalizeHost(host))
         val endpoint = AdbEndpoint.format(socketHost, port)
         if (AdbEndpoint.sameAuthority(primary.currentEndpoint().orEmpty(), endpoint) && primary.isConnected()) {
             return@withLock AdbOperationResult.Success(Device("active", endpoint))
