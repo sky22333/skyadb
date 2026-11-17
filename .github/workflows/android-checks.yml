@@ -38,6 +38,9 @@ jobs:
         with:
           gradle-version: wrapper
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
