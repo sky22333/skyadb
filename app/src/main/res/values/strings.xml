@@ -84,6 +84,7 @@
     <string name="home_title">Device connection</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="action_edit">Edit</string>
+    <string name="action_clear_input">Clear input</string>
     <string name="home_refresh_usb_desc">Refresh USB devices</string>
     <string name="device_authorized">Authorized</string>
     <string name="device_unauthorized">Pending authorization</string>

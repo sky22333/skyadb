@@ -84,6 +84,7 @@
     <string name="home_title">设备连接</string>
     <string name="action_disconnect">断开连接</string>
     <string name="action_edit">编辑</string>
+    <string name="action_clear_input">清空输入框</string>
     <string name="home_refresh_usb_desc">刷新 USB 设备</string>
     <string name="device_authorized">已授权</string>
     <string name="device_unauthorized">待授权</string>

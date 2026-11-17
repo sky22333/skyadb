@@ -2,6 +2,7 @@ package com.sky22333.skyadb.ui.home
 
 import androidx.compose.foundation.combinedClickable
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Remove
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -233,6 +234,23 @@ private fun ManualConnectSection(
     onEndpointChanged: (String) -> Unit,
     onConnectClick: () -> Unit,
 ) {
+    val clearAction: (@Composable () -> Unit)? = if (endpoint.isNotEmpty()) {
+        {
+            IconButton(
+                onClick = { onEndpointChanged("") },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Close,
+                    contentDescription = stringResource(R.string.action_clear_input),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    } else {
+        null
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -251,6 +269,7 @@ private fun ManualConnectSection(
             modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.home_endpoint_label),
             singleLine = true,
+            trailingIcon = clearAction,
         )
         endpointError?.let { Text(it, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.error) }
         OperationStatusMessage(status = operationStatus)
