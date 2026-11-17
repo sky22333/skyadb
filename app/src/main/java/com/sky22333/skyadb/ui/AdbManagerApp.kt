@@ -10,10 +10,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
@@ -36,6 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -49,6 +54,9 @@ import androidx.core.view.WindowCompat
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ui.apps.AppsScreen
 import com.sky22333.skyadb.ui.ai.AiScreen
+import com.sky22333.skyadb.ui.ai.AiSettingsScreen
+import com.sky22333.skyadb.ai.AiViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.ui.components.AppIcons
 import com.sky22333.skyadb.ui.device.DeviceScreen
 import com.sky22333.skyadb.ui.diagnostics.DiagnosticLogScreen
@@ -95,15 +103,15 @@ private fun TabBackHandler(enabled: Boolean, onBack: () -> Unit) {
 }
 
 @Composable
-fun AdbManagerApp() {
+fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState = rememberLazyListState()) {
     val stack = rememberNavBackStack<Route>(Route(RootRoute))
     var selectedTab by rememberSaveable { mutableStateOf(AppDestination.Home.route) }
     val current = (stack.lastOrNull() as? Route)?.name ?: RootRoute
     val showBottomBar = current == RootRoute
-    var aiSettingsOpen by remember { mutableStateOf(false) }
-    val aiListState = rememberLazyListState()
     val aiFollowsBottom = rememberSaveable { mutableStateOf(true) }
-    val showNavigation = showBottomBar && !(selectedTab == AppDestination.Ai.route && aiSettingsOpen)
+    var aiVisited by rememberSaveable { mutableStateOf(selectedTab == AppDestination.Ai.route) }
+    val sharedAiViewModel = if (aiVisited) aiViewModel ?: viewModel<AiViewModel>() else null
+    val showNavigation = showBottomBar
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val pageFocusRequester = remember { FocusRequester() }
@@ -136,6 +144,7 @@ fun AdbManagerApp() {
     }
 
     fun selectTab(route: String) {
+        if (route == AppDestination.Ai.route) aiVisited = true
         selectedTab = route
     }
     fun navigate(route: String) {
@@ -157,7 +166,7 @@ fun AdbManagerApp() {
         }
     }
 
-    TabBackHandler(showBottomBar && selectedTab != AppDestination.Home.route && !aiSettingsOpen) { selectTab(AppDestination.Home.route) }
+    TabBackHandler(showBottomBar && selectedTab != AppDestination.Home.route) { selectTab(AppDestination.Home.route) }
 
     val bottomNavigationHeight = 54.dp
     Scaffold(
@@ -190,6 +199,21 @@ fun AdbManagerApp() {
     ) { _ ->
         val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val rootBottomPadding = bottomNavigationHeight + systemBottom
+        Box(Modifier.fillMaxSize()) {
+        if (aiVisited) {
+            val chatVisible = selectedTab == AppDestination.Ai.route && current == RootRoute
+            val chatAlpha by animateFloatAsState(if (chatVisible) 1f else 0f, tween(220), label = "chat-tab")
+            Box(Modifier.fillMaxSize().zIndex(if (chatVisible) 1f else -1f).alpha(chatAlpha)
+                .then(if (!chatVisible) Modifier.clearAndSetSemantics {} else Modifier)
+                .windowInsetsPadding(
+                    if (chatVisible) WindowInsets.ime.union(WindowInsets(bottom = rootBottomPadding))
+                    else WindowInsets(bottom = rootBottomPadding)
+                )
+                .background(MiuixTheme.colorScheme.background)) {
+                AiScreen(viewModel = checkNotNull(sharedAiViewModel), onSettingsClick = { navigate(AiSettingsRoute) },
+                    listState = aiListState, followState = aiFollowsBottom, visible = chatVisible)
+            }
+        }
         NavDisplay(
             backStack = stack,
             onBack = ::back,
@@ -202,6 +226,7 @@ fun AdbManagerApp() {
                     when (route.name) {
                         MirrorRoute -> Color.Black
                         AppDestination.Files.route -> MiuixTheme.colorScheme.surface
+                        RootRoute -> Color.Transparent
                         else -> MiuixTheme.colorScheme.background
                     },
                 ).then(
@@ -217,9 +242,9 @@ fun AdbManagerApp() {
                     ) { tab ->
                         Box(Modifier.fillMaxSize().then(
                             if (tab == AppDestination.Ai.route) Modifier.windowInsetsPadding(
-                                WindowInsets.ime.union(if (aiSettingsOpen) WindowInsets.navigationBars else WindowInsets(bottom = rootBottomPadding))
+                                WindowInsets.ime.union(WindowInsets(bottom = rootBottomPadding))
                             ) else Modifier.padding(bottom = rootBottomPadding)
-                        ).background(MiuixTheme.colorScheme.background)) {
+                        ).background(if (tab == AppDestination.Ai.route) Color.Transparent else MiuixTheme.colorScheme.background)) {
                             when (tab) {
                                 AppDestination.Home.route -> HomeScreen(
                                     bottomPadding = 0.dp,
@@ -246,10 +271,11 @@ fun AdbManagerApp() {
                                     bottomPadding = 0.dp,
                                     onDiagnosticsClick = { navigate(DiagnosticsRoute) },
                                 )
-                                AppDestination.Ai.route -> AiScreen(onSettingsVisibilityChange = { aiSettingsOpen = it }, listState = aiListState, followState = aiFollowsBottom)
+                                AppDestination.Ai.route -> Unit
                             }
                         }
                     }
+                    AiSettingsRoute -> AiSettingsScreen(viewModel = checkNotNull(sharedAiViewModel), onDismiss = ::back)
                     AppDestination.Pairing.route -> PairingScreen(
                         bottomPadding = 0.dp,
                         onBackClick = ::back,
@@ -296,6 +322,7 @@ fun AdbManagerApp() {
                 }
             }
         }
+        }
     }
 }
 
@@ -336,6 +363,7 @@ private val PageTransition = object : NavTransition by NavTransitions.MiuixDefau
         programmatic = (NavMotion.Default.programmatic as NavSettleSpec.Tween).copy(durationMillis = 220),
     )
 }
+private const val AiSettingsRoute = "ai-settings"
 private const val RemoteRoute = "remote"
 private const val MirrorRoute = "mirror"
 private const val LogsRoute = "logs"

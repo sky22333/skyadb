@@ -738,7 +738,7 @@
     <string name="ai_stop">停止</string>
     <string name="ai_new">新对话</string>
     <string name="ai_attach">选择本机文件</string>
-    <string name="ai_attachment_only_prompt">用户只发送了文件，请询问希望如何处理。</string>
+    <string name="ai_attachment_only_prompt">用户只发送了附件，请询问希望如何处理。</string>
     <string name="ai_attachment">已选择本机文件</string>
     <string name="ai_remove_attachment">移除文件</string>
     <string name="ai_protocol">接口协议</string>
@@ -835,4 +835,19 @@
     <string name="fb_export">保存到本机</string>
     <string name="fb_exported">文件已保存。</string>
     <string name="fb_export_incomplete">文件导出中断或失败，目标文件可能不完整。</string>
+    <string name="ai_tool_declined">已拒绝</string>
+    <string name="ai_back_to_latest">回到最新</string>
+    <string name="ai_waiting_approval">等待确认</string>
+    <string name="ai_file">文件</string>
+    <string name="ai_preparing">正在准备</string>
+    <string name="ai_waiting_response">等待回复</string>
+    <string name="ai_answering">正在回答</string>
+    <string name="ai_work_process">工作过程</string>
+    <string name="ai_work_steps">%1$d 步</string>
+    <string name="ai_title_compact">AI</string>
+    <string name="ai_attachments_limit">每条消息最多选择 20 个文件。</string>
+    <string name="ai_attachment_access_failed">部分文件无法保留访问权限，请从支持持久授权的文件来源重新选择。</string>
+    <string name="ai_attachment_read_failed">无法读取 %1$s：%2$s</string>
+    <string name="ai_remove_attachment_named">移除 %1$s</string>
+    <string name="ai_attachments_loading">正在准备附件</string>
 </resources>

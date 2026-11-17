@@ -74,7 +74,7 @@ internal fun FastbootControls(
             trailing = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (state.summaryLoading)
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(size = 18.dp, strokeWidth = 2.dp)
                     IconButton(onClick = onRefresh, enabled = state.connected && !busy) {
                         Icon(
                             MiuixIcons.Refresh,

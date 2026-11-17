@@ -3,10 +3,12 @@ package com.sky22333.skyadb.ui.ai
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListState
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -51,6 +54,8 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ai.McpServerConfig
 import com.sky22333.skyadb.ai.AiConfig
 import com.sky22333.skyadb.ai.AiViewModel
+import com.sky22333.skyadb.ai.AiMessage
+import com.sky22333.skyadb.ai.AiRunPhase
 import com.sky22333.skyadb.ai.AiToolStatus
 import com.sky22333.skyadb.ai.AiConversationSummary
 import com.sky22333.skyadb.ai.AiDownload
@@ -61,7 +66,6 @@ import com.sky22333.skyadb.ui.components.FlatButton
 import com.sky22333.skyadb.ui.components.AppIcons
 import com.sky22333.skyadb.ui.components.TextField
 import com.sky22333.skyadb.ui.components.PopupAnchor
-import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.theme.AppDimens
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import com.swmansion.enriched.markdown.compose.EnrichedMarkdownText
@@ -82,12 +86,9 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 
 @Composable
-fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (Boolean) -> Unit = {}, listState: LazyListState? = null, followState: MutableState<Boolean>? = null) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val messagesListState = listState ?: key(state.historyLoading) {
-        rememberLazyListState(initialFirstVisibleItemIndex = state.messages.lastIndex.coerceAtLeast(0))
-    }
-    var showConfig by remember { mutableStateOf(false) }
+fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsClick: () -> Unit = {}, listState: LazyListState? = null, followState: MutableState<Boolean>? = null, visible: Boolean = true) {
+    val state by if (visible) viewModel.uiState.collectAsStateWithLifecycle() else remember { mutableStateOf(viewModel.uiState.value) }
+    val messagesListState = listState ?: rememberLazyListState()
     var showHistory by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
     var downloadToDelete by remember { mutableStateOf<AiDownload?>(null) }
@@ -99,9 +100,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     val inputSize = remember(input) { inputLength(input) }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    DisposableEffect(Unit) { onDispose { onSettingsVisibilityChange(false) } }
-    fun closeConfig() { viewModel.clearModels(); viewModel.clearMcpTest(); showConfig = false; onSettingsVisibilityChange(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) viewModel.attach(uri) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> viewModel.addAttachments(uris) }
     val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val download = downloadToExport
         downloadToExport = null
@@ -119,35 +118,27 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     val dragging by messagesListState.interactionSource.collectIsDraggedAsState()
     val localFollowState = remember { mutableStateOf(true) }
     var followsBottom by (followState ?: localFollowState)
-    var wasDragging by remember(messagesListState) { mutableStateOf(false) }
+    val timeline = remember(state.messages) { state.messages.toTimeline().asReversed() }
+    val lastMessageId = state.messages.lastOrNull()?.id
+
     LaunchedEffect(dragging) {
         if (dragging) followsBottom = false
-        else if (wasDragging && !messagesListState.canScrollForward) followsBottom = true
-        wasDragging = dragging
     }
-    val lastMessageId = state.messages.lastOrNull()?.id
-    val lastIndex = state.messages.lastIndex
-    LaunchedEffect(messagesListState, lastMessageId, followsBottom) {
-        if (followsBottom && lastIndex >= 0) messagesListState.scrollToItem(lastIndex)
+    LaunchedEffect(messagesListState) {
+        snapshotFlow {
+            !dragging && !messagesListState.isScrollInProgress &&
+                messagesListState.layoutInfo.totalItemsCount > 0 && !messagesListState.canScrollBackward
+        }.collect { if (it) followsBottom = true }
     }
-    LaunchedEffect(messagesListState, lastMessageId, followsBottom) {
-        if (followsBottom && lastIndex >= 0) {
-            snapshotFlow {
-                val layout = messagesListState.layoutInfo
-                val last = layout.visibleItemsInfo.lastOrNull { it.index == lastIndex }
-                last?.let { (it.offset + it.size + layout.afterContentPadding - layout.viewportEndOffset).coerceAtLeast(0) } ?: 0
-            }.collect { overflow -> if (overflow > 0) messagesListState.scrollBy(overflow.toFloat()) }
-        }
-    }
-    if (showConfig) {
-        AiConfigPage(state.config, state.models, state.loadingModels, saving = state.savingConfig, onDismiss = ::closeConfig, onFetch = viewModel::loadModels, onClearModels = viewModel::clearModels, mcpTesting = state.mcpTesting, mcpNotice = state.mcpNotice, mcpNoticeId = state.mcpNoticeId, mcpToolNames = state.mcpToolNames, onMcpChanged = viewModel::clearMcpNotice, onCloseMcp = viewModel::clearMcpTest, onTestMcp = viewModel::testMcp, onSave = { viewModel.saveConfig(it, ::closeConfig) })
-    } else Column(Modifier.fillMaxSize()) {
-        SmallTopAppBar(title = stringResource(R.string.ai_title), color = MiuixTheme.colorScheme.background, actions = {
-            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); viewModel.refreshDownloads(); showDownloads = true }, enabled = !state.busy && !state.managingDownload) { Icon(MiuixIcons.Download, stringResource(R.string.ai_downloads)) }
-            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); showHistory = true }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.ListView, stringResource(R.string.ai_history)) }
-            IconButton(onClick = { followsBottom = true; viewModel.clear() }, enabled = !state.busy && !state.historyLoading) { Icon(MiuixIcons.Add, stringResource(R.string.ai_new)) }
-            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onSettingsVisibilityChange(true); showConfig = true }, enabled = !state.busy) { Icon(MiuixIcons.Settings, stringResource(R.string.ai_config)) }
+    Column(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        SmallTopAppBar(title = stringResource(if (maxWidth < 360.dp) R.string.ai_title_compact else R.string.ai_title), color = MiuixTheme.colorScheme.background, actions = {
+            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); viewModel.refreshDownloads(); showDownloads = true }, modifier = Modifier.size(44.dp), enabled = !state.busy && !state.managingDownload) { Icon(MiuixIcons.Download, stringResource(R.string.ai_downloads)) }
+            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); showHistory = true }, modifier = Modifier.size(44.dp), enabled = !state.busy && !state.historyLoading && !state.attachmentsLoading) { Icon(MiuixIcons.ListView, stringResource(R.string.ai_history)) }
+            IconButton(onClick = { followsBottom = true; messagesListState.requestScrollToItem(0); viewModel.clear() }, modifier = Modifier.size(44.dp), enabled = !state.busy && !state.historyLoading && !state.attachmentsLoading) { Icon(MiuixIcons.Add, stringResource(R.string.ai_new)) }
+            IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); onSettingsClick() }, modifier = Modifier.size(44.dp), enabled = !state.busy) { Icon(MiuixIcons.Settings, stringResource(R.string.ai_config)) }
         })
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (state.historyLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -158,75 +149,93 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                     Text(stringResource(R.string.ai_empty), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
             } else {
-                LazyColumn(state = messagesListState, modifier = Modifier.fillMaxSize().testTag("ai_messages"), contentPadding = PaddingValues(start = AppDimens.ScreenPadding, end = AppDimens.ScreenPadding, top = AppDimens.ScreenPadding, bottom = composerPadding + AppDimens.ScreenPadding), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(state.messages, key = { it.id }) { message ->
+                LazyColumn(state = messagesListState, reverseLayout = true, modifier = Modifier.fillMaxSize().testTag("ai_messages"), contentPadding = PaddingValues(start = AppDimens.ScreenPadding, end = AppDimens.ScreenPadding, top = AppDimens.ScreenPadding, bottom = composerPadding + AppDimens.ScreenPadding), verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Top)) {
+                    item(key = AiBottomKey) { Spacer(Modifier.height(1.dp)) }
+                    items(timeline, key = { it.key }, contentType = { if (it is AiTimelineEntry.Work) "work" else "message" }) { entry ->
+                        if (entry is AiTimelineEntry.Work) {
+                            WorkProcess(entry.messages)
+                        } else {
+                        val message = (entry as AiTimelineEntry.Message).message
                         Column(Modifier.fillMaxWidth(), horizontalAlignment = if (message.role == "user") Alignment.End else Alignment.Start) {
                             when (message.role) {
-                                "assistant" -> EnrichedMarkdownText(markdown = message.text, style = markdownStyle, onLinkClick = { link -> runCatching { uriHandler.openUri(link) } })
-                                "tool" -> {
-                                    var expanded by remember(message.id) { mutableStateOf(false) }
-                                    val toolName = message.text.substringBefore('\n')
-                                    val toolLabel = when (toolName) {
-                                        "download_file" -> stringResource(R.string.ai_tool_download)
-                                        "pull_device_file" -> stringResource(R.string.ai_tool_pull)
-                                        "export_device_apk" -> stringResource(R.string.ai_tool_export_apk)
-                                        "list_authorized_files" -> stringResource(R.string.ai_tool_local_list)
-                                        "read_authorized_file" -> stringResource(R.string.ai_tool_local_read)
-                                        "write_authorized_file" -> stringResource(R.string.ai_tool_local_write)
-                                        "open_local_app" -> stringResource(R.string.ai_tool_open_app)
-                                        "agent_environments" -> stringResource(R.string.ai_agent_environments)
-                                        "agent_discover" -> stringResource(R.string.ai_agent_discover)
-                                        "agent_connect" -> stringResource(R.string.ai_agent_connect)
-                                        "agent_disconnect" -> stringResource(R.string.ai_agent_disconnect)
-                                        "agent_shell" -> stringResource(R.string.ai_agent_shell)
-                                        "agent_screen" -> stringResource(R.string.ai_agent_screen)
-                                        "agent_transfer" -> stringResource(R.string.ai_agent_transfer)
-                                        "get_device_info" -> stringResource(R.string.ai_tool_device)
-                                        "list_remote_files" -> stringResource(R.string.ai_tool_files)
-                                        "run_device_shell" -> stringResource(R.string.ai_tool_shell)
-                                        "upload_selected_file" -> stringResource(R.string.ai_tool_upload)
-                                        "read_selected_file" -> stringResource(R.string.ai_tool_read)
-                                        "list_selected_archive" -> stringResource(R.string.ai_tool_archive_list)
-                                        "read_selected_archive_text" -> stringResource(R.string.ai_tool_archive_read)
-                                        "list_local_files" -> stringResource(R.string.ai_tool_local_list)
-                                        "read_local_file" -> stringResource(R.string.ai_tool_local_read)
-                                        "upload_local_file" -> stringResource(R.string.ai_tool_local_upload)
-                                        else -> toolName
-                                    }
-                                    Row(
-                                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { expanded = !expanded }.padding(vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        Text(toolLabel, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                                        message.toolStatus?.let { status ->
-                                            Text(stringResource(when (status) {
-                                                AiToolStatus.Running -> R.string.ai_running
-                                                AiToolStatus.Finished -> R.string.ai_tool_finished
-                                                AiToolStatus.Failed -> R.string.ai_tool_failed
-                                                AiToolStatus.Interrupted -> R.string.ai_operation_interrupted
-                                            }), style = MiuixTheme.textStyles.footnote1, color = if (status == AiToolStatus.Failed) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                                        }
-                                        Icon(MiuixIcons.ChevronBackward, stringResource(if (expanded) R.string.action_collapse else R.string.action_expand), modifier = Modifier.size(18.dp).rotate(if (expanded) 90f else 270f), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                                    }
-                                    if (expanded) Text(message.text.substringAfter('\n', ""), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                                "assistant" -> {
+                                    val streaming = visible && state.phase == AiRunPhase.Answering && message.id == lastMessageId
+                                    val displayed = smoothStreamingText(message.id, message.text, streaming)
+                                    val renderText = remember(displayed) { separateMarkdownTables(displayed) }
+                                    EnrichedMarkdownText(markdown = renderText, style = markdownStyle, onLinkClick = { link -> runCatching { uriHandler.openUri(link) } })
                                 }
                                 "user" -> {
-                                    if (message.attachmentName.isNotBlank()) Text(message.attachmentName, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
-                                    if (message.text.isNotBlank()) Text(message.text, modifier = Modifier.widthIn(max = 320.dp))
+                                    Column(
+                                        modifier = Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp))
+                                            .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.10f))
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        if (message.attachments.isNotEmpty()) {
+                                            LazyRow(modifier = Modifier.widthIn(max = 292.dp), horizontalArrangement = Arrangement.spacedBy(AppDimens.CompactGap)) {
+                                                items(message.attachments, key = { it.id }) { attachment ->
+                                                    Row(modifier = Modifier.widthIn(max = 200.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        AttachmentThumbnail(android.net.Uri.parse(attachment.uri), attachment.name)
+                                                        Text(attachment.name, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                                                    }
+                                                }
+                                            }
+                                        } else if (message.attachmentName.isNotBlank()) Text(message.attachmentName, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                                        if (message.text.isNotBlank()) Text(message.text)
+                                    }
                                 }
                                 else -> Text(message.text)
                             }
                         }
+                        }
                     }
                 }
             }
-            Column(Modifier.align(Alignment.BottomCenter).onSizeChanged { composerHeight = it.height }) {
-                if (state.busy) Text(state.downloadProgress ?: stringResource(R.string.ai_running), modifier = Modifier.padding(horizontal = 20.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
-                if (state.attachment != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AttachmentThumbnail(state.attachment!!, state.attachmentName)
-                    Text(state.attachmentName.ifBlank { stringResource(R.string.ai_attachment) }, modifier = Modifier.weight(1f), maxLines = 1, style = MiuixTheme.textStyles.footnote1)
-                    IconButton(onClick = { viewModel.attach(null) }, enabled = !state.busy) { Icon(MiuixIcons.Close, stringResource(R.string.ai_remove_attachment)) }
+            if (!followsBottom && state.messages.isNotEmpty()) {
+                IconButton(
+                    onClick = { followsBottom = true; messagesListState.requestScrollToItem(0) },
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                        .padding(end = AppDimens.ScreenPadding, bottom = composerPadding + 8.dp)
+                        .size(44.dp)
+                        .shadow(2.dp, CircleShape)
+                        .background(MiuixTheme.colorScheme.background, CircleShape),
+                ) {
+                    Icon(AppIcons.ArrowUp, stringResource(R.string.ai_back_to_latest), modifier = Modifier.size(20.dp).rotate(180f))
+                }
+            }
+            Column(Modifier.align(Alignment.BottomCenter).onSizeChanged { composerHeight = it.height }.animateContentSize()) {
+                if (state.busy) Row(Modifier.padding(horizontal = AppDimens.ScreenPadding, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator(size = 14.dp, strokeWidth = 2.dp)
+                    Text(state.downloadProgress ?: stringResource(when {
+                        state.approval != null -> R.string.ai_waiting_approval
+                        state.phase == AiRunPhase.Preparing -> R.string.ai_preparing
+                        state.phase == AiRunPhase.Waiting -> R.string.ai_waiting_response
+                        state.phase == AiRunPhase.Answering -> R.string.ai_answering
+                        else -> R.string.ai_running
+                    }), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                }
+                if (state.attachmentsLoading) Row(Modifier.padding(horizontal = AppDimens.ScreenPadding, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator(size = 14.dp, strokeWidth = 2.dp)
+                    Text(stringResource(R.string.ai_attachments_loading), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+                }
+                if (state.attachments.isNotEmpty()) LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = AppDimens.ScreenPadding),
+                    horizontalArrangement = Arrangement.spacedBy(AppDimens.CompactGap),
+                ) {
+                    items(state.attachments, key = { it.id }) { attachment ->
+                        Row(
+                            modifier = Modifier.animateItem().widthIn(max = 220.dp).clip(RoundedCornerShape(AppDimens.ControlRadius))
+                                .background(MiuixTheme.colorScheme.background).padding(start = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            AttachmentThumbnail(android.net.Uri.parse(attachment.uri), attachment.name)
+                            Text(attachment.name, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MiuixTheme.textStyles.footnote1)
+                            IconButton(onClick = { viewModel.removeAttachment(attachment.id) }, enabled = !state.busy && !state.attachmentsLoading) {
+                                Icon(MiuixIcons.Close, stringResource(R.string.ai_remove_attachment_named, attachment.name), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
                 }
                 if (inputSize >= AI_INPUT_LIMIT - 2000) Text(
                     text = stringResource(if (inputSize > AI_INPUT_LIMIT) R.string.ai_input_over_limit else R.string.ai_input_count, inputSize, AI_INPUT_LIMIT),
@@ -236,17 +245,17 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                 )
                 TextField(
                     value = input, onValueChange = viewModel::updateDraft, enabled = !state.historyLoading,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(start = AppDimens.ScreenPadding, end = AppDimens.ScreenPadding, top = 8.dp, bottom = 16.dp)
                         .shadow(2.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
                         .border(1.dp, MiuixTheme.colorScheme.onBackground.copy(alpha = 0.08f), RoundedCornerShape(24.dp)),
                     colors = TextFieldDefaults.textFieldColors(backgroundColor = MiuixTheme.colorScheme.background),
                     insideMargin = DpSize(16.dp, 8.dp),
                     label = stringResource(R.string.ai_prompt), useLabelAsPlaceholder = true, maxLines = 4,
                     leadingIcon = {
-                        IconButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.size(48.dp), enabled = !state.busy) { Icon(MiuixIcons.Add, stringResource(R.string.ai_attach)) }
+                        IconButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.size(48.dp), enabled = !state.busy && !state.attachmentsLoading && !state.historyLoading) { Icon(MiuixIcons.Add, stringResource(R.string.ai_attach)) }
                     },
                     trailingIcon = {
-                        IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true } }, modifier = Modifier.size(48.dp), enabled = state.busy || ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading)) {
+                        IconButton(onClick = { if (state.busy) viewModel.stop() else if (viewModel.send(input)) { followsBottom = true; messagesListState.requestScrollToItem(0) } }, modifier = Modifier.size(48.dp), enabled = state.busy || ((input.isNotBlank() || state.attachments.isNotEmpty()) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading && !state.attachmentsLoading)) {
                             if (state.busy) {
                                 val stopDescription = stringResource(R.string.ai_stop)
                                 Box(
@@ -258,7 +267,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
                                     Box(Modifier.size(9.dp).background(MiuixTheme.colorScheme.background))
                                 }
                             } else {
-                                Icon(AppIcons.ArrowUp, stringResource(R.string.ai_send), tint = if ((input.isNotBlank() || state.attachment != null) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading) MiuixTheme.colorScheme.onBackground else MiuixTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+                                Icon(AppIcons.ArrowUp, stringResource(R.string.ai_send), tint = if ((input.isNotBlank() || state.attachments.isNotEmpty()) && inputSize <= AI_INPUT_LIMIT && !state.historyLoading && !state.attachmentsLoading) MiuixTheme.colorScheme.onBackground else MiuixTheme.colorScheme.onBackground.copy(alpha = 0.35f))
                             }
                         }
                     },
@@ -296,7 +305,7 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
             if (state.conversations.isEmpty()) Text(stringResource(R.string.ai_history_empty))
             state.conversations.forEach { conversation ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(conversation.title, modifier = Modifier.weight(1f).clickable { followsBottom = true; viewModel.selectConversation(conversation.id); showHistory = false }.padding(vertical = 12.dp), maxLines = 2)
+                    Text(conversation.title, modifier = Modifier.weight(1f).clickable { followsBottom = true; messagesListState.requestScrollToItem(0); viewModel.selectConversation(conversation.id); showHistory = false }.padding(vertical = 12.dp), maxLines = 2)
                     IconButton(onClick = { showHistory = false; pendingDeletion = conversation }) { Icon(MiuixIcons.Delete, stringResource(R.string.action_delete)) }
                 }
             }
@@ -329,6 +338,92 @@ fun AiScreen(viewModel: AiViewModel = viewModel(), onSettingsVisibilityChange: (
     }
 }
 
+private const val AiBottomKey = "ai-bottom"
+
+@Composable
+internal fun WorkProcess(messages: List<AiMessage>) {
+    val running = messages.any { it.toolStatus == AiToolStatus.Running }
+    val hasIssue = messages.any { it.toolStatus == AiToolStatus.Failed || it.toolStatus == AiToolStatus.Interrupted || it.toolStatus == AiToolStatus.Declined }
+    var manualExpanded by rememberSaveable(messages.first().id) { mutableStateOf<Boolean?>(null) }
+    val expanded = manualExpanded ?: (running || hasIssue)
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(AppDimens.ControlRadius))
+                .clickable { manualExpanded = !expanded }.padding(horizontal = 4.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
+                if (running) CircularProgressIndicator(size = 16.dp, strokeWidth = 2.dp)
+                else Box(Modifier.size(8.dp).background(if (hasIssue) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary, CircleShape))
+            }
+            Text(stringResource(R.string.ai_work_process), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MiuixTheme.textStyles.body2)
+            Text(stringResource(R.string.ai_work_steps, messages.size), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Icon(MiuixIcons.ChevronBackward, stringResource(if (expanded) R.string.action_collapse else R.string.action_expand), modifier = Modifier.size(18.dp).rotate(if (expanded) 90f else 270f), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                messages.forEach { message -> key(message.id) { ToolStep(message) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolStep(message: AiMessage) {
+    var expanded by rememberSaveable(message.id) { mutableStateOf(false) }
+    val toolName = message.text.substringBefore('\n')
+    val toolLabel = when (toolName) {
+        "download_file" -> stringResource(R.string.ai_tool_download)
+        "pull_device_file" -> stringResource(R.string.ai_tool_pull)
+        "export_device_apk" -> stringResource(R.string.ai_tool_export_apk)
+        "list_authorized_files" -> stringResource(R.string.ai_tool_local_list)
+        "read_authorized_file" -> stringResource(R.string.ai_tool_local_read)
+        "write_authorized_file" -> stringResource(R.string.ai_tool_local_write)
+        "open_local_app" -> stringResource(R.string.ai_tool_open_app)
+        "agent_environments" -> stringResource(R.string.ai_agent_environments)
+        "agent_discover" -> stringResource(R.string.ai_agent_discover)
+        "agent_connect" -> stringResource(R.string.ai_agent_connect)
+        "agent_disconnect" -> stringResource(R.string.ai_agent_disconnect)
+        "agent_shell" -> stringResource(R.string.ai_agent_shell)
+        "agent_screen" -> stringResource(R.string.ai_agent_screen)
+        "agent_transfer" -> stringResource(R.string.ai_agent_transfer)
+        "get_device_info" -> stringResource(R.string.ai_tool_device)
+        "list_remote_files" -> stringResource(R.string.ai_tool_files)
+        "run_device_shell" -> stringResource(R.string.ai_tool_shell)
+        "upload_selected_file" -> stringResource(R.string.ai_tool_upload)
+        "read_selected_file" -> stringResource(R.string.ai_tool_read)
+        "list_selected_archive" -> stringResource(R.string.ai_tool_archive_list)
+        "read_selected_archive_text" -> stringResource(R.string.ai_tool_archive_read)
+        "list_local_files" -> stringResource(R.string.ai_tool_local_list)
+        "read_local_file" -> stringResource(R.string.ai_tool_local_read)
+        "upload_local_file" -> stringResource(R.string.ai_tool_local_upload)
+        else -> toolName
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(AppDimens.ControlRadius))
+            .background(MiuixTheme.colorScheme.onBackground.copy(alpha = 0.04f))
+            .clickable { expanded = !expanded }.padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(toolLabel, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, color = MiuixTheme.colorScheme.onBackground, style = MiuixTheme.textStyles.body2)
+        message.toolStatus?.let { status ->
+            Text(stringResource(when (status) {
+                AiToolStatus.Running -> R.string.ai_running
+                AiToolStatus.Finished -> R.string.ai_tool_finished
+                AiToolStatus.Failed -> R.string.ai_tool_failed
+                AiToolStatus.Interrupted -> R.string.ai_operation_interrupted
+                AiToolStatus.Declined -> R.string.ai_tool_declined
+            }), maxLines = 1, style = MiuixTheme.textStyles.footnote1, color = if (status == AiToolStatus.Failed || status == AiToolStatus.Interrupted) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        }
+        Icon(MiuixIcons.ChevronBackward, stringResource(if (expanded) R.string.action_collapse else R.string.action_expand), modifier = Modifier.size(18.dp).rotate(if (expanded) 90f else 270f), tint = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    }
+    AnimatedVisibility(visible = expanded) {
+        Text(message.text.substringAfter('\n', ""), modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, style = MiuixTheme.textStyles.footnote1)
+    }
+}
+
 @Composable
 private fun AttachmentThumbnail(uri: android.net.Uri, name: String) {
     val context = LocalContext.current
@@ -345,9 +440,23 @@ private fun AttachmentThumbnail(uri: android.net.Uri, name: String) {
             }.getOrNull()
         }
     }
-    bitmap?.let {
-        Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(40.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+    Box(Modifier.padding(end = 8.dp).size(40.dp).clip(RoundedCornerShape(8.dp))
+        .background(MiuixTheme.colorScheme.onBackground.copy(alpha = 0.06f)), contentAlignment = Alignment.Center) {
+        if (bitmap != null) Image(bitmap!!.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else Text(stringResource(R.string.ai_file), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
     }
+}
+
+@Composable
+fun AiSettingsScreen(viewModel: AiViewModel, onDismiss: () -> Unit) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    fun close() { viewModel.clearModels(); viewModel.clearMcpTest(); onDismiss() }
+    AiConfigPage(state.config, state.models, state.loadingModels, saving = state.savingConfig, onDismiss = ::close,
+        onFetch = viewModel::loadModels, onClearModels = viewModel::clearModels,
+        mcpTesting = state.mcpTesting, mcpNotice = state.mcpNotice, mcpNoticeId = state.mcpNoticeId,
+        mcpToolNames = state.mcpToolNames, onMcpChanged = viewModel::clearMcpNotice,
+        onCloseMcp = viewModel::clearMcpTest, onTestMcp = viewModel::testMcp,
+        onSave = { viewModel.saveConfig(it, ::close) })
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -440,14 +549,12 @@ private fun AiConfigPage(initial: AiConfig, models: List<String>, loading: Boole
                 }
             }
             if (directoryError) Text(stringResource(R.string.ai_directory_failed), color = MiuixTheme.colorScheme.error, style = MiuixTheme.textStyles.footnote1)
-            Spacer(Modifier.height(8.dp))
-            SectionHeader(
+            ArrowPreference(
                 title = stringResource(R.string.ai_mcp_title),
-                trailing = {
-                    IconButton(onClick = { onMcpChanged(); focusManager.clearFocus(); keyboard?.hide(); editingMcp = McpServerConfig() }, enabled = !saving) {
-                        Icon(MiuixIcons.Add, stringResource(R.string.ai_mcp_add))
-                    }
-                },
+                insideMargin = PaddingValues(0.dp),
+                enabled = !saving,
+                endActions = { Text(stringResource(R.string.ai_mcp_add), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                onClick = { onMcpChanged(); focusManager.clearFocus(); keyboard?.hide(); editingMcp = McpServerConfig() },
             )
             config.mcpServers.forEach { server ->
                 ArrowPreference(
