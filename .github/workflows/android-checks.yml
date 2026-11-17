@@ -78,7 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           APK_PATH="$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)"
-          CERT_SHA256="$("${ANDROID_HOME}/build-tools/37.0.0/apksigner" verify --print-certs "${APK_PATH}" | awk -F': ' '/SHA-256 digest/ { print tolower($2); exit }')"
+          CERT_SHA256="$("${ANDROID_HOME}/build-tools/37.0.0/apksigner" verify --print-certs "${APK_PATH}" | awk -F': ' '/SHA-256 digest/ { print tolower($NF); exit }')"
           echo "Debug APK certificate SHA-256: ${CERT_SHA256}"
           test "${CERT_SHA256}" = "e3249ae85f008ae02f5c274bd6aa2172ebdc0e77c3c3a325b3895b5ce1559512"
 
