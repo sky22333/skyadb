@@ -66,6 +66,7 @@ class ScrcpyRepository(
                             operation = "H.265 不可用",
                             target = kadbManager.currentEndpoint(),
                             message = "本机没有可用的 HEVC 解码器，已改用 H.264",
+                            suggestion = appString(R.string.scrcpy_mirror_codec_fallback_suggestion),
                         )
                         MirrorVideoCodec.H264
                     } else {
