@@ -22,32 +22,41 @@ class ScrcpyControlClient(
     }
 
     fun sendTouch(event: MirrorTouchEvent) {
+        sendTouches(listOf(event))
+    }
+
+    fun sendTouches(events: List<MirrorTouchEvent>) {
+        if (events.isEmpty()) return
         val width = videoWidth
         val height = videoHeight
-        val action = ScrcpyProtocol.motionAction(event.actionMasked) ?: return
-        val point = MirrorCoordinateMapper.map(
-            x = event.x,
-            y = event.y,
-            surfaceWidth = event.surfaceWidth,
-            surfaceHeight = event.surfaceHeight,
-            videoWidth = width,
-            videoHeight = height,
-        ) ?: return
-
-        val pointerId = event.pointerId.toLong()
-        send(
-            ScrcpyProtocol.touch(
-                action = action,
-                pointerId = pointerId,
-                x = point.x,
-                y = point.y,
-                screenWidth = point.screenWidth,
-                screenHeight = point.screenHeight,
-                pressure = event.pressure,
-                actionButton = event.actionButton,
-                buttons = event.buttons,
-            ),
-        )
+        val packets =
+            events.mapNotNull { event ->
+                val action = ScrcpyProtocol.motionAction(event.actionMasked) ?: return@mapNotNull null
+                val point = MirrorCoordinateMapper.map(
+                    x = event.x,
+                    y = event.y,
+                    surfaceWidth = event.surfaceWidth,
+                    surfaceHeight = event.surfaceHeight,
+                    videoWidth = width,
+                    videoHeight = height,
+                ) ?: return@mapNotNull null
+                ScrcpyProtocol.touch(
+                    action = action,
+                    pointerId = event.pointerId.toLong(),
+                    x = point.x,
+                    y = point.y,
+                    screenWidth = point.screenWidth,
+                    screenHeight = point.screenHeight,
+                    pressure = event.pressure,
+                    actionButton = event.actionButton,
+                    buttons = event.buttons,
+                )
+            }
+        if (packets.isEmpty()) return
+        synchronized(lock) {
+            packets.forEach { stream.sink.write(it) }
+            stream.sink.flush()
+        }
     }
 
     fun sendKey(keyCode: Int) {

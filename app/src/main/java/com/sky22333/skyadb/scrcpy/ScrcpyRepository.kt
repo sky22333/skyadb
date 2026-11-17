@@ -164,8 +164,13 @@ class ScrcpyRepository(
         }
 
     fun sendTouch(event: MirrorTouchEvent) {
+        sendTouches(listOf(event))
+    }
+
+    fun sendTouches(events: List<MirrorTouchEvent>) {
+        if (events.isEmpty()) return
         runCatching {
-            session?.controlClient?.sendTouch(event)
+            session?.controlClient?.sendTouches(events)
         }
             .onFailure { error ->
                 recordControlFailure("发送触摸", appString(R.string.scrcpy_send_touch_failed), error)
