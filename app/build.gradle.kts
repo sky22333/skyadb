@@ -54,6 +54,15 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            if (releaseSigningEnabled) {
+                storeFile = file(signingStoreFile!!)
+                storeType = "PKCS12"
+                keyAlias = keyAliasValue!!
+                storePassword = keyStorePasswordValue!!
+                keyPassword = keyPasswordValue!!
+            }
+        }
         create("release") {
             if (releaseSigningEnabled) {
                 storeFile = file(signingStoreFile!!)

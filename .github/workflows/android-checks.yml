@@ -38,6 +38,24 @@ jobs:
         with:
           gradle-version: wrapper
 
+      - name: Prepare fixed debug signing key
+        id: signing
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_KEY_BASE64}" || -z "${KEY_ALIAS}" || -z "${KEY_STORE_PASSWORD}" || -z "${KEY_PASSWORD}" ]]; then
+            echo "未配置固定签名密钥，本次 APK 使用临时 debug 签名。"
+            echo "store_file=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          mkdir -p "${RUNNER_TEMP}/signing"
+          echo "${SIGNING_KEY_BASE64}" | base64 --decode > "${RUNNER_TEMP}/signing/debug.p12"
+          echo "store_file=${RUNNER_TEMP}/signing/debug.p12" >> "${GITHUB_OUTPUT}"
+
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
@@ -48,7 +66,21 @@ jobs:
         run: ./gradlew --no-daemon lintDebug
 
       - name: Build debug APK
+        env:
+          SIGNING_STORE_FILE: ${{ steps.signing.outputs.store_file }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleDebug
+
+      - name: Verify debug APK signing certificate
+        if: steps.signing.outputs.store_file != ''
+        run: |
+          set -euo pipefail
+          APK_PATH="$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)"
+          CERT_SHA256="$("${ANDROID_HOME}/build-tools/37.0.0/apksigner" verify --print-certs "${APK_PATH}" | awk -F': ' '/SHA-256 digest/ { print tolower($2); exit }')"
+          echo "Debug APK certificate SHA-256: ${CERT_SHA256}"
+          test "${CERT_SHA256}" = "e3249ae85f008ae02f5c274bd6aa2172ebdc0e77c3c3a325b3895b5ce1559512"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

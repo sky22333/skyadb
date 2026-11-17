@@ -211,6 +211,7 @@ skyadb/
 - 功能、依赖、协议、CI 或工程结构变化时同步更新文档；不要提交缓存、构建产物、签名证书或临时分析文件。
 - 文本默认 UTF-8、LF；Kotlin 缩进 4 空格，Markdown、YAML、JSON 和 XML 缩进 2 空格；Windows 脚本可使用 CRLF。
 - 正式发布使用 GitHub Actions 和 PKCS#12 签名，所需 Secrets 为 `SIGNING_KEY_BASE64`、`KEY_ALIAS`、`KEY_STORE_PASSWORD`、`KEY_PASSWORD`。
+- Android Checks 也复用上述 Secrets 为 Debug APK 使用固定证书签名；配置后，后续 CI APK 可直接覆盖升级。
 
 ## 构建与验证
 
@@ -228,7 +229,7 @@ git diff --check
 
 `FastbootUiTest` 默认只查询和复制结果。显式传入 instrumentation 参数 `fastbootReboot=bootloader` 或 `fastbootReboot=system` 时额外验证对应重启按钮及会话清理，测试结束后目标设备停留在所选模式。额外传入 `fastbootPrepare=true` 可从已授权的 USB ADB 目标重启到 Bootloader，再执行本轮测试；未显式指定时不会切换目标模式。
 
-Debug 使用本地调试签名；未配置发布签名时，本地 Release APK 为未签名产物。Release 使用 R8 混淆和资源收缩。
+Debug 在未配置签名 Secrets 时使用本地调试签名，配置后使用固定证书签名；本地 Release 未配置签名时仍为未签名产物。Release 使用 R8 混淆和资源收缩。
 
 ## 发布规范
 
