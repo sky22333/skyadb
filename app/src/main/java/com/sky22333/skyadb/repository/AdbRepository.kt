@@ -543,7 +543,8 @@ class DefaultAdbRepository(
             fastbootOtgManager.disconnect()
             kadbManager.clearUsbFastbootSession()
         }
-        kadbManager.disconnectSession(deviceId)
+        val disconnected = kadbManager.disconnectSession(deviceId)
+        if (!disconnected && wasActive) kadbManager.disconnect()
         syncConnectionState()
         if (wasActive) deviceInfoState.value = DeviceInfo()
     }

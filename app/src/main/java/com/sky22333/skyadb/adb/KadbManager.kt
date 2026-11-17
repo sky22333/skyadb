@@ -797,8 +797,12 @@ class KadbManager {
     suspend fun disconnectSession(id: String): Boolean =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                val wasActive = activeSessionId == id
-                if (!disconnectSessionLocked(id)) return@withLock false
+                val sessionId = managedSessions.entries.firstOrNull { (candidateId, session) ->
+                    candidateId == id ||
+                        (session.kind == AdbSessionKind.Wifi && AdbEndpoint.sameAuthority(candidateId, id))
+                }?.key ?: return@withLock false
+                val wasActive = activeSessionId == sessionId || activeKadb === managedSessions[sessionId]?.kadb
+                if (!disconnectSessionLocked(sessionId)) return@withLock false
                 if (wasActive) setActiveLocked(managedSessions.values.lastOrNull())
                 true
             }
@@ -856,7 +860,7 @@ class KadbManager {
     private fun disconnectSessionLocked(id: String): Boolean {
         val removed = managedSessions.remove(id) ?: return false
         removed.kadb?.close()
-        if (activeSessionId == id) clearActiveLocked() else updateSessionSnapshotLocked()
+        if (activeSessionId == id || activeKadb === removed.kadb) clearActiveLocked() else updateSessionSnapshotLocked()
         return true
     }
 

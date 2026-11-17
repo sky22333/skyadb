@@ -129,13 +129,34 @@ class HomeViewModel(
 
     fun onRecentDeviceDisconnect(device: AdbDevice) {
         viewModelScope.launch {
-            state.value = state.value.copy(
-                operationStatus = when (val result = adbRepository.disconnectDevice(device.id)) {
+            val targetId = when (device.linkKind) {
+                AdbLinkKind.Wifi -> AdbEndpoint.format(device.host, device.port)
+                AdbLinkKind.UsbOtg -> device.id
+            }
+            val result = adbRepository.disconnectDevice(targetId)
+            val snapshot = state.value
+            val status = when (result) {
                     is AdbOperationResult.Success -> OperationStatus.Success(
                         appString(R.string.home_device_disconnected, device.name)
                     )
                     is AdbOperationResult.Failure -> OperationStatus.Failed(result.message, result.suggestion)
+            }
+            val devices = if (result is AdbOperationResult.Success) {
+                snapshot.recentDevices.map { item ->
+                    if (item.id == device.id || item.id == targetId) {
+                        item.copy(connectionState = ConnectionState.Disconnected)
+                    } else {
+                        item
+                    }
                 }
+            } else {
+                snapshot.recentDevices
+            }
+            state.value = snapshot.copy(
+                recentDevices = devices,
+                canDisconnect = devices.any { it.connectionState == ConnectionState.Connected } ||
+                    adbRepository.sessionKind() != AdbSessionKind.None,
+                operationStatus = status,
             )
         }
     }
