@@ -7,9 +7,12 @@ import com.flyfishxu.kadb.usb.KadbUsb
 import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.i18n.appString
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
 import com.sky22333.skyadb.model.DeviceInfo
+import com.sky22333.skyadb.model.MirrorConnectionMode
+import com.sky22333.skyadb.model.MirrorTransport
 import com.sky22333.skyadb.model.RemoteFileEntry
 import com.sky22333.skyadb.model.ShellCommandResult
 import com.sky22333.skyadb.model.operationCatching
@@ -53,6 +56,10 @@ class KadbManager {
     private val sessionMutex = Mutex()
     @Volatile private var activeKadb: Kadb? = null
     @Volatile private var activeEndpoint: String? = null
+    @Volatile private var wifiHost: String? = null
+    @Volatile private var wifiPort: Int? = null
+    @Volatile private var wifiConnectTimeoutMillis: Int = 10_000
+    @Volatile private var wifiSocketTimeoutMillis: Int = 30_000
 
     @Volatile private var sessionKind: AdbSessionKind = AdbSessionKind.None
 
@@ -75,13 +82,14 @@ class KadbManager {
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
                 disconnectAdbOnlyLocked()
+                val socketHost = AdbEndpoint.hostForSocket(host)
                 openKadbSessionLocked(
-                    host = host,
+                    host = socketHost,
                     port = port,
                     connectTimeoutMillis = connectTimeoutMillis,
                     socketTimeoutMillis = socketTimeoutMillis,
                     sessionKind = AdbSessionKind.Wifi,
-                    endpoint = "$host:$port",
+                    endpoint = AdbEndpoint.format(socketHost, port),
                 )
             }
         }
@@ -103,6 +111,12 @@ class KadbManager {
                 activeKadb = kadb
                 activeEndpoint = endpoint
                 this.sessionKind = sessionKind
+                if (sessionKind == AdbSessionKind.Wifi) {
+                    wifiHost = host
+                    wifiPort = port
+                    wifiConnectTimeoutMillis = connectTimeoutMillis
+                    wifiSocketTimeoutMillis = socketTimeoutMillis
+                }
                 AdbOperationResult.Success(endpoint)
             } catch (error: Throwable) {
                 kadb.close()
@@ -136,6 +150,8 @@ class KadbManager {
                         probeConnection(client, maxOf(connectTimeoutMillis, socketTimeoutMillis))
                         activeKadb = client
                         activeEndpoint = "usb-otg:${device.deviceName}"
+                        wifiHost = null
+                        wifiPort = null
                         sessionKind = AdbSessionKind.UsbAdb
                         AdbOperationResult.Success(activeEndpoint!!)
                     } catch (error: Throwable) {
@@ -185,7 +201,7 @@ class KadbManager {
     ): AdbOperationResult<Unit> =
         withContext(Dispatchers.IO) {
             operationCatching {
-                Kadb.pair(host, port, pairingCode, name)
+                Kadb.pair(AdbEndpoint.hostForSocket(host), port, pairingCode, name)
                 AdbOperationResult.Success(Unit)
             }
                 .getOrElse { error ->
@@ -740,6 +756,8 @@ class KadbManager {
         activeKadb?.close()
         activeKadb = null
         activeEndpoint = null
+        wifiHost = null
+        wifiPort = null
         sessionKind = AdbSessionKind.None
     }
 
@@ -747,6 +765,8 @@ class KadbManager {
         activeKadb?.close()
         activeKadb = null
         activeEndpoint = null
+        wifiHost = null
+        wifiPort = null
         if (sessionKind == AdbSessionKind.Wifi || sessionKind == AdbSessionKind.UsbAdb) {
             sessionKind = AdbSessionKind.None
         }
@@ -799,8 +819,8 @@ class KadbManager {
             }
         }
 
-    /** Kadb 2.1.5 multiplexes video/audio/control on the existing WiFi or USB transport. */
-    suspend fun mirrorClient(): AdbOperationResult<Kadb> = sessionMutex.withLock {
+    /** Non-mirror callers must reuse the main transport and must not own it. */
+    suspend fun sharedClient(): AdbOperationResult<Kadb> = sessionMutex.withLock {
         val client = activeKadb
         if (client == null) {
             AdbOperationResult.Failure(
@@ -811,6 +831,104 @@ class KadbManager {
             AdbOperationResult.Success(client)
         }
     }
+
+    /**
+     * Use a dedicated TCP ADB transport for WiFi mirroring when adbd accepts one. USB OTG
+     * remains shared because a second USB transport would compete for the same device handle.
+     * Any failure falls back to the existing transport instead of breaking the mirror session.
+     */
+    suspend fun mirrorClient(): AdbOperationResult<MirrorClient> =
+        withContext(Dispatchers.IO) {
+            val snapshot = sessionMutex.withLock {
+                val shared = activeKadb
+                if (shared == null) {
+                    return@withLock null
+                }
+                MirrorSessionSnapshot(
+                    shared = shared,
+                    kind = sessionKind,
+                    host = wifiHost,
+                    port = wifiPort,
+                    connectTimeoutMillis = wifiConnectTimeoutMillis,
+                    socketTimeoutMillis = wifiSocketTimeoutMillis,
+                )
+            } ?: return@withContext AdbOperationResult.Failure(
+                message = appString(R.string.kadb_not_connected),
+                suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
+            )
+
+            if (snapshot.kind != AdbSessionKind.Wifi || snapshot.host == null || snapshot.port == null) {
+                return@withContext mirrorShared(snapshot.shared, snapshot.kind)
+            }
+
+            val dedicated =
+                operationCatching {
+                    val client =
+                        Kadb.create(
+                            snapshot.host,
+                            snapshot.port,
+                            snapshot.connectTimeoutMillis,
+                            snapshot.socketTimeoutMillis,
+                        )
+                    try {
+                        probeConnection(
+                            client,
+                            maxOf(snapshot.connectTimeoutMillis, snapshot.socketTimeoutMillis),
+                        )
+                        client
+                    } catch (error: Throwable) {
+                        client.close()
+                        throw error
+                    }
+                }.getOrNull()
+
+            if (dedicated == null) {
+                return@withContext mirrorShared(snapshot.shared, snapshot.kind)
+            }
+
+            val stillCurrent = sessionMutex.withLock { activeKadb === snapshot.shared }
+            if (!stillCurrent || !snapshot.shared.connectionCheck()) {
+                dedicated.close()
+                return@withContext AdbOperationResult.Failure(
+                    message = appString(R.string.kadb_not_connected),
+                    suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
+                )
+            }
+
+            AdbOperationResult.Success(
+                MirrorClient(
+                    kadb = dedicated,
+                    transport = MirrorTransport.Wifi,
+                    mode = MirrorConnectionMode.Dedicated,
+                ) { dedicated.close() }
+            )
+        }
+
+    private fun mirrorShared(client: Kadb, kind: AdbSessionKind): AdbOperationResult<MirrorClient> {
+        if (!client.connectionCheck()) {
+            return AdbOperationResult.Failure(
+                message = appString(R.string.kadb_not_connected),
+                suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
+            )
+        }
+        val transport = if (kind == AdbSessionKind.Wifi) MirrorTransport.Wifi else MirrorTransport.Usb
+        return AdbOperationResult.Success(
+            MirrorClient(
+                kadb = client,
+                transport = transport,
+                mode = MirrorConnectionMode.Shared,
+            ) {}
+        )
+    }
+
+    private data class MirrorSessionSnapshot(
+        val shared: Kadb,
+        val kind: AdbSessionKind,
+        val host: String?,
+        val port: Int?,
+        val connectTimeoutMillis: Int,
+        val socketTimeoutMillis: Int,
+    )
 
     private fun parseResolution(output: String): String {
         return output

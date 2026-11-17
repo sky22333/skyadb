@@ -2,6 +2,7 @@ package com.sky22333.skyadb.discovery
 
 import androidx.annotation.StringRes
 import com.sky22333.skyadb.R
+import com.sky22333.skyadb.model.AdbEndpoint
 import kotlinx.coroutines.flow.StateFlow
 
 enum class AdbMdnsServiceType(
@@ -28,8 +29,8 @@ data class AdbMdnsEndpoint(
     val port: Int,
     val type: AdbMdnsServiceType,
 ) {
-    val id: String = "${type.name}:$host:$port"
-    val endpoint: String = "$host:$port"
+    val id: String = "${type.name}:${AdbEndpoint.format(host, port)}"
+    val endpoint: String = AdbEndpoint.format(host, port)
 }
 
 data class AdbMdnsDiscoveryState(

@@ -4,6 +4,7 @@ import android.net.Uri
 import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.adb.KadbManager
 import com.sky22333.skyadb.discovery.AndroidAdbMdnsDiscovery
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +35,8 @@ internal object AgentTools {
             if (devices.isEmpty()) appendLine("No ADB devices are connected")
             devices.forEach { appendLine("${it.id}: ADB ${it.endpoint} (${if (it.connected) "connected" else "disconnected; use agent_connect to reconnect"})") }
             recent.forEach { device ->
-                val endpoint = "${device.host}:${device.port}"
-                val connected = devices.firstOrNull { it.endpoint == endpoint && it.connected }
+                val endpoint = AdbEndpoint.format(device.host, device.port)
+                val connected = devices.firstOrNull { it.connected && AdbEndpoint.sameAuthority(it.endpoint, endpoint) }
                 appendLine("Recent device: name=${Json.encodeToString(device.name)}, host=${Json.encodeToString(device.host)}, port=${device.port}, ${if (connected != null) "connected ID=${connected.id}" else "not connected"}")
             }
             append("Use exact connected environment IDs. To use a recent device that is not connected, call agent_connect with its host and port, then use the ID returned. If the target is ambiguous, ask the user. Discover capabilities with commands on the selected environment.")
@@ -48,7 +49,7 @@ internal object AgentTools {
             delay(3000)
             val state = discovery.state.value
             state.error?.let { error(it) }
-            state.endpoints.joinToString("\n") { "${it.type}: ${it.host}:${it.port}" }.ifEmpty { "No ADB services found" }
+            state.endpoints.joinToString("\n") { "${it.type}: ${it.endpoint}" }.ifEmpty { "No ADB services found" }
         } finally { discovery.stop() }
     }
     suspend fun capture(id: String, activeToken: Any?): DeviceHandle {

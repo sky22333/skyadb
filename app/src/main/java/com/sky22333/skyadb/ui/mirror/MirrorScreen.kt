@@ -11,9 +11,8 @@ import top.yukonga.miuix.kmp.icon.extended.Send
 import top.yukonga.miuix.kmp.icon.extended.VolumeUp
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.Surface
-import android.view.TextureView
-import android.graphics.SurfaceTexture
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -64,7 +63,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
+import com.sky22333.skyadb.model.MirrorConnectionMode
+import com.sky22333.skyadb.model.MirrorTransport
 import com.sky22333.skyadb.model.OperationStatus
+import com.sky22333.skyadb.scrcpy.MirrorStats
 
 @Composable
 fun MirrorScreen(
@@ -72,7 +74,6 @@ fun MirrorScreen(
     viewModel: MirrorViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var surface by remember { mutableStateOf<Surface?>(null) }
     var inputText by remember { mutableStateOf("") }
     var controlsVisible by rememberSaveable { mutableStateOf(true) }
     var keyboardVisible by rememberSaveable { mutableStateOf(false) }
@@ -103,36 +104,34 @@ fun MirrorScreen(
             AndroidView(
                 modifier = surfaceModifier,
                 factory = { context ->
-                    object : TextureView(context) {
+                    object : SurfaceView(context) {
                             override fun performClick(): Boolean {
                                 super.performClick()
                                 return true
                             }
                         }
                         .apply {
-                            surfaceTextureListener =
-                                object : TextureView.SurfaceTextureListener {
-                                    override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
-                                        val videoSurface = Surface(texture)
-                                        surface = videoSurface
-                                        viewModel.onSurfaceCreated(videoSurface)
+                            holder.addCallback(
+                                object : SurfaceHolder.Callback {
+                                    override fun surfaceCreated(holder: SurfaceHolder) {
+                                        viewModel.onSurfaceCreated(holder.surface)
                                     }
 
-                                    override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = Unit
+                                    override fun surfaceChanged(
+                                        holder: SurfaceHolder,
+                                        format: Int,
+                                        width: Int,
+                                        height: Int,
+                                    ) = Unit
 
-                                    override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
-                                        val oldSurface = surface
-                                        surface = null
+                                    override fun surfaceDestroyed(holder: SurfaceHolder) {
                                         viewModel.onSurfaceDestroyed()
-                                        oldSurface?.release()
-                                        return true
                                     }
-
-                                    override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
                                 }
+                            )
                             setOnTouchListener { view, event ->
                                 if (event.actionMasked == MotionEvent.ACTION_UP) view.performClick()
-                                if (surface != null) {
+                                if (holder.surface.isValid) {
                                     viewModel.sendTouch(event, view.width, view.height)
                                 }
                                 true
@@ -168,18 +167,27 @@ fun MirrorScreen(
             enter = fadeIn(tween(150)),
             exit = fadeOut(tween(100)),
         ) {
-            MirrorControls(
-                modifier = Modifier,
-                keyboardVisible = keyboardVisible,
-                onHideKeyboard = hideKeyboard,
-                inputText = inputText,
-                onInputTextChange = { inputText = it.take(2000) },
-                onSendText = {
-                    viewModel.sendText(inputText)
-                    inputText = ""
-                },
-                onKey = viewModel::sendKey,
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                MirrorStatsBar(
+                    stats = uiState.stats,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+                MirrorControls(
+                    modifier = Modifier,
+                    keyboardVisible = keyboardVisible,
+                    onHideKeyboard = hideKeyboard,
+                    inputText = inputText,
+                    onInputTextChange = { inputText = it.take(2000) },
+                    onSendText = {
+                        viewModel.sendText(inputText)
+                        inputText = ""
+                    },
+                    onKey = viewModel::sendKey,
+                )
+            }
         }
 
         if (uiState.status is OperationStatus.Running || uiState.status is OperationStatus.Failed) {
@@ -246,6 +254,79 @@ private fun MirrorTopActions(
             contentDescription = stringResource(R.string.mirror_close_desc),
             onClick = onClose,
         )
+    }
+}
+
+@Composable
+private fun MirrorStatsBar(
+    stats: MirrorStats,
+    modifier: Modifier = Modifier,
+) {
+    val transportLabel =
+        stringResource(
+            if (stats.transport == MirrorTransport.Wifi) R.string.mirror_transport_wifi
+            else R.string.mirror_transport_usb
+        )
+    val connectionLabel =
+        stringResource(
+            if (stats.connectionMode == MirrorConnectionMode.Dedicated)
+                R.string.mirror_connection_dedicated
+            else R.string.mirror_connection_shared
+        )
+    val decoderLabel =
+        if (stats.decoderName.isBlank()) stringResource(R.string.mirror_decoder_unknown)
+        else stats.decoderName
+    Card(
+        modifier = modifier,
+        cornerRadius = 10.dp,
+        insideMargin = PaddingValues(0.dp),
+        colors = CardDefaults.defaultColors(color = Color.Black.copy(alpha = 0.50f), contentColor = Color.White),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.mirror_stats_frames,
+                    stats.receivedFrames,
+                    stats.decodedFrames,
+                    stats.droppedFrames,
+                ),
+                color = Color.White.copy(alpha = 0.88f),
+                style = MiuixTheme.textStyles.footnote1,
+            )
+            Text(
+                text = stringResource(
+                    R.string.mirror_stats_rates,
+                    stats.receiveFps,
+                    stats.decodeFps,
+                ),
+                color = Color.White.copy(alpha = 0.72f),
+                style = MiuixTheme.textStyles.footnote1,
+            )
+            Text(
+                text = stringResource(
+                    R.string.mirror_stats_connection,
+                    transportLabel,
+                    connectionLabel,
+                    decoderLabel,
+                ),
+                color = Color.White.copy(alpha = 0.72f),
+                style = MiuixTheme.textStyles.footnote1,
+            )
+            Text(
+                text = stringResource(
+                    R.string.mirror_stats_pipeline,
+                    stats.bitrateMbps,
+                    stats.queueDepth,
+                    stats.latencyGrowthMs,
+                    stats.keyFrameRequests,
+                ),
+                color = Color.White.copy(alpha = 0.72f),
+                style = MiuixTheme.textStyles.footnote1,
+            )
+        }
     }
 }
 

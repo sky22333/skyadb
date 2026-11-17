@@ -7,8 +7,10 @@ import android.media.MediaCodecList
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.nio.ByteBuffer
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -31,6 +33,35 @@ class MediaCodecPumpTest {
         try {
             decoder.configure(format)
             decoder.queue(frame, 1_000L)
+            withTimeout(3_000L) { rendered.await() }
+        } finally {
+            decoder.close()
+        }
+    }
+
+    @Test
+    fun tryQueueAcceptsFrameWhenInputIsAvailable() = runBlocking {
+        val (format, frame) = encodeFrame()
+        val rendered = CompletableDeferred<Unit>()
+        val decoder =
+            MediaCodecPump(
+                onOutput = { codec, index, info ->
+                    codec.releaseOutputBuffer(index, false)
+                    if (info.size > 0 && info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG == 0)
+                        rendered.complete(Unit)
+                },
+                onError = { rendered.completeExceptionally(it) },
+            )
+        try {
+            decoder.configure(format)
+            val accepted =
+                withTimeout(3_000L) {
+                    while (!decoder.tryQueue(frame, 1_000L)) {
+                        delay(10)
+                    }
+                    true
+                }
+            assertTrue(accepted)
             withTimeout(3_000L) { rendered.await() }
         } finally {
             decoder.close()

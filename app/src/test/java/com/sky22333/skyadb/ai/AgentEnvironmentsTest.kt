@@ -14,4 +14,14 @@ class AgentEnvironmentsTest {
         val online = AgentTools.formatEnvironments(AiConfig(), listOf(AgentSessions.Device("active", "192.168.1.10:5555")), recent)
         assertTrue(online.contains("connected ID=active"))
     }
+
+    @Test fun recentIpv6DevicesMatchEquivalentCompressedHosts() {
+        val recent = listOf(AdbDevice("tv6", "Living room", "2001:db8::1", 5555, ConnectionState.Disconnected))
+        val online = AgentTools.formatEnvironments(
+            AiConfig(),
+            listOf(AgentSessions.Device("active", "[2001:0DB8::1]:5555")),
+            recent,
+        )
+        assertTrue(online.contains("connected ID=active"))
+    }
 }

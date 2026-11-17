@@ -5,6 +5,7 @@ import android.view.Surface
 import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.stream.AdbStream
 import com.sky22333.skyadb.R
+import com.sky22333.skyadb.adb.MirrorClient
 import com.sky22333.skyadb.i18n.appString
 import java.io.EOFException
 import kotlin.random.Random
@@ -29,15 +30,25 @@ private constructor(
     private val decoder: ScrcpyVideoDecoder,
     private val scope: CoroutineScope,
     private val logLines: ArrayDeque<String>,
+    private val statsTracker: MirrorStatsTracker,
+    private val mirrorClient: MirrorClient,
     private val onError: (Throwable, String) -> Unit,
     private val onAudioError: (Throwable) -> Unit,
+    private val onStats: (MirrorStats) -> Unit,
 ) {
     @Volatile private var audioDecoder: ScrcpyAudioDecoder? = null
 
     @Volatile private var stopping = false
+    @Volatile private var finalStatsEmitted = false
 
     fun start() {
         scope.launch { readServerLogs() }
+        scope.launch {
+            while (isActive) {
+                delay(StatsIntervalMillis)
+                emitStats()
+            }
+        }
         scope.launch {
             runCatching { decoder.start() }
                 .onFailure { error ->
@@ -64,12 +75,16 @@ private constructor(
 
     fun setSurface(surface: Surface) {
         decoder.setSurface(surface)
-        // RESET_VIDEO 走 ADB socket，必须在 IO 线程。
-        scope.launch { controlClient.resetVideo() }
+        // 释放旧 Surface 的解码器，并从服务端请求新的关键帧。
+        scope.launch {
+            decoder.releaseCurrentDecoder()
+            controlClient.resetVideo()
+        }
     }
 
     fun clearSurface() {
         decoder.clearSurface()
+        scope.launch { decoder.releaseCurrentDecoder() }
     }
 
     suspend fun stop() =
@@ -84,14 +99,23 @@ private constructor(
             }
             runCatching { controlStream.close() }
             runCatching { serverStream.close() }
+            runCatching { mirrorClient.close() }
             scope.cancel()
             scope.coroutineContext[Job]?.join()
+            if (!finalStatsEmitted) {
+                finalStatsEmitted = true
+                emitStats()
+            }
         }
 
     private fun serverLogTail(): String {
         return synchronized(logLines) {
             logLines.takeLast(ServerLogTailLines).joinToString("\n")
         }
+    }
+
+    private fun emitStats() {
+        runCatching { onStats(statsTracker.snapshot()) }
     }
 
     private suspend fun readServerLogs() =
@@ -114,24 +138,27 @@ private constructor(
 
     companion object {
         private const val ServerLogTailLines = 20
+        private const val StatsIntervalMillis = 1_000L
 
         suspend fun start(
             context: Context,
-            kadb: Kadb,
+            mirrorClient: MirrorClient,
             surface: Surface,
             options: ScrcpyOptions = ScrcpyOptions(),
             audioEnabled: Boolean,
             onVideoSize: (Int, Int) -> Unit,
+            onStats: (MirrorStats) -> Unit = {},
             onError: (Throwable, String) -> Unit,
             onAudioError: (Throwable) -> Unit,
         ): ScrcpySession =
             withContext(Dispatchers.IO) {
+                val kadb: Kadb = mirrorClient.kadb
                 val serverManager = ScrcpyServerManager(context)
                 val logs = ArrayDeque<String>()
-                serverManager.pushServer(kadb)
                 val opened = mutableListOf<AdbStream>()
                 var transferred = false
                 try {
+                    serverManager.pushServer(kadb)
                     val scid = generateScid()
                     val socketName = "scrcpy_${ScrcpyConstants.formatScid(scid)}"
                     val serverStream =
@@ -166,11 +193,18 @@ private constructor(
                     skipDeviceName(videoStream)
                     val videoCodecId = videoStream.source.readInt()
                     val controlClient = ScrcpyControlClient(controlStream)
+                    val statsTracker =
+                        MirrorStatsTracker(
+                            transport = mirrorClient.transport,
+                            connectionMode = mirrorClient.mode,
+                        )
                     val videoDecoder =
                         ScrcpyVideoDecoder(
                             stream = videoStream,
                             codecId = videoCodecId,
                             surface = surface,
+                            statsTracker = statsTracker,
+                            onRequestKeyFrame = controlClient::resetVideo,
                             onVideoSize = { width, height ->
                                 controlClient.updateVideoSize(width, height)
                                 onVideoSize(width, height)
@@ -185,13 +219,17 @@ private constructor(
                             decoder = videoDecoder,
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                             logLines = logs,
+                            statsTracker = statsTracker,
+                            mirrorClient = mirrorClient,
                             onError = onError,
                             onAudioError = onAudioError,
+                            onStats = onStats,
                         )
                         .also { transferred = true }
                 } finally {
-                    if (!transferred)
+                    if (!transferred) {
                         opened.asReversed().forEach { stream -> runCatching { stream.close() } }
+                    }
                 }
             }
 

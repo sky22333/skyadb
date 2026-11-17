@@ -18,6 +18,8 @@ class ScrcpyVideoDecoder(
     private val codecId: Int,
     surface: Surface,
     private val onVideoSize: (Int, Int) -> Unit,
+    private val statsTracker: MirrorStatsTracker,
+    private val onRequestKeyFrame: () -> Unit,
 ) {
     @Volatile private var running = true
     @Volatile private var surface: Surface = surface
@@ -29,6 +31,7 @@ class ScrcpyVideoDecoder(
     private var config: ByteArray? = null
     @Volatile private var awaitingKeyFrame = true
     private val surfaceEpoch = AtomicLong()
+    private val lastKeyFrameRequestNanos = AtomicLong()
     private var decoderEpoch = -1L
 
     suspend fun start() =
@@ -43,6 +46,7 @@ class ScrcpyVideoDecoder(
                     val ptsAndFlags = fields.long
                     val size = fields.int
                     if ((ptsAndFlags and ScrcpyProtocol.PacketFlagSession) != 0L) {
+                        statsTracker.resetLatencyBaseline()
                         fields.position(4)
                         val nextWidth = fields.int
                         val nextHeight = fields.int
@@ -63,23 +67,47 @@ class ScrcpyVideoDecoder(
                     val data = stream.source.readByteArray(size.toLong())
                     val isConfig = (ptsAndFlags and ScrcpyProtocol.PacketFlagConfig) != 0L
                     val isKeyFrame = (ptsAndFlags and ScrcpyProtocol.PacketFlagKeyFrame) != 0L
+                    val pts = ptsAndFlags and ScrcpyProtocol.PacketPtsMask
+                    if (!isConfig) statsTracker.onPacketReceived(size, pts)
                     if (isConfig) config = data
                     val epoch = surfaceEpoch.get()
                     if (decoderEpoch != epoch) {
                         release()
                         awaitingKeyFrame = true
                     }
-                    if (width == 0 || height == 0 || !surfaceValid || !surface.isValid) continue
-                    if (!isConfig && awaitingKeyFrame && !isKeyFrame) continue
+                    if (width == 0 || height == 0 || !surfaceValid || !surface.isValid) {
+                        if (!isConfig) statsTracker.onFrameDropped()
+                        continue
+                    }
+                    if (!isConfig && awaitingKeyFrame && !isKeyFrame) {
+                        statsTracker.onFrameDropped()
+                        requestKeyFrame()
+                        continue
+                    }
                     try {
                         val existing = pump
                         val decoder = existing ?: configure(epoch)
-                        if (!isConfig) awaitingKeyFrame = false
                         // configure() already submitted cached CSD once.
-                        if (!isConfig)
-                            decoder.queue(data, ptsAndFlags and ScrcpyProtocol.PacketPtsMask)
-                        else if (existing != null)
-                            decoder.queue(data, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+                        if (isConfig) {
+                            if (existing != null)
+                                decoder.queue(data, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+                        } else if (awaitingKeyFrame) {
+                            decoder.queue(data, pts)
+                            statsTracker.onFrameSubmitted()
+                            awaitingKeyFrame = false
+                        } else if (decoder.tryQueue(data, pts)) {
+                            statsTracker.onFrameSubmitted()
+                        } else {
+                            if (isKeyFrame) {
+                                decoder.queue(data, pts)
+                                statsTracker.onFrameSubmitted()
+                            } else {
+                                statsTracker.onFrameDropped()
+                                awaitingKeyFrame = true
+                                requestKeyFrame()
+                                continue
+                            }
+                        }
                     } catch (error: Exception) {
                         // Some hardware decoders report an abandoned Surface asynchronously.
                         // That codec belongs to the previous Surface, not the current session.
@@ -109,6 +137,8 @@ class ScrcpyVideoDecoder(
         surfaceEpoch.incrementAndGet()
     }
 
+    suspend fun releaseCurrentDecoder() = release()
+
     fun stop() {
         running = false
         runCatching { stream.close() } // Wake a blocked network read before cancelling the job.
@@ -126,7 +156,14 @@ class ScrcpyVideoDecoder(
             }
         val decoder =
             MediaCodecPump(
+                onCodecName = statsTracker::onDecoderSelected,
                 onOutput = { codec, index, info ->
+                    if (
+                        (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 &&
+                            (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0
+                    ) {
+                        statsTracker.onFrameDecoded()
+                    }
                     codec.releaseOutputBuffer(
                         index,
                         surfaceValid &&
@@ -149,9 +186,25 @@ class ScrcpyVideoDecoder(
         return decoder
     }
 
+    private fun requestKeyFrame() {
+        val now = System.nanoTime()
+        while (true) {
+            val previous = lastKeyFrameRequestNanos.get()
+            if (previous != 0L && now - previous < KeyFrameRequestIntervalNanos) return
+            if (lastKeyFrameRequestNanos.compareAndSet(previous, now)) break
+        }
+        statsTracker.onKeyFrameRequested()
+        runCatching { onRequestKeyFrame() }
+    }
+
     private suspend fun release() {
         val decoder = pump
         pump = null
+        statsTracker.onDecoderReset()
         decoder?.close()
+    }
+
+    private companion object {
+        const val KeyFrameRequestIntervalNanos = 1_000_000_000L
     }
 }

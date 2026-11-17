@@ -14,6 +14,6 @@ class MirrorQualityPresetTest {
     fun presets_keepExpectedScrcpyOptions() {
         assertEquals(ScrcpyOptions(1024, 30, 2_000_000), MirrorQualityPreset.Smooth.options)
         assertEquals(ScrcpyOptions(), MirrorQualityPreset.Balanced.options)
-        assertEquals(ScrcpyOptions(1920, 60, 8_000_000), MirrorQualityPreset.High.options)
+        assertEquals(ScrcpyOptions(1920, 60, 10_000_000), MirrorQualityPreset.High.options)
     }
 }

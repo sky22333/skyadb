@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.OperationStatus
@@ -316,7 +317,7 @@ private fun RecentDeviceRow(
             )
             Text(
                 text = when (device.linkKind) {
-                    AdbLinkKind.Wifi -> "${device.host}:${device.port}"
+                    AdbLinkKind.Wifi -> AdbEndpoint.format(device.host, device.port)
                     AdbLinkKind.UsbOtg -> device.linkKind.label
                 },
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
@@ -348,7 +349,7 @@ private fun ManualConnectSectionErrorPreview() {
     AdbManagerTheme() {
         ManualConnectSection(
             endpoint = "192.168.1.999:70000",
-            endpointError = "请输入正确的 IPv4 地址",
+            endpointError = "请输入正确的 IPv4/IPv6 地址",
             connectEnabled = false,
             operationStatus = OperationStatus.Failed(
                 text = "无法发起连接",

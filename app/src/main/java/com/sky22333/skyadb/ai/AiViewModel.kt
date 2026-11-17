@@ -20,6 +20,7 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.download.NetworkDownloadManager
 import com.sky22333.skyadb.download.DownloadResult
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -587,7 +588,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                 "export_device_apk" -> packageName
                 "open_local_app" -> packageName
                 "agent_shell" -> "$environment\n$command"
-                "agent_connect" -> "$deviceId: $host:$port"
+                "agent_connect" -> "$deviceId: ${port?.let { AdbEndpoint.format(host, it) } ?: AdbEndpoint.hostForSocket(host)}"
                 "agent_disconnect" -> deviceId
                 "agent_screen" -> environment
                 "agent_transfer" -> "$sourceEnvironment:$sourcePath → $destinationEnvironment:$path"
@@ -865,7 +866,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             ToolDescriptor("fastboot_image", "Flash, boot, or stage an image on the connected Fastboot device. Large flash images are streamed and split into sparse pieces. If a split fails, earlier pieces may already be written. Use only for the user's requested operation.", listOf(parameter("action", "flash, boot, or stage"), parameter("partition", "Partition for flash; empty for boot or stage"), parameter("source", "selected for the conversation attachment, authorized for a user-authorized directory, or local for shared storage or app downloads"), parameter("path", "Relative authorized path or absolute local path; empty for selected"), parameter("max_chunk_size", "Optional flash download limit in bytes (decimal or 0x hexadecimal); empty to query the device"))),
             ToolDescriptor("agent_environments", "List connected execution environments and recently connected devices; call this before selecting an environment. Connect a recent device on demand if needed."),
             ToolDescriptor("agent_discover", "Discover nearby ADB network services; discovery does not pair or connect devices."),
-            ToolDescriptor("agent_connect", "Connect or reuse an already paired or authorized remote ADB endpoint, including a recent device. Always use the environment ID returned by this tool. The user pairs new devices separately using the app's wireless pairing screen.", listOf(parameter("device_id", "Unique short device ID using letters, digits, underscore or hyphen"), parameter("host", "Remote device IP address"), parameter("port", "ADB connection port as a decimal string"))),
+            ToolDescriptor("agent_connect", "Connect or reuse an already paired or authorized remote ADB endpoint, including a recent device. Always use the environment ID returned by this tool. The user pairs new devices separately using the app's wireless pairing screen.", listOf(parameter("device_id", "Unique short device ID using letters, digits, underscore or hyphen"), parameter("host", "Remote device IPv4 or IPv6 address"), parameter("port", "ADB connection port as a decimal string"))),
             ToolDescriptor("agent_disconnect", "Disconnect an additional ADB device when the user asks to release it. The active device is managed from the app home screen.", listOf(parameter("device_id", "Connected additional device ID"))),
             ToolDescriptor("agent_shell", "Run any shell command on an explicit environment. Use app for this app's UID, active for the selected device, or a connected device ID. On ADB devices input commands can control the interface.", listOf(parameter("environment", "Exact environment ID"), parameter("command", "Shell command"))),
             ToolDescriptor("agent_screen", "Inspect the current UI hierarchy of an ADB device; use agent_shell with input commands to interact.", listOf(parameter("environment", "Exact ADB device ID"))),

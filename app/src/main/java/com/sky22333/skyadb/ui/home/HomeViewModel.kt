@@ -8,6 +8,7 @@ import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.OperationStatus
@@ -103,18 +104,18 @@ class HomeViewModel(
     }
 
     fun onRecentDeviceSelected(device: AdbDevice) {
-        updateForm("${device.host}:${device.port}")
+        updateForm(AdbEndpoint.format(device.host, device.port))
     }
 
     fun onDiscoveredEndpointSelected(host: String, port: Int) {
-        updateForm("$host:$port")
+        updateForm(AdbEndpoint.format(AdbEndpoint.hostForSocket(host), port))
         onConnectClicked()
     }
 
     fun onPairedHostPrepared(host: String) {
         val current = state.value
         val port = NetworkInputValidator.endpoint(current.endpoint, current.defaultPort).port ?: current.defaultPort
-        updateForm("$host:$port")
+        updateForm(AdbEndpoint.format(AdbEndpoint.hostForSocket(host), port))
         state.value = state.value.copy(
             operationStatus = OperationStatus.Success(appString(R.string.home_pairing_success_ip_filled)),
         )

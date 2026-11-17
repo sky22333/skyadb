@@ -6,6 +6,7 @@ import com.sky22333.skyadb.AppServices
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.discovery.AdbMdnsDiscovery
 import com.sky22333.skyadb.i18n.appString
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -60,10 +61,11 @@ class PairingViewModel(
     fun onDiscoveredEndpointSelected(host: String, port: Int) {
         pairJob?.cancel()
         pairJob = null
+        val normalizedHost = NetworkInputValidator.normalizeHost(host) ?: AdbEndpoint.hostForSocket(host)
         val currentCode = state.value.pairingCode
-        val validation = validateForm(host, port.toString(), currentCode)
+        val validation = validateForm(normalizedHost, port.toString(), currentCode)
         state.value = state.value.copy(
-            ip = host,
+            ip = normalizedHost,
             pairingPort = port.toString(),
             ipError = validation.ipError,
             portError = validation.portError,
@@ -95,7 +97,9 @@ class PairingViewModel(
         }
 
         pairJob?.cancel()
+        val normalizedIp = requireNotNull(validation.host)
         state.value = current.copy(
+            ip = normalizedIp,
             ipError = validation.ipError,
             portError = validation.portError,
             codeError = validation.codeError,
@@ -103,14 +107,14 @@ class PairingViewModel(
             readyToConnect = false,
             connectPort = null,
             operationStatus = OperationStatus.Running(
-                appString(R.string.pairing_pairing_with, current.ip, current.pairingPort),
+                appString(R.string.pairing_pairing_with, normalizedIp, current.pairingPort),
             ),
         )
 
         pairJob = viewModelScope.launch {
             when (
                 val result = adbRepository.pair(
-                    host = current.ip,
+                    host = normalizedIp,
                     port = current.pairingPort.toInt(),
                     pairingCode = current.pairingCode,
                 )
@@ -119,7 +123,7 @@ class PairingViewModel(
                     state.value = state.value.copy(
                         operationStatus = OperationStatus.Running(appString(R.string.pairing_finding_port)),
                     )
-                    val connectPort = mdnsDiscovery.findConnectPort(current.ip)
+                    val connectPort = mdnsDiscovery.findConnectPort(normalizedIp)
                     state.value = state.value.copy(
                         pairEnabled = true,
                         readyToConnect = true,
@@ -168,7 +172,8 @@ class PairingViewModel(
     }
 
     private fun validateForm(ip: String, pairingPort: String, pairingCode: String): PairingValidationResult {
-        val ipError = NetworkInputValidator.ipv4Error(ip)?.let(::appString)
+        val normalizedHost = NetworkInputValidator.normalizeHost(ip)
+        val ipError = NetworkInputValidator.ipError(ip)?.let(::appString)
         val portError = NetworkInputValidator.portError(pairingPort, labelRes = R.string.pairing_port_label)
             ?.resolve(AppServices.context)
 
@@ -179,10 +184,11 @@ class PairingViewModel(
         }
 
         return PairingValidationResult(
+            host = normalizedHost,
             ipError = ipError,
             portError = portError,
             codeError = codeError,
-            isValid = ip.isNotBlank() &&
+            isValid = normalizedHost != null &&
                 pairingPort.isNotBlank() &&
                 pairingCode.isNotBlank() &&
                 ipError == null &&
@@ -193,6 +199,7 @@ class PairingViewModel(
 }
 
 private data class PairingValidationResult(
+    val host: String?,
     val ipError: String?,
     val portError: String?,
     val codeError: String?,

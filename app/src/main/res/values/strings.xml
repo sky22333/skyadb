@@ -39,6 +39,17 @@
     <string name="mirror_quality_smooth">Smooth</string>
     <string name="mirror_quality_balanced">Balanced</string>
     <string name="mirror_quality_high">High</string>
+    <string name="mirror_video_codec_h264">H.264</string>
+    <string name="mirror_video_codec_h265">H.265</string>
+    <string name="mirror_stats_frames">Received %1$d · Decoded %2$d · Dropped %3$d</string>
+    <string name="mirror_stats_rates">RX %1$.1f FPS · Decode %2$.1f FPS</string>
+    <string name="mirror_stats_pipeline">%1$.2f Mbps · Queue %2$d · +%3$d ms · Resets %4$d</string>
+    <string name="mirror_stats_connection">%1$s · %2$s · %3$s</string>
+    <string name="mirror_transport_wifi">WiFi</string>
+    <string name="mirror_transport_usb">USB</string>
+    <string name="mirror_connection_shared">Shared ADB</string>
+    <string name="mirror_connection_dedicated">Dedicated ADB</string>
+    <string name="mirror_decoder_unknown">Decoder pending</string>
 
     <!-- Navigation / common -->
     <string name="nav_devices">Devices</string>
@@ -61,6 +72,7 @@
     <string name="settings_scan_ranges_title">Scan ranges</string>
     <string name="settings_scan_ranges_placeholder">e.g. 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">Mirror quality</string>
+    <string name="settings_mirror_video_codec_title">Mirror codec</string>
     <string name="settings_theme_mode_title">Theme mode</string>
     <string name="settings_diagnostics_title">Diagnostic log</string>
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
@@ -398,6 +410,7 @@
     <string name="scrcpy_audio_stream_error">Audio unavailable; video is still playing</string>
     <string name="scrcpy_start_failed">Failed to start screen mirroring</string>
     <string name="scrcpy_start_failed_fallback_suggestion">Check the diagnostic logs in Settings.</string>
+    <string name="scrcpy_mirror_codec_fallback_suggestion">H.265 requires support from both the target encoder and this device decoder. The mirror automatically retried with H.264.</string>
     <string name="scrcpy_control_disconnected_suggestion">The mirroring connection may have dropped. Please re-enter screen mirroring.</string>
     <string name="scrcpy_send_touch_failed">Failed to send the remote touch event</string>
     <string name="scrcpy_send_key_failed">Failed to send the remote key event</string>
@@ -493,7 +506,7 @@
     <string name="scan_range_error_invalid">Invalid format or range too large: %1$s</string>
 
     <!-- Input validation -->
-    <string name="error_ipv4_invalid">Please enter a valid IPv4 address</string>
+    <string name="error_ipv4_invalid">Please enter a valid IPv4/IPv6 address</string>
     <string name="error_port_not_number">%1$s must be numeric</string>
     <string name="error_port_out_of_range">%1$s must be between 1-65535</string>
     <string name="error_url_scheme">Please enter a link starting with http:// or https://</string>

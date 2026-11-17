@@ -12,6 +12,7 @@ import com.sky22333.skyadb.discovery.ScanRangeParser
 import com.sky22333.skyadb.i18n.AppLanguage
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
+import com.sky22333.skyadb.scrcpy.MirrorVideoCodec
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ data class SettingsUiState(
     val scanRanges: String = "",
     val themeMode: ThemeMode = ThemeMode.System,
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
+    val mirrorVideoCodec: MirrorVideoCodec = MirrorVideoCodec.H264,
     val language: AppLanguage = AppLanguage.FollowSystem,
 )
 
@@ -48,6 +50,7 @@ class SettingsViewModel(
                     scanRanges = scanRanges,
                     themeMode = settings.themeMode,
                     mirrorQualityPreset = settings.mirrorQualityPreset,
+                    mirrorVideoCodec = settings.mirrorVideoCodec,
                 )
                 if (!defaultScanRangeSaved && settings.scanRanges.isBlank() && scanRanges.isNotBlank()) {
                     defaultScanRangeSaved = true
@@ -117,6 +120,13 @@ class SettingsViewModel(
         state.value = state.value.copy(mirrorQualityPreset = preset)
         viewModelScope.launch {
             settingsStore.updateMirrorQualityPreset(preset)
+        }
+    }
+
+    fun onMirrorVideoCodecSelected(codec: MirrorVideoCodec) {
+        state.value = state.value.copy(mirrorVideoCodec = codec)
+        viewModelScope.launch {
+            settingsStore.updateMirrorVideoCodec(codec)
         }
     }
 

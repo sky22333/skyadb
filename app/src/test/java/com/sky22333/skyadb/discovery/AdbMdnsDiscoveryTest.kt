@@ -26,4 +26,17 @@ class AdbMdnsDiscoveryTest {
         assertEquals("192.168.1.23:37125", endpoint.endpoint)
     }
 
+    @Test
+    fun endpoint_bracketsIpv6InIdAndEndpointText() {
+        val endpoint = AdbMdnsEndpoint(
+            name = "Redmi",
+            host = "2001:db8::1",
+            port = 37125,
+            type = AdbMdnsServiceType.Connect,
+        )
+
+        assertEquals("Connect:[2001:db8::1]:37125", endpoint.id)
+        assertEquals("[2001:db8::1]:37125", endpoint.endpoint)
+    }
+
 }

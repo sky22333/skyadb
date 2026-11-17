@@ -10,6 +10,7 @@ import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.diagnostics.alsoLog
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbDevice
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbLinkKind
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.AppInfo
@@ -146,10 +147,12 @@ class DefaultAdbRepository(
     override suspend fun connect(host: String, port: Int): AdbOperationResult<String> =
         connectionMutex.withLock {
             disconnectLocked()
+            val socketHost = AdbEndpoint.hostForSocket(host)
+            val endpoint = AdbEndpoint.format(socketHost, port)
             val settings = settingsStore.settings.first()
             val result =
                 kadbManager.connect(
-                    host = host,
+                    host = socketHost,
                     port = port,
                     connectTimeoutMillis = settings.connectionTimeoutSeconds * 1_000,
                     socketTimeoutMillis = settings.commandTimeoutSeconds * 1_000,
@@ -157,9 +160,9 @@ class DefaultAdbRepository(
             if (result is AdbOperationResult.Success) {
                 persistConnectedDevice(
                     AdbDevice(
-                        id = "$host:$port",
+                        id = endpoint,
                         name = appString(R.string.repo_device_name_android),
-                        host = host,
+                        host = socketHost,
                         port = port,
 
                         connectionState = ConnectionState.Connected,
@@ -168,7 +171,7 @@ class DefaultAdbRepository(
                     )
                 )
             }
-            return@withLock result.logFailure(DiagnosticModule.WifiAdb, "连接设备", "$host:$port")
+            return@withLock result.logFailure(DiagnosticModule.WifiAdb, "连接设备", endpoint)
         }
 
     override suspend fun connectUsbOtg(deviceName: String): AdbOperationResult<String> =
@@ -328,9 +331,10 @@ class DefaultAdbRepository(
         port: Int,
         pairingCode: String,
     ): AdbOperationResult<Unit> {
+        val socketHost = AdbEndpoint.hostForSocket(host)
         return kadbManager
-            .pair(host, port, pairingCode)
-            .logFailure(DiagnosticModule.Pairing, "无线配对", "$host:$port")
+            .pair(socketHost, port, pairingCode)
+            .logFailure(DiagnosticModule.Pairing, "无线配对", AdbEndpoint.format(socketHost, port))
     }
 
     override suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo> =

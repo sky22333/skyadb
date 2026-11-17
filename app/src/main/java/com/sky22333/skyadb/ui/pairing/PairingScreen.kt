@@ -296,7 +296,7 @@ private fun PairingContentErrorPreview() {
                 ip = "192.168.1.999",
                 pairingPort = "70000",
                 pairingCode = "12",
-                ipError = "请输入正确的 IPv4 地址",
+                ipError = "请输入正确的 IPv4/IPv6 地址",
                 portError = "配对端口范围应为 1-65535",
                 codeError = "配对码通常为 6 位数字",
                 operationStatus = OperationStatus.Failed(

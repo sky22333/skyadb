@@ -39,6 +39,17 @@
     <string name="mirror_quality_smooth">流畅</string>
     <string name="mirror_quality_balanced">均衡</string>
     <string name="mirror_quality_high">高清</string>
+    <string name="mirror_video_codec_h264">H.264</string>
+    <string name="mirror_video_codec_h265">H.265</string>
+    <string name="mirror_stats_frames">接收 %1$d · 解码 %2$d · 丢帧 %3$d</string>
+    <string name="mirror_stats_rates">接收 %1$.1f FPS · 解码 %2$.1f FPS</string>
+    <string name="mirror_stats_pipeline">%1$.2f Mbps · 队列 %2$d · +%3$d ms · 重置 %4$d</string>
+    <string name="mirror_stats_connection">%1$s · %2$s · %3$s</string>
+    <string name="mirror_transport_wifi">WiFi</string>
+    <string name="mirror_transport_usb">USB</string>
+    <string name="mirror_connection_shared">共享 ADB</string>
+    <string name="mirror_connection_dedicated">独立 ADB</string>
+    <string name="mirror_decoder_unknown">解码器待加载</string>
 
     <!-- Navigation / common -->
     <string name="nav_devices">设备</string>
@@ -61,6 +72,7 @@
     <string name="settings_scan_ranges_title">扫描网段</string>
     <string name="settings_scan_ranges_placeholder">例如 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">镜像画质</string>
+    <string name="settings_mirror_video_codec_title">镜像编码器</string>
     <string name="settings_theme_mode_title">主题模式</string>
     <string name="settings_diagnostics_title">诊断日志</string>
     <string name="settings_clear_recent_devices_title">清理最近设备</string>
@@ -398,6 +410,7 @@
     <string name="scrcpy_audio_stream_error">音频不可用，视频仍可使用</string>
     <string name="scrcpy_start_failed">屏幕镜像启动失败</string>
     <string name="scrcpy_start_failed_fallback_suggestion">请查看设置里的诊断日志。</string>
+    <string name="scrcpy_mirror_codec_fallback_suggestion">H.265 需要目标设备编码器和本机解码器同时支持，镜像已自动改用 H.264 重试。</string>
     <string name="scrcpy_control_disconnected_suggestion">镜像连接可能已断开，请重新进入屏幕镜像。</string>
     <string name="scrcpy_send_touch_failed">远程触摸发送失败</string>
     <string name="scrcpy_send_key_failed">远程按键发送失败</string>
@@ -493,7 +506,7 @@
     <string name="scan_range_error_invalid">格式错误或范围过大：%1$s</string>
 
     <!-- Input validation -->
-    <string name="error_ipv4_invalid">请输入正确的 IPv4 地址</string>
+    <string name="error_ipv4_invalid">请输入正确的 IPv4/IPv6 地址</string>
     <string name="error_port_not_number">%1$s只能填写数字</string>
     <string name="error_port_out_of_range">%1$s范围应为 1-65535</string>
     <string name="error_url_scheme">请输入以 http:// 或 https:// 开头的链接</string>

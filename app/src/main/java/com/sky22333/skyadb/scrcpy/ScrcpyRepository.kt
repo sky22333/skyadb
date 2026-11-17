@@ -1,10 +1,13 @@
 package com.sky22333.skyadb.scrcpy
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.view.KeyEvent
 import android.view.Surface
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.KadbManager
+import com.sky22333.skyadb.adb.MirrorClient
 import com.sky22333.skyadb.diagnostics.DiagnosticLogger
 import com.sky22333.skyadb.diagnostics.DiagnosticModule
 import com.sky22333.skyadb.i18n.appString
@@ -45,7 +48,9 @@ class ScrcpyRepository(
     suspend fun start(
         surface: Surface,
         qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
+        videoCodec: MirrorVideoCodec = MirrorVideoCodec.H264,
         onVideoSize: (Int, Int) -> Unit,
+        onStats: (MirrorStats) -> Unit = {},
         onStreamError: (Throwable) -> Unit = {},
         onAudioError: (Throwable) -> Unit = {},
     ): AdbOperationResult<Unit> =
@@ -54,53 +59,72 @@ class ScrcpyRepository(
             lifecycleMutex.withLock {
                 stopLocked()
                 currentCoroutineContext().ensureActive()
-                val options = qualityPreset.options
-                val optionsText = options.diagnosticText()
+                val requestedCodec =
+                    if (videoCodec == MirrorVideoCodec.H265 && !localDecoderSupports(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
+                        DiagnosticLogger.record(
+                            module = DiagnosticModule.Mirror,
+                            operation = "H.265 不可用",
+                            target = kadbManager.currentEndpoint(),
+                            message = "本机没有可用的 HEVC 解码器，已改用 H.264",
+                        )
+                        MirrorVideoCodec.H264
+                    } else {
+                        videoCodec
+                    }
+                var options = qualityPreset.options.copy(videoCodec = requestedCodec)
+                var optionsText = options.diagnosticText()
                 val audioEnabled = (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
-                val connections =
+                val mirrorClient =
                     when (val acquired = kadbManager.mirrorClient()) {
                         is AdbOperationResult.Failure -> return@withContext acquired
                         is AdbOperationResult.Success -> acquired.data
                     }
                 try {
                     operationCatching {
+                        val firstAttempt =
+                            operationCatching {
+                                startSession(
+                                    context = context,
+                                    mirrorClient = mirrorClient,
+                                    surface = surface,
+                                    options = options,
+                                    audioEnabled = audioEnabled,
+                                    onVideoSize = onVideoSize,
+                                    onStats = onStats,
+                                    onStreamError = onStreamError,
+                                    onAudioError = onAudioError,
+                                    qualityPreset = qualityPreset,
+                                    optionsText = optionsText,
+                                )
+                            }
                         val created =
-                            ScrcpySession.start(
-                                context,
-                                connections,
-                                surface,
-                                options,
-                                audioEnabled,
-                                onVideoSize,
-                                onAudioError = { error ->
-                                    DiagnosticLogger.record(
-                                        module = DiagnosticModule.Mirror,
-                                        operation = "音频流",
-                                        target = kadbManager.currentEndpoint(),
-                                        message = appString(R.string.scrcpy_audio_stream_error),
-                                        suggestion = appString(R.string.scrcpy_start_failed_fallback_suggestion),
-                                        cause = error,
-                                    )
-                                    onAudioError(error)
-                                },
-                                onError = { error, serverLog ->
-                                    DiagnosticLogger.record(
-                                        module = DiagnosticModule.Mirror,
-                                        operation = "视频流",
-                                        target = kadbManager.currentEndpoint(),
-                                        message = appString(R.string.scrcpy_video_stream_error),
-                                        suggestion =
-                                            mirrorDiagnosticSuggestion(
-                                                qualityPreset,
-                                                optionsText,
-                                                serverLog,
-                                            ),
-                                        cause = error,
-                                    )
-                                    requestStop()
-                                    onStreamError(error)
-                                },
-                            )
+                            if (firstAttempt.isFailure && requestedCodec == MirrorVideoCodec.H265) {
+                                options = qualityPreset.options.copy(videoCodec = MirrorVideoCodec.H264)
+                                optionsText = options.diagnosticText()
+                                DiagnosticLogger.record(
+                                    module = DiagnosticModule.Mirror,
+                                    operation = "H.265 回退",
+                                    target = kadbManager.currentEndpoint(),
+                                    message = "H.265 镜像启动失败，已回退 H.264",
+                                    suggestion = appString(R.string.scrcpy_mirror_codec_fallback_suggestion),
+                                    cause = firstAttempt.exceptionOrNull(),
+                                )
+                                startSession(
+                                    context = context,
+                                    mirrorClient = mirrorClient,
+                                    surface = surface,
+                                    options = options,
+                                    audioEnabled = audioEnabled,
+                                    onVideoSize = onVideoSize,
+                                    onStats = onStats,
+                                    onStreamError = onStreamError,
+                                    onAudioError = onAudioError,
+                                    qualityPreset = qualityPreset,
+                                    optionsText = optionsText,
+                                )
+                            } else {
+                                firstAttempt.getOrElse { error -> throw error }
+                            }
                         session = created
                         currentCoroutineContext().ensureActive()
                         check(generation.get() == token) { "Mirror start cancelled" }
@@ -109,6 +133,7 @@ class ScrcpyRepository(
                     }
                         .getOrElse { error ->
                             stopLocked()
+                            if (session == null) runCatching { mirrorClient.close() }
                             DiagnosticLogger.record(
                                 module = DiagnosticModule.Mirror,
                                 operation = "启动镜像",
@@ -129,7 +154,9 @@ class ScrcpyRepository(
                         }
                 } finally {
                     if (!currentCoroutineContext().isActive || generation.get() != token) {
-                        withContext(NonCancellable) { stopLocked() }
+                        withContext(NonCancellable) {
+                            if (session == null) mirrorClient.close() else stopLocked()
+                        }
                     }
                 }
             }
@@ -184,6 +211,64 @@ class ScrcpyRepository(
         session = null
         current?.stop()
     }
+
+    private suspend fun startSession(
+        context: Context,
+        mirrorClient: MirrorClient,
+        surface: Surface,
+        options: ScrcpyOptions,
+        audioEnabled: Boolean,
+        onVideoSize: (Int, Int) -> Unit,
+        onStats: (MirrorStats) -> Unit,
+        onStreamError: (Throwable) -> Unit,
+        onAudioError: (Throwable) -> Unit,
+        qualityPreset: MirrorQualityPreset,
+        optionsText: String,
+    ): ScrcpySession =
+        ScrcpySession.start(
+            context = context,
+            mirrorClient = mirrorClient,
+            surface = surface,
+            options = options,
+            audioEnabled = audioEnabled,
+            onVideoSize = onVideoSize,
+            onStats = onStats,
+            onAudioError = { error ->
+                DiagnosticLogger.record(
+                    module = DiagnosticModule.Mirror,
+                    operation = "音频流",
+                    target = kadbManager.currentEndpoint(),
+                    message = appString(R.string.scrcpy_audio_stream_error),
+                    suggestion = appString(R.string.scrcpy_start_failed_fallback_suggestion),
+                    cause = error,
+                )
+                onAudioError(error)
+            },
+            onError = { error, serverLog ->
+                DiagnosticLogger.record(
+                    module = DiagnosticModule.Mirror,
+                    operation = "视频流",
+                    target = kadbManager.currentEndpoint(),
+                    message = appString(R.string.scrcpy_video_stream_error),
+                    suggestion =
+                        mirrorDiagnosticSuggestion(
+                            qualityPreset,
+                            optionsText,
+                            serverLog,
+                        ),
+                    cause = error,
+                )
+                requestStop()
+                onStreamError(error)
+            },
+        )
+
+    private fun localDecoderSupports(mime: String): Boolean =
+        runCatching {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                !info.isEncoder && info.supportedTypes.any { it.equals(mime, ignoreCase = true) }
+            }
+        }.getOrDefault(false)
 
     private fun recordControlFailure(operation: String, message: String, error: Throwable) {
         DiagnosticLogger.record(

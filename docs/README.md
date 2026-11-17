@@ -10,8 +10,8 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 
 ## 当前功能
 
-- 无线调试配对：输入配对 IP、配对端口、配对码后调用 Kadb Pairing。
-- 手动连接设备：输入目标设备 IP 和 ADB 端口。
+- 无线调试配对：输入配对 IPv4/IPv6 地址、配对端口、配对码后调用 Kadb Pairing。
+- 手动连接设备：输入目标设备 IPv4/IPv6 地址和 ADB 端口；IPv6 显式端口使用 `[地址]:端口`，link-local 地址可带 `%接口名`。
 - USB OTG：识别 ADB / Fastboot 接口，授权后连接；Fastboot 设备页提供镜像刷写、临时启动、固件 ZIP 浏览和槽位管理；命令页提供设备摘要、命令查询和结果复制。
 - 最近设备：保存 WiFi 设备记录，支持点击回填 IP 和端口；USB 总线地址仅用于当前插入，不持久化。
 - 设备详情：点击设备名称查看 Android 信息或 Fastboot 摘要；点击连接状态选择重启到系统、Bootloader、Recovery 或 fastbootd。
@@ -23,14 +23,14 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 - 截图：调用目标设备 `screencap`，拉取截图到本机缓存并预览，需要时再由用户选择保存位置。
 - 系统日志：读取目标设备最近系统日志，支持复制日志内容，便于排查目标设备问题。
 - 虚拟遥控器：采用实体遥控器式布局，提供电源、唤醒、息屏、方向与确认、返回、主页、菜单、音量、静音和媒体控制共 17 个按键。默认字号下紧凑手机也可一屏操作；横屏自动切换双区布局，所有按键触控区域至少 48dp。状态提示固定占位，错误提示可点击查看完整原因，反馈不会推移按键。
-- 屏幕镜像：基于官方 `scrcpy-server-v5.0.1`、Kadb `localabstract` 流、`SurfaceView` 和 `MediaCodec` 实现画面预览与远程触控；支持音频转发与中文输入；镜像页支持控制区显示/隐藏，输入键盘默认关闭，可独立显示和关闭；关闭输入区时收起软键盘并释放焦点。画面按远端视频比例居中显示。
+- 屏幕镜像：基于官方 `scrcpy-server-v5.0.1`、Kadb `localabstract` 流、`SurfaceView` 和 `MediaCodec` 实现画面预览与远程触控；默认 H.264，可在设置中切换 H.265；支持音频转发与中文输入；镜像页支持控制区显示/隐藏、实时码率/解码帧率/丢帧/流水线延迟统计，输入键盘默认关闭，可独立显示和关闭；关闭输入区时收起软键盘并释放焦点。画面按远端视频比例居中显示。
 - 命令页：ADB 模式执行 Shell 命令，Fastboot 模式发送协议命令；支持粘贴带 `adb` / `adb shell` / `fastboot` 前缀的输入，展示输出和执行状态。
 - 局域网发现：优先通过 Android NSD / mDNS 自动发现 ADB 服务，支持 `_adb._tcp.`、`_adb-tls-pairing._tcp.`、`_adb-tls-connect._tcp.`；自动发现无结果时，保留 TCP 网段扫描和 ADB 协议轻握手确认作为兜底。
 - AI 助手：配置 OpenAI 兼容接口、密钥和模型，支持获取模型列表、Chat Completions / Responses、流式对话、历史记录和 Markdown 渲染。支持选择文件供工具读取或传输，并向支持多模态的模型发送图片。
 - AI 工具：支持已连接或最近设备、多设备 ADB 会话、设备 Shell、界面读取、授权的本机文件与跨设备文件操作、APK 提取和 HTTP / HTTPS 文件下载；可配置工具执行确认或自动执行。
 - MCP：配置 Streamable HTTP 服务，发现并调用远端工具，支持 Bearer Token 和连接测试。
 - 诊断日志：记录进程内错误和异常，支持复制排查。
-- 设置：支持默认端口、连接超时、命令超时、扫描网段、屏幕镜像画质、主题模式配置。
+- 设置：支持默认端口、连接超时、命令超时、扫描网段、屏幕镜像画质、屏幕镜像编码器、主题模式配置。
 
 ## 技术栈
 
@@ -59,8 +59,8 @@ sky adb 是一款运行在 Android 手机上的支持简体中文和英文的 AD
 - 运行 sky adb 的设备：最低 Android 7.0，API 24。
 - 编译目标：compileSdk 37，targetSdk 37。
 - Android 17 局域网：targetSdk 37 需声明并运行时申请 `ACCESS_LOCAL_NETWORK`，用于 mDNS 发现、网段扫描和 WiFi ADB 连接。
-- 被连接设备：支持 ADB over TCP / Wireless Debugging，或已开启 USB 调试并完成授权。Android 11+ 推荐使用无线调试配对；传统 WiFi ADB 设备通常使用 `5555` 端口。
-- 屏幕镜像目标设备：以目标设备是否支持 scrcpy server、视频编码和 ADB socket 转发为准；默认画质使用均衡模式，高负载设备可在设置中切换为流畅模式。
+- 被连接设备：支持 IPv4/IPv6 ADB over TCP、Wireless Debugging，或已开启 USB 调试并完成授权。Android 11+ 推荐使用无线调试配对；传统 WiFi ADB 设备通常使用 `5555` 端口。IPv6 局域网自动发现仍以 mDNS 为准，网段扫描只处理 IPv4。
+- 屏幕镜像目标设备：以目标设备是否支持 scrcpy server、所选视频编码器和 ADB socket 转发为准；默认画质使用均衡模式（1280p/60fps/6Mbps），默认编码器为 H.264，高负载或弱网设备可在设置中切换为流畅模式（1024p/30fps/2Mbps）。
 
 ## 项目结构
 
@@ -117,16 +117,16 @@ skyadb/
 - DataStore：保存设置和最近设备，所有读取以 Flow 形式向上游暴露。
 - AI：`AiViewModel` 管理会话、流式响应和工具调用；`AiConfigStore` 加密保存配置与历史，模型客户端按需创建；`AgentSessions` 管理额外 ADB 会话，MCP 连接在使用后关闭。
 - Apps：应用信息探针在目标设备读取名称和图标，页面按需请求图标并使用有界缓存。
-- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 由 `kadb-mdns` 管理 Android NSD 发现、解析和关闭，发现页离开时停止；配对查找连接端口使用独立短时会话。TCP 扫描支持并发限制、超时、取消和进度节流。
+- Discovery：自动发现和扫描逻辑独立于 UI。mDNS 由 `kadb-mdns` 管理 Android NSD 发现、解析和关闭，发现页离开时停止；配对查找连接端口使用独立短时会话，IPv6 主机按规范化地址比较。TCP 扫描支持并发限制、超时、取消和进度节流，仅覆盖 IPv4 网段。
 - Download：下载逻辑独立于页面，取消时关闭 OkHttp Call；文件名经过校验，下载落入独立缓存子目录，进度更新节流。
 - Diagnostics：错误日志仅保存在进程内，最多 500 条；Debug 构建同时将失败原因写入 logcat，不做永久存储。
-- Scrcpy：屏幕镜像逻辑独立于页面，复用当前 WiFi / USB Kadb 连接的独立 ADB 流、官方 server、MediaCodec 硬解码和控制协议封装。
-- Validation：输入校验集中维护，避免每个页面重复实现 IP、端口、URL、路径判断。
+- Scrcpy：屏幕镜像逻辑独立于页面，使用官方 server、MediaCodec 硬解码和控制协议封装；WiFi 优先建立专用 ADB transport，失败时回退主连接，USB OTG 复用主连接。视频编码器、画质档和性能统计集中管理。
+- Validation：输入校验集中维护，避免每个页面重复实现 IPv4/IPv6、端口、URL、路径判断；endpoint 显示统一使用 IPv6 方括号格式。
 
 ## 连接、传输与镜像实现
 
 - 应用探针由 `app/src/probe/java` 构建为 DEX；进入应用管理时推送探针和 scrcpy server 至目标设备 `/data/local/tmp/skyadb-app-probe.dex` 与 `/data/local/tmp/skyadb-app-probe.jar`，通过 `app_process` 运行。退出时关闭进程并尝试清理，固定文件名可在下次启动时覆盖；图标缓存上限为 4 MiB。
-- USB ADB 由 `KadbUsb.isAdbDevice()` 识别、`KadbUsb.create()` 建立连接。每个设备持有一个 Kadb 实例，视频、音频、控制和其他操作使用该连接上的独立流。
+- USB ADB 由 `KadbUsb.isAdbDevice()` 识别、`KadbUsb.create()` 建立连接。USB 镜像与其他操作复用该连接；WiFi 镜像尝试新建相同身份认证的专用 TCP ADB transport，设备不接受第二连接时自动回退共享连接。
 - 连接、断开、设备信息刷新和最近设备状态合并由仓库串行管理；授权等待受超时与取消控制，失败或取消会关闭待连接实例。
 - ADB 身份由 `AdbIdentityManager` 配置持久化存储，密钥在 IO 操作时按需加载。
 - 远端目录使用 `openSync().list()`，由 Kadb 协商 Sync v1/v2。文件下载写入目标同目录临时文件，成功后原子替换；失败保留已有文件。
@@ -138,8 +138,10 @@ skyadb/
 - 命令输入由 `CommandInputParser` 统一解析，只去除开头完整的客户端名称（支持 `.exe`），ADB Shell 正文的参数、引号和操作符保留。前缀与当前连接模式不一致时拒绝执行，不自动切换设备。
 - Fastboot 命令页使用对应标题和示例。`fastboot getvar product`、`fastboot erase cache`、`fastboot set_active b` 分别转换为 `getvar:product`、`erase:cache`、`set_active:b`；支持 `fastboot reboot` 及带重启目标的写法，原始协议和 OEM 命令可直接输入。
 - `devices` 属于主机枚举操作，提示用户到首页查看设备；桌面选设备参数、交互式 Shell 参数和未实现的客户端文件传输流程在发送前提示。命令页不提供完整桌面 adb / fastboot 客户端兼容层；设备页和 AI 均可使用本地镜像执行 Fastboot 刷写。
-- `ScrcpySession` 管理官方 server 及视频、音频、控制流；镜像退出只关闭自己的流，不关闭共享的 Kadb 连接。
-- `MediaCodecPump` 在独立 HandlerThread 上串行管理解码器，输出不依赖下一次网络输入。输入采用反压，支持设备声明的低延迟解码；音频按实际输出格式创建 AudioTrack，解码 PCM 直接通过 ByteBuffer 写入。
+- `ScrcpySession` 管理官方 server 及视频、音频、控制流；镜像退出只关闭自己的流和专用 ADB 连接，不关闭共享的 Kadb 连接。
+- scrcpy 5.0.1 服务端通过 `LocalServerSocket` 输出已编码流，客户端经 ADB `localabstract` 读取；ADB 没有 UDP 转发服务，因此不改 server 时不能把该链路替换成 UDP。当前优化集中在 H.264/H.265 编码、画质档、Surface 解码、积压丢帧、关键帧恢复和专用 ADB 连接。
+- `MediaCodecPump` 在独立 HandlerThread 上串行管理解码器，输出不依赖下一次网络输入。普通输入采用反压，视频增量帧使用非阻塞提交；解码器积压时丢弃当前非关键帧并等待关键帧，通过 `RESET_VIDEO` 限流请求恢复，避免延迟持续累积。支持设备声明的低延迟解码；音频按实际输出格式创建 AudioTrack，解码 PCM 直接通过 ByteBuffer 写入。
+- `ScrcpySession` 每秒汇总传输类型、独立/共享连接、实际解码器、接收/解码帧率、码率、待解码队列深度、累计丢帧、关键帧请求和相对流水线延迟增长，镜像页在控制区可见时显示紧凑统计条。
 - Surface 重建时保留 scrcpy 会话，重建视频解码器并发送 `RESET_VIDEO`，等待关键帧恢复画面；旧 Surface 的迟到回调与新解码器隔离。
 - 镜像启停串行化，延迟清理不关闭后续启动的新会话。触摸 MOVE 按指针合并，保留按下、抬起和其他控制指令的顺序。
 - scrcpy 资产为 `app/src/main/assets/scrcpy/scrcpy-server-v5.0.1`，SHA-256 为 `764eb6f79811d5211fe9df341120882ba9994c7a61b897d7bf3fb662e53bc536`；更换资产时同步更新 `ScrcpyConstants` 并核验协议。
@@ -178,8 +180,10 @@ skyadb/
 - ViewModel 中的 Flow 收集和协程任务要跟随 ViewModel 生命周期释放，避免 Activity 泄漏。
 - 不在 Compose 页面中直接持有 `Context` 长生命周期引用；需要上下文的服务使用 `applicationContext`。
 - 状态模型要小而稳定，避免把大文件内容、图片 Bitmap 或长输出反复塞入全局状态。
-- 屏幕镜像默认使用均衡画质，用户可切换流畅、均衡、高清三档；高清模式不作为默认值。
+- 屏幕镜像默认使用均衡画质，用户可切换流畅、均衡、高清三档；高清模式不作为默认值。流畅、均衡、高清均优先保证 60fps 观看流畅度，并可通过码率/分辨率取舍适配设备能力。
+- 屏幕镜像默认 H.264，用户可切换 H.265；H.265 仅在目标设备编码器和本机解码器均支持时使用，切换后下一会话生效。
 - 屏幕镜像使用 `SurfaceView` 按远端视频比例居中显示，触摸坐标必须与实际画面区域一致。
+- 屏幕镜像必须维持有界积压；视频积压时丢弃过期增量帧并请求关键帧，不能让延迟随时间增长。
 - 屏幕镜像的触摸、按键、文本发送和 socket 释放必须在 IO 线程执行，不能阻塞主线程。
 - 屏幕镜像不因短暂切后台或 Surface 重建而拆除会话；回前台通过重建解码器并发送 `RESET_VIDEO` 恢复画面。用户关闭页面、离开镜像页或视频流异常时释放会话。
 
@@ -196,7 +200,7 @@ skyadb/
 - 新增持久化数据按当前版本设计，保持必要的读取和错误处理；无需增加尚未发布版本的升级兼容代码。
 - 新增网络能力必须考虑超时、取消、错误提示、缓存清理和进度节流。
 - 新增 UI 优先使用 Miuix 组件、默认主题和图标，并复用现有尺寸规范；必要的定制应保持整体一致。
-- 新增镜像参数必须通过 `MirrorQualityPreset` 或 `ScrcpyOptions` 集中管理，不能在 UI 或启动命令中散落硬编码。
+- 新增镜像参数必须通过 `MirrorQualityPreset`、`MirrorVideoCodec` 或 `ScrcpyOptions` 集中管理，不能在 UI 或启动命令中散落硬编码。
 
 ## 验收与维护
 
