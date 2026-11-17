@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,13 +43,9 @@ class MirrorViewModel(
 
     /** 控制指令串行发送；与 stop 解耦，避免 onCleared 取消正在释放的会话。 */
     private val controlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val controlCommands =
-        MirrorControlQueue<ControlCommand>(
-            capacity = ControlQueueCapacity,
-            isDroppable = { command ->
-                command is ControlCommand.TouchBatch && command.events.all(MirrorTouchEvent::isMove)
-            },
-        )
+    private val controlCommands = Channel<ControlCommand>(Channel.UNLIMITED)
+    private val controlLock = Any()
+    private var pendingMoves: ControlCommand.Moves? = null
     @Volatile private var started = false
     private var startJob: Job? = null
     private var latestSurface: Surface? = null
@@ -145,19 +142,16 @@ class MirrorViewModel(
     }
 
     fun sendTouch(event: MotionEvent, width: Int, height: Int) {
-        val events =
-            if (
-                event.actionMasked == MotionEvent.ACTION_MOVE ||
-                    event.actionMasked == MotionEvent.ACTION_CANCEL
-            ) {
-                (0 until event.pointerCount).mapNotNull { index ->
-                    MirrorTouchEvent.from(event, width, height, index)
-                }
-            } else {
-                listOfNotNull(MirrorTouchEvent.from(event, width, height))
+        if (
+            event.actionMasked == MotionEvent.ACTION_MOVE ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+        ) {
+            for (index in 0 until event.pointerCount) {
+                MirrorTouchEvent.from(event, width, height, index)?.let { enqueueTouch(it) }
             }
-        if (events.isNotEmpty()) {
-            controlCommands.offer(ControlCommand.TouchBatch(events))
+        } else {
+            val touch = MirrorTouchEvent.from(event, width, height) ?: return
+            enqueueTouch(touch)
         }
     }
 
@@ -174,7 +168,6 @@ class MirrorViewModel(
         startJob?.cancel()
         started = false
         latestSurface = null
-        controlCommands.clear()
         state.value = MirrorUiState()
         repository.requestStop()
     }
@@ -190,32 +183,56 @@ class MirrorViewModel(
     }
 
     private suspend fun processControlCommands() {
-        while (true) {
-            val command = controlCommands.take() ?: break
+        for (command in controlCommands) {
             dispatchControl(command)
         }
     }
 
+    private fun enqueueTouch(touch: MirrorTouchEvent) =
+        synchronized(controlLock) {
+            if (touch.isMove) {
+                val batch =
+                    pendingMoves
+                        ?: ControlCommand.Moves(linkedMapOf()).also {
+                            pendingMoves = it
+                            controlCommands.trySend(it)
+                        }
+                batch.events[touch.pointerId] = touch
+            } else {
+                pendingMoves = null
+                controlCommands.trySend(ControlCommand.Touch(touch))
+            }
+        }
+
     private fun enqueue(command: ControlCommand) =
-        controlCommands.offer(command)
+        synchronized(controlLock) {
+            pendingMoves = null
+            controlCommands.trySend(command)
+        }
 
     private fun dispatchControl(command: ControlCommand) {
         when (command) {
-            is ControlCommand.TouchBatch -> repository.sendTouches(command.events)
+            is ControlCommand.Moves -> {
+                val events =
+                    synchronized(controlLock) {
+                        if (pendingMoves === command) pendingMoves = null
+                        command.events.values.toList()
+                    }
+                events.forEach(repository::sendTouch)
+            }
+            is ControlCommand.Touch -> repository.sendTouch(command.event)
             is ControlCommand.Key -> repository.sendKey(command.keyCode)
             is ControlCommand.Text -> repository.sendText(command.text)
         }
     }
 
     private sealed interface ControlCommand {
-        data class TouchBatch(val events: List<MirrorTouchEvent>) : ControlCommand
+        data class Moves(val events: MutableMap<Int, MirrorTouchEvent>) : ControlCommand
+
+        data class Touch(val event: MirrorTouchEvent) : ControlCommand
 
         data class Key(val keyCode: Int) : ControlCommand
 
         data class Text(val text: String) : ControlCommand
-    }
-
-    private companion object {
-        const val ControlQueueCapacity = 256
     }
 }
