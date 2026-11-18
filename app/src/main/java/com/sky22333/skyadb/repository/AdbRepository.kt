@@ -132,27 +132,16 @@ class DefaultAdbRepository(
         scope.launch {
             recentDeviceStore.devices.collect { devices ->
                 connectionMutex.withLock {
-                    val connectedIds =
+                    val liveConnected =
                         recentDeviceState.value
-                            .filter { it.connectionState == ConnectionState.Connected }
-                            .map { it.id }
-                            .toSet()
-                    val activeUsb =
-                        recentDeviceState.value.filter {
-                            it.linkKind == AdbLinkKind.UsbOtg &&
-                                it.connectionState == ConnectionState.Connected
-                        }
-                    recentDeviceState.value =
-                        activeUsb +
-                            devices.filterNot { it.id in deletedDeviceIds }.map { device ->
-                                if (device.id in connectedIds) {
-                                    device.copy(
-                                        connectionState = ConnectionState.Connected,
-                                    )
-                                } else {
-                                    device
-                                }
+                            .filter {
+                                it.connectionState == ConnectionState.Connected &&
+                                    it.id !in deletedDeviceIds
                             }
+                    val liveIds = liveConnected.mapTo(mutableSetOf()) { it.id }
+                    recentDeviceState.value =
+                        (liveConnected + devices.filterNot { it.id in deletedDeviceIds || it.id in liveIds })
+                            .distinctBy { it.id }
                 }
             }
         }
@@ -545,7 +534,7 @@ class DefaultAdbRepository(
             kadbManager.clearUsbFastbootSession()
         }
         val disconnected = kadbManager.disconnectSession(deviceId)
-        if (!disconnected && wasActive) kadbManager.disconnect()
+        if (!disconnected && wasActive && kadbManager.currentEndpoint() == deviceId) kadbManager.disconnect()
         syncConnectionState()
         if (wasActive) deviceInfoState.value = DeviceInfo()
     }

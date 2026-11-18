@@ -57,7 +57,6 @@ class DeviceViewModel(
                         deviceId = activeId,
                         connectionState = ConnectionState.Connected,
                         sessionKind = adbRepository.sessionKind(),
-                        info = if (previousId != activeId) DeviceInfo() else state.value.info,
                         fastbootSummary = if (previousId != activeId) null else state.value.fastbootSummary,
                         rebootStatus = if (previousId != activeId && !state.value.rebooting) OperationStatus.Idle else state.value.rebootStatus,
                     )

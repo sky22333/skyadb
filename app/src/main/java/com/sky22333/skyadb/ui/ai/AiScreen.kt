@@ -480,6 +480,11 @@ fun AiSettingsScreen(viewModel: AiViewModel, onDismiss: () -> Unit) {
         mcpToolNames = state.mcpToolNames, onMcpChanged = viewModel::clearMcpNotice,
         onCloseMcp = viewModel::clearMcpTest, onTestMcp = viewModel::testMcp,
         onSave = { viewModel.saveConfig(it, ::close) })
+    state.error?.let { error ->
+        WindowDialog(show = true, onDismissRequest = viewModel::dismissError, title = stringResource(R.string.ai_error), summary = error) {
+            Button(onClick = viewModel::dismissError, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_confirm)) }
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

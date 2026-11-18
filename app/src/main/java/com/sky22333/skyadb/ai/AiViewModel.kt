@@ -427,7 +427,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (config.baseUrl.toHttpUrlOrNull() == null || config.model.isBlank()) { state.update { it.copy(error = appString(R.string.ai_config_required)) }; return false }
         val token = AppServices.kadbManager.sessionToken()
         val endpoint = AppServices.kadbManager.currentEndpoint()
-        if (currentDeviceId.isNotBlank() && endpoint != null && endpoint != currentDeviceId) {
+        if (currentDeviceId.isNotBlank() && endpoint != null && !AdbEndpoint.sameAuthority(endpoint, currentDeviceId)) {
             draftJob?.cancel()
             val pendingDraft = state.value.draft
             val pendingAttachments = state.value.attachments

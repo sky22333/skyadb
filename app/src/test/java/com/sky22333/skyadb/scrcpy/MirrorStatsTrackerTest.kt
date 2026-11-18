@@ -59,6 +59,21 @@ class MirrorStatsTrackerTest {
     }
 
     @Test
+    fun latencyGrowthTracksArrivalBehindMediaTimeline() {
+        val tracker = MirrorStatsTracker()
+        val start = 1_000_000_000L
+
+        tracker.onPacketReceived(sizeBytes = 1, ptsUs = 0L, nowNanos = start)
+        tracker.onPacketReceived(
+            sizeBytes = 1,
+            ptsUs = 1_000_000L,
+            nowNanos = start + 1_500_000_000L,
+        )
+
+        assertEquals(500L, tracker.snapshot(nowNanos = start + 1_500_000_000L).latencyGrowthMs)
+    }
+
+    @Test
     fun queueDepthTracksSubmittedFramesNotYetDecoded() {
         val tracker = MirrorStatsTracker()
 

@@ -57,7 +57,7 @@ class MirrorStatsTracker(
             } else {
                 val mediaElapsedUs = ptsUs - baselinePts
                 val wallElapsedUs = (nowNanos - latencyBaselineNanos) / 1_000L
-                latencyGrowthMs = ((mediaElapsedUs - wallElapsedUs) / 1_000L).coerceAtLeast(0L)
+                latencyGrowthMs = ((wallElapsedUs - mediaElapsedUs) / 1_000L).coerceAtLeast(0L)
             }
         }
     }

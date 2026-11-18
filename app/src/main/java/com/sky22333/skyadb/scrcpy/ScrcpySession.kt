@@ -74,17 +74,17 @@ private constructor(
     }
 
     fun setSurface(surface: Surface) {
-        decoder.setSurface(surface)
+        val previousEpoch = decoder.setSurface(surface)
         // 释放旧 Surface 的解码器，并从服务端请求新的关键帧。
         scope.launch {
-            decoder.releaseCurrentDecoder()
+            decoder.releaseCurrentDecoder(previousEpoch)
             controlClient.resetVideo()
         }
     }
 
     fun clearSurface() {
-        decoder.clearSurface()
-        scope.launch { decoder.releaseCurrentDecoder() }
+        val previousEpoch = decoder.clearSurface()
+        scope.launch { decoder.releaseCurrentDecoder(previousEpoch) }
     }
 
     suspend fun stop() =

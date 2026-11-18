@@ -58,10 +58,8 @@ data class AdbEndpoint(
             if (leftHost != null || rightHost != null) {
                 if (leftHost == null || rightHost == null) return false
                 if (leftHost.addressKey != rightHost.addressKey) return false
-                if (leftHost.zone != null && rightHost.zone != null) {
-                    return leftHost.zone.equals(rightHost.zone, ignoreCase = true)
-                }
-                return true
+                if (leftHost.zone == null || rightHost.zone == null) return leftHost.zone == rightHost.zone
+                return leftHost.zone.equals(rightHost.zone, ignoreCase = true)
             }
             val normalizedLeft = normalizeHost(left)
             val normalizedRight = normalizeHost(right)
@@ -192,7 +190,9 @@ data class AdbEndpoint(
                 return groups.takeIf { it.size == 8 }?.toIntArray()
             }
 
-            val left = parseSection(value.substring(0, compression)) ?: return null
+            val leftSection = value.substring(0, compression)
+            if (leftSection.contains('.')) return null
+            val left = parseSection(leftSection) ?: return null
             val right = parseSection(value.substring(compression + 2)) ?: return null
             if (left.size + right.size >= 8) return null
             return IntArray(8).also { result ->

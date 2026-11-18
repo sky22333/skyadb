@@ -28,6 +28,8 @@ class AdbEndpointTest {
         assertTrue(AdbEndpoint.sameHost("[FE80::1%WLAN0]", "fe80::1%wlan0"))
         assertTrue(AdbEndpoint.sameHost("192.168.1.2", "192.168.1.2"))
         assertFalse(AdbEndpoint.sameHost("2001:db8::1", "2001:db8::2"))
+        assertFalse(AdbEndpoint.sameHost("fe80::1", "fe80::1%wlan0"))
+        assertFalse(AdbEndpoint.sameHost("fe80::1%wlan0", "fe80::1%eth0"))
     }
 
     @Test
@@ -95,5 +97,12 @@ class AdbEndpointTest {
         assertTrue(AdbEndpoint.sameAuthority("ADB.Example.COM.:5555", "adb.example.com:5555"))
         assertFalse(AdbEndpoint.sameAuthority("[2001:db8::1]:5555", "[2001:db8::1]:5556"))
         assertFalse(AdbEndpoint.sameAuthority("192.168.1.2:5555", "[2001:db8::1]:5555"))
+        assertFalse(AdbEndpoint.sameAuthority("[fe80::1]:5555", "[fe80::1%wlan0]:5555"))
+    }
+
+    @Test
+    fun ipv4TailIsOnlyValidAtTheEndOfAnIpv6Address() {
+        assertEquals("fd00::192.0.2.1", AdbEndpoint.normalizeHost("fd00::192.0.2.1"))
+        assertNull(AdbEndpoint.normalizeHost("fd00:192.0.2.1::1"))
     }
 }

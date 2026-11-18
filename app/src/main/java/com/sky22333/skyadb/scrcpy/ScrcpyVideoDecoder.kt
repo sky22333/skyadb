@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class ScrcpyVideoDecoder(
@@ -32,7 +34,8 @@ class ScrcpyVideoDecoder(
     @Volatile private var awaitingKeyFrame = true
     private val surfaceEpoch = AtomicLong()
     private val lastKeyFrameRequestNanos = AtomicLong()
-    private var decoderEpoch = -1L
+    private val decoderMutex = Mutex()
+    @Volatile private var decoderEpoch = -1L
 
     suspend fun start() =
         withContext(Dispatchers.IO) {
@@ -124,27 +127,33 @@ class ScrcpyVideoDecoder(
             }
         }
 
-    fun setSurface(next: Surface) {
+    fun setSurface(next: Surface): Long {
+        val previousEpoch = surfaceEpoch.get()
         awaitingKeyFrame = true
         surface = next
         surfaceValid = next.isValid
         surfaceEpoch.incrementAndGet()
+        return previousEpoch
     }
 
-    fun clearSurface() {
+    fun clearSurface(): Long {
+        val previousEpoch = surfaceEpoch.get()
         surfaceValid = false
         awaitingKeyFrame = true
         surfaceEpoch.incrementAndGet()
+        return previousEpoch
     }
 
-    suspend fun releaseCurrentDecoder() = release()
+    suspend fun releaseCurrentDecoder(epoch: Long) {
+        release(epoch, awaitKeyFrame = true)
+    }
 
     fun stop() {
         running = false
         runCatching { stream.close() } // Wake a blocked network read before cancelling the job.
     }
 
-    private suspend fun configure(epoch: Long): MediaCodecPump {
+    private suspend fun configure(epoch: Long): MediaCodecPump = decoderMutex.withLock {
         val mime =
             when (codecId) {
                 ScrcpyProtocol.CodecH264 -> MediaFormat.MIMETYPE_VIDEO_AVC
@@ -183,7 +192,7 @@ class ScrcpyVideoDecoder(
         decoderEpoch = epoch
         decoder.configure(MediaFormat.createVideoFormat(mime, width, height), surface)
         config?.let { decoder.queue(it, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG) }
-        return decoder
+        decoder
     }
 
     private fun requestKeyFrame() {
@@ -197,11 +206,17 @@ class ScrcpyVideoDecoder(
         runCatching { onRequestKeyFrame() }
     }
 
-    private suspend fun release() {
-        val decoder = pump
+    private suspend fun release(expectedEpoch: Long? = null, awaitKeyFrame: Boolean = false) = decoderMutex.withLock {
+        if (expectedEpoch != null && decoderEpoch != expectedEpoch) return@withLock
+        if (awaitKeyFrame) awaitingKeyFrame = true
+        val decoder = pump ?: return@withLock
         pump = null
-        statsTracker.onDecoderReset()
-        decoder?.close()
+        decoderEpoch = -1L
+        try {
+            decoder.close()
+        } finally {
+            statsTracker.onDecoderReset()
+        }
     }
 
     private companion object {

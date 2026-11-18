@@ -113,6 +113,9 @@ class HomeViewModel(
     fun onRecentDeviceSelected(device: AdbDevice) {
         connectionJob?.cancel()
         connectionJob = null
+        state.value = state.value.copy(
+            connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
+        )
         if (device.linkKind == AdbLinkKind.Wifi) {
             updateForm(AdbEndpoint.format(device.host, device.port))
         }
@@ -315,9 +318,10 @@ class HomeViewModel(
     /** 官方 USB Host 文档：Detached 仅应清理与该 [UsbDevice] 的通信。 根因：此前对任意拔出都 disconnect，会误杀 Wi‑Fi ADB 会话。 */
     private suspend fun onUsbDeviceDetached(deviceName: String) {
         val connecting = state.value.connectingUsbDeviceName == deviceName
-        if (adbRepository.isActiveUsbDevice(deviceName)) {
-            adbRepository.disconnectDevice("usb-otg:$deviceName")
-            adbRepository.disconnectDevice("fastboot:$deviceName")
+        val active = adbRepository.isActiveUsbDevice(deviceName)
+        adbRepository.disconnectDevice("usb-otg:$deviceName")
+        adbRepository.disconnectDevice("fastboot:$deviceName")
+        if (active) {
             state.value =
                 state.value.copy(
                     connectingUsbDeviceName = null,
@@ -387,6 +391,7 @@ class HomeViewModel(
     private fun selectDevice(device: AdbDevice) {
         connectionJob?.cancel()
         state.value = state.value.copy(
+            connectEnabled = false,
             operationStatus = OperationStatus.Running(
                 appString(R.string.home_switching_device, device.name)
             )
@@ -394,6 +399,7 @@ class HomeViewModel(
         connectionJob = viewModelScope.launch {
             val result = adbRepository.selectDevice(device.id)
             state.value = state.value.copy(
+                connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
                 operationStatus = when (result) {
                     is AdbOperationResult.Success ->
                         OperationStatus.Success(

@@ -797,10 +797,13 @@ class KadbManager {
     suspend fun disconnectSession(id: String): Boolean =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
-                val sessionId = managedSessions.entries.firstOrNull { (candidateId, session) ->
-                    candidateId == id ||
-                        (session.kind == AdbSessionKind.Wifi && AdbEndpoint.sameAuthority(candidateId, id))
-                }?.key ?: return@withLock false
+                val sessionId = if (managedSessions.containsKey(id)) {
+                    id
+                } else {
+                    managedSessions.entries.firstOrNull { (candidateId, session) ->
+                        session.kind == AdbSessionKind.Wifi && AdbEndpoint.sameAuthority(candidateId, id)
+                    }?.key
+                } ?: return@withLock false
                 val wasActive = activeSessionId == sessionId || activeKadb === managedSessions[sessionId]?.kadb
                 if (!disconnectSessionLocked(sessionId)) return@withLock false
                 if (wasActive) setActiveLocked(managedSessions.values.lastOrNull())
@@ -1001,6 +1004,13 @@ class KadbManager {
                 }.getOrNull()
 
             if (dedicated == null) {
+                val stillCurrent = sessionMutex.withLock { activeKadb === snapshot.shared }
+                if (!stillCurrent) {
+                    return@withContext AdbOperationResult.Failure(
+                        message = appString(R.string.kadb_not_connected),
+                        suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
+                    )
+                }
                 return@withContext mirrorShared(snapshot.shared, snapshot.kind)
             }
 
