@@ -40,6 +40,7 @@ interface AdbRepository {
     val recentDevices: Flow<List<AdbDevice>>
     val selectedDeviceInfo: Flow<DeviceInfo>
     val activeDeviceId: Flow<String?>
+    val selectionVersion: Flow<Long>
 
     suspend fun connect(host: String, port: Int): AdbOperationResult<String>
 
@@ -110,6 +111,8 @@ interface AdbRepository {
 
     fun sessionToken(): Any?
 
+    fun currentSelectionVersion(): Long
+
     fun isActiveUsbDevice(deviceName: String): Boolean
 
     fun deviceDisplayName(deviceId: String): String?
@@ -128,11 +131,13 @@ class DefaultAdbRepository(
     private val recentDeviceState = MutableStateFlow(emptyList<AdbDevice>())
     private val deviceInfoState = MutableStateFlow(DeviceInfo())
     private val activeDeviceState = MutableStateFlow<String?>(null)
+    private val selectionVersionState = MutableStateFlow(0L)
     private val deletedDeviceIds = mutableSetOf<String>()
 
     override val recentDevices: Flow<List<AdbDevice>> = recentDeviceState.asStateFlow()
     override val selectedDeviceInfo: Flow<DeviceInfo> = deviceInfoState.asStateFlow()
     override val activeDeviceId: Flow<String?> = activeDeviceState.asStateFlow()
+    override val selectionVersion: Flow<Long> = selectionVersionState.asStateFlow()
 
     init {
         scope.launch {
@@ -406,6 +411,8 @@ class DefaultAdbRepository(
 
     override fun sessionToken(): Any? = kadbManager.sessionToken()
 
+    override fun currentSelectionVersion(): Long = selectionVersionState.value
+
     override suspend fun install(
         apkFile: File,
         onProgress: ((transferred: Long, total: Long) -> Unit)?,
@@ -663,7 +670,11 @@ class DefaultAdbRepository(
                 else -> device
             }
         }
-        activeDeviceState.value = kadbManager.currentEndpoint()
+        val nextActive = kadbManager.currentEndpoint()
+        if (activeDeviceState.value != nextActive) {
+            activeDeviceState.value = nextActive
+            selectionVersionState.value += 1
+        }
     }
 
     private companion object {
