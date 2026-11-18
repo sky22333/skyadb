@@ -41,6 +41,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         )
     val uiState: StateFlow<ShellUiState> = state.asStateFlow()
     private var deviceId: String? = null
+    private var deviceGeneration = 0L
 
     init {
         viewModelScope.launch {
@@ -48,6 +49,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
             adbRepository.activeDeviceId.collect { connectedId ->
                 val kind = adbRepository.sessionKind()
                 val deviceChanged = previousId != null && connectedId != previousId
+                if (connectedId != previousId) deviceGeneration++
                 deviceId = connectedId
                 state.update { snapshot ->
                     val nextStatus = if (deviceChanged) OperationStatus.Idle else snapshot.operationStatus
@@ -164,6 +166,10 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         }
         val command = (parsed as CommandInputParser.Result.Ready).command
         val targetDeviceId = deviceId
+        val targetDeviceGeneration = deviceGeneration
+
+        fun isCurrentTarget() =
+            deviceId == targetDeviceId && deviceGeneration == targetDeviceGeneration
 
         state.value =
             state.value.copy(
@@ -178,17 +184,17 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         viewModelScope.launch {
             if (fastboot) {
                 when (val result = adbRepository.runFastbootCommand(command)) {
-                    is AdbOperationResult.Success -> if (deviceId == targetDeviceId) {
+                    is AdbOperationResult.Success -> if (isCurrentTarget()) {
                         applySuccess(command, result.data, exitCode = 0)
                     }
-                    is AdbOperationResult.Failure -> if (deviceId == targetDeviceId) applyFailure(result)
+                    is AdbOperationResult.Failure -> if (isCurrentTarget()) applyFailure(result)
                 }
                 return@launch
             }
 
             when (val result = adbRepository.runShell(command, timeoutMillis = null)) {
                 is AdbOperationResult.Success -> {
-                    if (deviceId != targetDeviceId) return@launch
+                    if (!isCurrentTarget()) return@launch
                     val commandResult = result.data
                     val combinedOutput = buildString {
                         if (commandResult.output.isNotBlank()) append(commandResult.output.trim())
@@ -200,7 +206,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                     }
                     applySuccess(command, combinedOutput, commandResult.exitCode)
                 }
-                is AdbOperationResult.Failure -> if (deviceId == targetDeviceId) applyFailure(result)
+                is AdbOperationResult.Failure -> if (isCurrentTarget()) applyFailure(result)
             }
         }
     }
