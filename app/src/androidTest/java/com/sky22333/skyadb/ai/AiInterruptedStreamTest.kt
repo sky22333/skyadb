@@ -15,6 +15,16 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AiInterruptedStreamTest {
+    @Test fun runningToolRestoresAsInterrupted() = runBlocking {
+        val store = testAiStore()
+        val call = ToolCall("call", "agent_shell", "{}")
+        val messages = listOf(AiMessage(role = "tool", text = "agent_shell\n{}", toolStatus = AiToolStatus.Running))
+        store.saveHistory(AiHistory("interrupted", listOf(AiConversation("interrupted", "test", messages, listOf(Turn.User("test"), Turn.Assistant("", listOf(call)))))))
+        val vm = AiViewModel(store)
+        val restored = withTimeout(10000) { vm.uiState.first { !it.historyLoading } }
+        assertEquals(AiToolStatus.Interrupted, restored.messages.single().toolStatus)
+    }
+
     @Test fun stoppingStreamKeepsPartialAnswerInConversationHistory() = runBlocking {
         val server = ServerSocket(0)
         val worker = thread(isDaemon = true) {

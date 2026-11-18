@@ -25,6 +25,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.activity.compose.setContent
 import com.sky22333.skyadb.MainActivity
 import com.sky22333.skyadb.ui.ai.AiScreen
+import com.sky22333.skyadb.ui.AdbManagerApp
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -138,11 +139,89 @@ class AiNavigationUiTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { it.setContent { AdbManagerTheme { Box(Modifier.fillMaxSize().imePadding()) { val current = rememberLazyListState(); listState = current; AiScreen(vm, listState = current) } } } }
             compose.waitUntil(15000) { !vm.uiState.value.historyLoading }
-            compose.waitUntil(15000) { listState?.let { s -> s.layoutInfo.visibleItemsInfo.any { it.index == 1 && it.size > 1000 } && !s.canScrollForward } == true }
+            compose.waitUntil(15000) { listState?.let { s -> s.layoutInfo.visibleItemsInfo.any { it.index == 1 && it.size > 1000 } && !s.canScrollBackward } == true }
             compose.onNodeWithTag("ai_messages").performTouchInput { swipeDown() }
-            compose.waitUntil(10000) { listState?.canScrollForward == true }
+            compose.waitUntil(10000) { listState?.canScrollBackward == true }
             compose.waitForIdle()
-            assertTrue(listState?.canScrollForward == true)
+            assertTrue(listState?.canScrollBackward == true)
         }
     }
+    @Test fun tabAndSettingsNavigationPreservesChatPosition() {
+        val store = testAiStore()
+        val response = (1..100).joinToString("\n\n") { "Paragraph $it" }
+        val messages = listOf(AiMessage(role = "user", text = "hello"), AiMessage(role = "assistant", text = response))
+        store.saveHistory(AiHistory("return-test", listOf(AiConversation("return-test", "hello", messages, listOf(Turn.User("hello"), Turn.Assistant(response, emptyList()))))))
+        val vm = AiViewModel(store)
+        runBlocking { withTimeout(10000) { vm.uiState.first { !it.historyLoading } } }
+        var listState: LazyListState? = null
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { AdbManagerTheme {
+                val current = rememberLazyListState(); listState = current; AdbManagerApp(vm, current)
+            } } }
+            compose.onNodeWithContentDescription(appString(R.string.ai_nav)).performClick()
+            compose.onNodeWithTag("ai_messages").assertIsDisplayed()
+            compose.waitUntil(10000) { listState?.layoutInfo?.totalItemsCount == 3 && listState?.canScrollBackward == false }
+            compose.onNodeWithContentDescription(appString(R.string.nav_settings)).performClick()
+            compose.mainClock.autoAdvance = false
+            try {
+                compose.onNodeWithContentDescription(appString(R.string.ai_nav)).performClick()
+                repeat(20) {
+                    compose.mainClock.advanceTimeByFrame()
+                    compose.runOnIdle { assertTrue("Bottom anchor changed during return", listState!!.firstVisibleItemIndex == 0 && listState!!.firstVisibleItemScrollOffset == 0) }
+                }
+            } finally { compose.mainClock.autoAdvance = true }
+            compose.onNodeWithTag("ai_messages").performTouchInput { swipeDown() }
+            compose.onNodeWithContentDescription(appString(R.string.ai_back_to_latest)).assertIsDisplayed()
+            compose.waitUntil(10000) { listState?.isScrollInProgress == false }
+            val position = listState!!.firstVisibleItemIndex to listState!!.firstVisibleItemScrollOffset
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            fun gfx(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).bufferedReader().use { it.readText() }
+            gfx("dumpsys gfxinfo ${instrumentation.targetContext.packageName} reset")
+            compose.onNodeWithContentDescription(appString(R.string.nav_settings)).performClick()
+            compose.mainClock.autoAdvance = false
+            try {
+                compose.onNodeWithContentDescription(appString(R.string.ai_nav)).performClick()
+                repeat(20) {
+                    compose.mainClock.advanceTimeByFrame()
+                    compose.runOnIdle {
+                        assertTrue("Position changed during the return transition", position == (listState!!.firstVisibleItemIndex to listState!!.firstVisibleItemScrollOffset))
+                    }
+                }
+            } finally { compose.mainClock.autoAdvance = true }
+            compose.onNodeWithContentDescription(appString(R.string.ai_back_to_latest)).assertIsDisplayed()
+            assertTrue("Tab return changed the reading position", position == (listState!!.firstVisibleItemIndex to listState!!.firstVisibleItemScrollOffset))
+            compose.onNodeWithContentDescription(appString(R.string.ai_config)).performClick()
+            compose.onNodeWithText(appString(R.string.ai_url)).assertIsDisplayed()
+            compose.onNodeWithText(appString(R.string.action_cancel)).performScrollTo().performClick()
+            compose.onNodeWithContentDescription(appString(R.string.ai_back_to_latest)).assertIsDisplayed()
+            assertTrue("Settings return changed the reading position", position == (listState!!.firstVisibleItemIndex to listState!!.firstVisibleItemScrollOffset))
+            compose.onNodeWithContentDescription(appString(R.string.ai_back_to_latest)).performClick()
+            compose.onNodeWithContentDescription(appString(R.string.ai_back_to_latest)).assertDoesNotExist()
+            val directory = java.io.File(instrumentation.targetContext.getExternalFilesDir(null), "ai-visual-review").apply { mkdirs() }
+            java.io.File(directory, "navigation-gfxinfo.txt").writeText(gfx("dumpsys gfxinfo ${instrumentation.targetContext.packageName} framestats"))
+        }
+    }
+
+    @Test fun switchingConversationsStartsAtLatest() {
+        val store = testAiStore()
+        fun conversation(id: String): AiConversation {
+            val response = (1..80).joinToString("\n\n") { "$id paragraph $it" }
+            return AiConversation(id, id, listOf(AiMessage(role = "user", text = id), AiMessage(role = "assistant", text = response)), listOf(Turn.User(id), Turn.Assistant(response, emptyList())))
+        }
+        store.saveHistory(AiHistory("first", listOf(conversation("first"), conversation("second"))))
+        val vm = AiViewModel(store)
+        var listState: LazyListState? = null
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { AdbManagerTheme { Box(Modifier.fillMaxSize().imePadding()) {
+                val current = rememberLazyListState(); listState = current; AiScreen(vm, listState = current)
+            } } } }
+            compose.waitUntil(15000) { !vm.uiState.value.historyLoading && listState?.layoutInfo?.totalItemsCount == 3 && listState?.canScrollBackward == false }
+            compose.onNodeWithTag("ai_messages").performTouchInput { swipeDown() }
+            compose.waitUntil(10000) { listState?.canScrollBackward == true }
+            compose.onNodeWithContentDescription(appString(R.string.ai_history)).performClick()
+            compose.onNodeWithText("second").performClick()
+            compose.waitUntil(15000) { vm.uiState.value.messages.firstOrNull()?.text == "second" && listState?.canScrollBackward == false }
+        }
+    }
+
 }

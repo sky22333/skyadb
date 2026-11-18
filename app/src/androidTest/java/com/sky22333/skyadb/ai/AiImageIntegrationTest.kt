@@ -44,13 +44,13 @@ class AiImageIntegrationTest {
             val config = AiConfig("http://127.0.0.1:${server.localPort}/v1", "test", "test")
             vm.saveConfig(config); withTimeout(10000) { vm.uiState.first { it.config == config } }
             vm.updateDraft("Image")
-            vm.attach(Uri.fromFile(image)); assertTrue(vm.send("Image"))
+            vm.attachFiles(Uri.fromFile(image)); assertTrue(vm.send("Image"))
             val rejected = withTimeout(20000) { vm.uiState.first { !it.busy } }
             assertNotNull(rejected.error)
             assertEquals("Image", rejected.draft)
-            assertEquals(Uri.fromFile(image), rejected.attachment)
+            assertEquals(Uri.fromFile(image).toString(), rejected.attachments.single().uri)
             assertFalse(rejected.messages.any { it.text == "Image" })
-            vm.attach(null); vm.dismissError(); vm.updateDraft("Text only"); assertTrue(vm.send("Text only"))
+            vm.removeAttachment(rejected.attachments.single().id); vm.dismissError(); vm.updateDraft("Text only"); assertTrue(vm.send("Text only"))
             val result = withTimeout(20000) { vm.uiState.first { !it.busy } }
             assertNull(result.error)
             assertEquals("", result.draft)
@@ -106,9 +106,9 @@ class AiImageIntegrationTest {
             withTimeout(10000) { vm.uiState.first { !it.historyLoading } }
             val config = AiConfig("http://127.0.0.1:${server.localPort}/v1", "test", "test")
             vm.saveConfig(config); withTimeout(10000) { vm.uiState.first { it.config == config } }
-            vm.attach(Uri.fromFile(first)); assertTrue(vm.send("First image"))
+            vm.attachFiles(Uri.fromFile(first)); assertTrue(vm.send("First image"))
             assertNull(withTimeout(20000) { vm.uiState.first { !it.busy } }.error)
-            vm.attach(Uri.fromFile(second)); assertTrue(vm.send("Compare with the first image"))
+            vm.attachFiles(Uri.fromFile(second)); assertTrue(vm.send("Compare with the first image"))
             assertNull(withTimeout(20000) { vm.uiState.first { !it.busy } }.error)
             assertEquals(2, Regex("data:image/png;base64,").findAll(requests[1]).count())
         } finally { vm.stop(); first.delete(); second.delete(); server.close(); worker.join(1000) }
@@ -142,17 +142,19 @@ class AiImageIntegrationTest {
             } finally { server.close() }
         }
         val file = File(AppServices.context.cacheDir, "image-test.png").apply { writeBytes(android.util.Base64.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7xkAAAAASUVORK5CYII=", android.util.Base64.DEFAULT)) }
+        val second = File(AppServices.context.cacheDir, "image-test-2.png").apply { writeBytes(file.readBytes()) }
         val vm = AiViewModel(testAiStore())
         try {
             withTimeout(10000) { vm.uiState.first { !it.historyLoading } }
             val config = AiConfig("http://127.0.0.1:${server.localPort}/v1", "test", "test", responses = responses)
             vm.saveConfig(config); withTimeout(10000) { vm.uiState.first { it.config == config } }
-            vm.attach(Uri.fromFile(file)); assertTrue(vm.send("Describe the image"))
+            vm.attachFiles(Uri.fromFile(file), Uri.fromFile(second)); assertTrue(vm.send("Describe the images"))
             val result = withTimeout(20000) { vm.uiState.first { !it.busy } }
             assertNull(result.error)
             assertTrue(request.get().contains(if (responses) "input_image" else "image_url"))
-            assertTrue(request.get().contains("data:image/png;base64,"))
+            assertEquals(2, Regex("data:image/png;base64,").findAll(request.get()).count())
+            assertEquals(2, result.messages.first { it.role == "user" }.attachments.size)
             assertTrue(result.messages.any { it.text.contains("image received") })
-        } finally { vm.stop(); file.delete(); server.close(); worker.join(1000) }
+        } finally { vm.stop(); file.delete(); second.delete(); server.close(); worker.join(1000) }
     }
 }

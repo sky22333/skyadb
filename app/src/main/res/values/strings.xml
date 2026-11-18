@@ -773,7 +773,7 @@
     <string name="ai_stop">Stop</string>
     <string name="ai_new">New chat</string>
     <string name="ai_attach">Select local file</string>
-    <string name="ai_attachment_only_prompt">The user attached a file without a message. Ask what they would like to do with it.</string>
+    <string name="ai_attachment_only_prompt">The user attached files without a message. Ask what they would like to do with them.</string>
     <string name="ai_attachment">Local file selected</string>
     <string name="ai_remove_attachment">Remove file</string>
     <string name="ai_protocol">API protocol</string>
@@ -870,4 +870,19 @@
     <string name="fb_export">Save to device</string>
     <string name="fb_exported">File saved.</string>
     <string name="fb_export_incomplete">File export was interrupted or failed; the destination may be incomplete.</string>
+    <string name="ai_tool_declined">Declined</string>
+    <string name="ai_back_to_latest">Back to latest</string>
+    <string name="ai_waiting_approval">Waiting for approval</string>
+    <string name="ai_file">File</string>
+    <string name="ai_preparing">Preparing</string>
+    <string name="ai_waiting_response">Waiting for response</string>
+    <string name="ai_answering">Responding</string>
+    <string name="ai_work_process">Work process</string>
+    <string name="ai_work_steps">%1$d steps</string>
+    <string name="ai_title_compact">AI</string>
+    <string name="ai_attachments_limit">Select up to 20 files per message.</string>
+    <string name="ai_attachment_access_failed">Could not retain access to some files. Select them again from a provider that supports persistent access.</string>
+    <string name="ai_attachment_read_failed">Cannot read %1$s: %2$s</string>
+    <string name="ai_remove_attachment_named">Remove %1$s</string>
+    <string name="ai_attachments_loading">Preparing attachments</string>
 </resources>

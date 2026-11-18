@@ -52,7 +52,7 @@ class AiLiveIntegrationTest {
         val file = java.io.File(AppServices.context.cacheDir, "skyadb-upload-${java.util.UUID.randomUUID()}.txt").apply { writeText("SKYADB_UPLOAD_CONTENT") }
         val destination = "/data/local/tmp/${file.name}"
         try {
-            vm.attach(android.net.Uri.fromFile(file))
+            vm.attachFiles(android.net.Uri.fromFile(file))
             assertTrue(vm.send("Upload my selected file to /data/local/tmp/ using its original filename."))
             var approved = 0
             withTimeout(120_000) {
@@ -133,7 +133,7 @@ class AiLiveIntegrationTest {
             zip.closeEntry()
         }
         try {
-            vm.attach(contentUri ?: android.net.Uri.fromFile(file))
+            vm.attachFiles(contentUri ?: android.net.Uri.fromFile(file))
             assertTrue(vm.send("Tell me the exact selected filename, then use archive tools to read report.txt and report its exact content."))
             var approvals = 0
             withTimeout(120_000) {
@@ -192,7 +192,7 @@ class AiLiveIntegrationTest {
         assertTrue("Config save failed: ${saved.error}", saved.config == config)
         val file = java.io.File(testDir, "input.txt").apply { writeText("SKYADB_LIVE_OK") }
         try {
-            vm.attach(android.net.Uri.fromFile(file))
+            vm.attachFiles(android.net.Uri.fromFile(file))
             assertTrue(vm.send("Use the read_selected_file tool to read my selected file and repeat its contents exactly."))
             val pending = withTimeout(90_000) { vm.uiState.first { it.approval != null || !it.busy } }
             assertNotNull("No file approval: ${pending.error}", pending.approval)
