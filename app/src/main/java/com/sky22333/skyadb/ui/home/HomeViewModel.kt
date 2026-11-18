@@ -111,10 +111,12 @@ class HomeViewModel(
     }
 
     fun onRecentDeviceSelected(device: AdbDevice) {
+        val cancelledPendingConnection = connectionJob?.isActive == true
         connectionJob?.cancel()
         connectionJob = null
         state.value = state.value.copy(
             connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
+            operationStatus = if (cancelledPendingConnection) OperationStatus.Idle else state.value.operationStatus,
         )
         if (device.linkKind == AdbLinkKind.Wifi) {
             updateForm(AdbEndpoint.format(device.host, device.port))
@@ -317,31 +319,41 @@ class HomeViewModel(
 
     /** 官方 USB Host 文档：Detached 仅应清理与该 [UsbDevice] 的通信。 根因：此前对任意拔出都 disconnect，会误杀 Wi‑Fi ADB 会话。 */
     private suspend fun onUsbDeviceDetached(deviceName: String) {
+        val attemptJob = connectionJob
         val connecting = state.value.connectingUsbDeviceName == deviceName
+        val ownsUi = connectionJob === attemptJob && (!(attemptJob?.isActive == true) || connecting)
         val active = adbRepository.isActiveUsbDevice(deviceName)
         adbRepository.disconnectDevice("usb-otg:$deviceName")
         adbRepository.disconnectDevice("fastboot:$deviceName")
         if (active) {
-            state.value =
-                state.value.copy(
-                    connectingUsbDeviceName = null,
-                    operationStatus =
-                        OperationStatus.Success(appString(R.string.repo_usb_device_disconnected)),
-                )
+            if (connecting) attemptJob?.cancel()
+            if (ownsUi) {
+                connectionJob = null
+                state.value =
+                    state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
+                        operationStatus =
+                            OperationStatus.Success(appString(R.string.repo_usb_device_disconnected)),
+                    )
+            }
             return
         }
         if (connecting) {
-            connectionJob?.cancel()
-            state.value =
-                state.value.copy(
-                    connectingUsbDeviceName = null,
-                    connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
-                    operationStatus =
-                        OperationStatus.Failed(
-                            appString(R.string.repo_usb_device_disconnected),
-                            appString(R.string.usb_connection_hint),
-                        ),
-                )
+            attemptJob?.cancel()
+            if (ownsUi) {
+                connectionJob = null
+                state.value =
+                    state.value.copy(
+                        connectingUsbDeviceName = null,
+                        connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
+                        operationStatus =
+                            OperationStatus.Failed(
+                                appString(R.string.repo_usb_device_disconnected),
+                                appString(R.string.usb_connection_hint),
+                            ),
+                    )
+            }
         }
     }
 

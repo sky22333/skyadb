@@ -41,7 +41,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         )
     val uiState: StateFlow<ShellUiState> = state.asStateFlow()
     private var deviceId: String? = null
-    private var deviceGeneration = 0L
+    private var commandOwnership = 0L
 
     init {
         viewModelScope.launch {
@@ -49,7 +49,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
             adbRepository.activeDeviceId.collect { connectedId ->
                 val kind = adbRepository.sessionKind()
                 val deviceChanged = previousId != null && connectedId != previousId
-                if (connectedId != previousId) deviceGeneration++
+                if (connectedId != previousId) commandOwnership++
                 deviceId = connectedId
                 state.update { snapshot ->
                     val nextStatus = if (deviceChanged) OperationStatus.Idle else snapshot.operationStatus
@@ -166,10 +166,11 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         }
         val command = (parsed as CommandInputParser.Result.Ready).command
         val targetDeviceId = deviceId
-        val targetDeviceGeneration = deviceGeneration
+        val targetSessionToken = adbRepository.sessionToken()
+        val targetCommandOwnership = ++commandOwnership
 
         fun isCurrentTarget() =
-            deviceId == targetDeviceId && deviceGeneration == targetDeviceGeneration
+            deviceId == targetDeviceId && commandOwnership == targetCommandOwnership
 
         state.value =
             state.value.copy(
@@ -192,7 +193,14 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                 return@launch
             }
 
-            when (val result = adbRepository.runShell(command, timeoutMillis = null)) {
+            when (
+                val result =
+                    adbRepository.runShell(
+                        command,
+                        timeoutMillis = null,
+                        expectedSessionToken = targetSessionToken,
+                    )
+            ) {
                 is AdbOperationResult.Success -> {
                     if (!isCurrentTarget()) return@launch
                     val commandResult = result.data

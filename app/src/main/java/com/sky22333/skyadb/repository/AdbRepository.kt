@@ -55,7 +55,11 @@ interface AdbRepository {
 
     suspend fun refreshDeviceInfo(): AdbOperationResult<DeviceInfo>
 
-    suspend fun runShell(command: String, timeoutMillis: Long? = 30_000): AdbOperationResult<ShellCommandResult>
+    suspend fun runShell(
+        command: String,
+        timeoutMillis: Long? = 30_000,
+        expectedSessionToken: Any? = null,
+    ): AdbOperationResult<ShellCommandResult>
 
     suspend fun install(
         apkFile: File,
@@ -103,6 +107,8 @@ interface AdbRepository {
     suspend fun removeDevice(deviceId: String): AdbOperationResult<Unit>
 
     fun sessionKind(): AdbSessionKind
+
+    fun sessionToken(): Any?
 
     fun isActiveUsbDevice(deviceName: String): Boolean
 
@@ -382,7 +388,11 @@ class DefaultAdbRepository(
         return result.logFailure(DiagnosticModule.WifiAdb, "刷新设备信息")
     }
 
-    override suspend fun runShell(command: String, timeoutMillis: Long?): AdbOperationResult<ShellCommandResult> {
+    override suspend fun runShell(
+        command: String,
+        timeoutMillis: Long?,
+        expectedSessionToken: Any?,
+    ): AdbOperationResult<ShellCommandResult> {
         if (kadbManager.sessionKind() == AdbSessionKind.UsbFastboot) {
             return AdbOperationResult.Failure(
                 message = appString(R.string.repo_fastboot_no_shell),
@@ -390,9 +400,11 @@ class DefaultAdbRepository(
             )
         }
         return kadbManager
-            .shell(command, timeoutMillis = timeoutMillis)
+            .shell(command, timeoutMillis = timeoutMillis, expectedToken = expectedSessionToken)
             .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
+
+    override fun sessionToken(): Any? = kadbManager.sessionToken()
 
     override suspend fun install(
         apkFile: File,
@@ -501,6 +513,7 @@ class DefaultAdbRepository(
         if (activeId != null) kadbManager.disconnectSession(activeId)
         syncConnectionState()
         deviceInfoState.value = DeviceInfo()
+        refreshPromotedDeviceIfNeeded()
     }
 
     override suspend fun selectDevice(deviceId: String): AdbOperationResult<Unit> =
@@ -514,9 +527,7 @@ class DefaultAdbRepository(
             }
             syncConnectionState()
             deviceInfoState.value = DeviceInfo()
-            scope.launch {
-                connectionMutex.withLock { refreshDeviceInfoLocked() }
-            }
+            refreshPromotedDeviceIfNeeded()
             AdbOperationResult.Success(Unit)
         }
 
@@ -536,7 +547,17 @@ class DefaultAdbRepository(
         val disconnected = kadbManager.disconnectSession(deviceId)
         if (!disconnected && wasActive && kadbManager.currentEndpoint() == deviceId) kadbManager.disconnect()
         syncConnectionState()
-        if (wasActive) deviceInfoState.value = DeviceInfo()
+        if (wasActive) {
+            deviceInfoState.value = DeviceInfo()
+            refreshPromotedDeviceIfNeeded()
+        }
+    }
+
+    private fun refreshPromotedDeviceIfNeeded() {
+        if (kadbManager.currentEndpoint() == null) return
+        scope.launch {
+            connectionMutex.withLock { refreshDeviceInfoLocked() }
+        }
     }
 
     override suspend fun renameDevice(deviceId: String, name: String): AdbOperationResult<Unit> =

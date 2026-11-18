@@ -73,6 +73,7 @@ class KadbManager {
     @Volatile private var wifiPort: Int? = null
     @Volatile private var wifiConnectTimeoutMillis: Int = 10_000
     @Volatile private var wifiSocketTimeoutMillis: Int = 30_000
+    @Volatile private var activeSessionSnapshot = SessionSnapshot(null, null)
 
     @Volatile private var sessionKind: AdbSessionKind = AdbSessionKind.None
     private val activeEndpointState = MutableStateFlow<String?>(null)
@@ -88,7 +89,14 @@ class KadbManager {
         val socketTimeoutMillis: Int = 30_000,
     )
 
+    internal data class SessionSnapshot(
+        val token: Any?,
+        val endpoint: String?,
+    )
+
     internal fun sessionToken(): Any? = activeKadb
+
+    internal fun sessionSnapshot(): SessionSnapshot = activeSessionSnapshot
 
     internal fun isConnected(): Boolean = activeKadb?.connectionCheck() == true
 
@@ -253,11 +261,22 @@ class KadbManager {
         }
 
     /** Reads shell output in bounded chunks; never buffers the complete device response. */
-    suspend fun shell(command: String, maxOutputBytes: Int = 1_000_000, timeoutMillis: Long? = 30_000): AdbOperationResult<ShellCommandResult> =
+    suspend fun shell(
+        command: String,
+        maxOutputBytes: Int = 1_000_000,
+        timeoutMillis: Long? = 30_000,
+        expectedToken: Any? = null,
+    ): AdbOperationResult<ShellCommandResult> =
         withContext(Dispatchers.IO) {
             val client = activeKadb ?: return@withContext AdbOperationResult.Failure(
                 appString(R.string.kadb_not_connected), appString(R.string.kadb_connect_before_shell_suggestion),
             )
+            if (expectedToken != null && client !== expectedToken) {
+                return@withContext AdbOperationResult.Failure(
+                    appString(R.string.kadb_not_connected),
+                    appString(R.string.kadb_connect_before_shell_suggestion),
+                )
+            }
             operationCatching {
                 withTimeoutOrNull(timeoutMillis ?: Long.MAX_VALUE) {
                     val v2 = client.supportsFeature("shell_v2")
@@ -846,6 +865,7 @@ class KadbManager {
         wifiPort = session?.port
         wifiConnectTimeoutMillis = session?.connectTimeoutMillis ?: 10_000
         wifiSocketTimeoutMillis = session?.socketTimeoutMillis ?: 30_000
+        activeSessionSnapshot = SessionSnapshot(session?.kadb, session?.id)
         updateSessionSnapshotLocked()
     }
 
@@ -857,6 +877,7 @@ class KadbManager {
         wifiHost = null
         wifiPort = null
         sessionKind = AdbSessionKind.None
+        activeSessionSnapshot = SessionSnapshot(null, null)
         updateSessionSnapshotLocked()
     }
 

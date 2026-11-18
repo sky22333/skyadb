@@ -7,6 +7,7 @@ import com.flyfishxu.kadb.stream.AdbStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -24,15 +25,13 @@ class ScrcpyVideoDecoder(
     private val onRequestKeyFrame: () -> Unit,
 ) {
     @Volatile private var running = true
-    @Volatile private var surface: Surface = surface
-    @Volatile private var surfaceValid = surface.isValid
+    private val surfaceState = AtomicReference(SurfaceState(surface, surface.isValid, 0L))
     @Volatile private var pump: MediaCodecPump? = null
     @Volatile private var decoderError: Throwable? = null
     private var width = 0
     private var height = 0
     private var config: ByteArray? = null
     @Volatile private var awaitingKeyFrame = true
-    private val surfaceEpoch = AtomicLong()
     private val lastKeyFrameRequestNanos = AtomicLong()
     private val decoderMutex = Mutex()
     @Volatile private var decoderEpoch = -1L
@@ -73,12 +72,17 @@ class ScrcpyVideoDecoder(
                     val pts = ptsAndFlags and ScrcpyProtocol.PacketPtsMask
                     if (!isConfig) statsTracker.onPacketReceived(size, pts)
                     if (isConfig) config = data
-                    val epoch = surfaceEpoch.get()
-                    if (decoderEpoch != epoch) {
+                    val surfaceSnapshot = surfaceState.get()
+                    if (decoderEpoch != surfaceSnapshot.epoch) {
                         release()
                         awaitingKeyFrame = true
                     }
-                    if (width == 0 || height == 0 || !surfaceValid || !surface.isValid) {
+                    if (
+                        width == 0 ||
+                            height == 0 ||
+                            !surfaceSnapshot.valid ||
+                            !surfaceSnapshot.surface.isValid
+                    ) {
                         if (!isConfig) statsTracker.onFrameDropped()
                         continue
                     }
@@ -89,7 +93,12 @@ class ScrcpyVideoDecoder(
                     }
                     try {
                         val existing = pump
-                        val decoder = existing ?: configure(epoch)
+                        val decoder = existing ?: configure(surfaceSnapshot)
+                        if (decoder == null) {
+                            if (!isConfig) statsTracker.onFrameDropped()
+                            awaitingKeyFrame = true
+                            continue
+                        }
                         // configure() already submitted cached CSD once.
                         if (isConfig) {
                             if (existing != null)
@@ -114,9 +123,11 @@ class ScrcpyVideoDecoder(
                     } catch (error: Exception) {
                         // Some hardware decoders report an abandoned Surface asynchronously.
                         // That codec belongs to the previous Surface, not the current session.
-                        if (epoch == surfaceEpoch.get() && surfaceValid) throw error
+                        val current = surfaceState.get()
+                        if (surfaceSnapshot.epoch == current.epoch && current.valid) throw error
                         release()
                         awaitingKeyFrame = true
+                        if (!isConfig) statsTracker.onFrameDropped()
                     }
                 }
             } catch (error: Exception) {
@@ -128,20 +139,17 @@ class ScrcpyVideoDecoder(
         }
 
     fun setSurface(next: Surface): Long {
-        val previousEpoch = surfaceEpoch.get()
         awaitingKeyFrame = true
-        surface = next
-        surfaceValid = next.isValid
-        surfaceEpoch.incrementAndGet()
-        return previousEpoch
+        while (true) {
+            val current = surfaceState.get()
+            val updated = SurfaceState(next, next.isValid, current.epoch + 1)
+            if (surfaceState.compareAndSet(current, updated)) return current.epoch
+        }
     }
 
     fun clearSurface(): Long {
-        val previousEpoch = surfaceEpoch.get()
-        surfaceValid = false
         awaitingKeyFrame = true
-        surfaceEpoch.incrementAndGet()
-        return previousEpoch
+        return surfaceState.getAndUpdate { it.copy(valid = false, epoch = it.epoch + 1) }.epoch
     }
 
     suspend fun releaseCurrentDecoder(epoch: Long) {
@@ -153,7 +161,9 @@ class ScrcpyVideoDecoder(
         runCatching { stream.close() } // Wake a blocked network read before cancelling the job.
     }
 
-    private suspend fun configure(epoch: Long): MediaCodecPump = decoderMutex.withLock {
+    private suspend fun configure(requested: SurfaceState): MediaCodecPump? = decoderMutex.withLock {
+        val current = surfaceState.get()
+        if (current.epoch != requested.epoch || !current.valid) return@withLock null
         val mime =
             when (codecId) {
                 ScrcpyProtocol.CodecH264 -> MediaFormat.MIMETYPE_VIDEO_AVC
@@ -173,26 +183,38 @@ class ScrcpyVideoDecoder(
                     ) {
                         statsTracker.onFrameDecoded()
                     }
+                    val latest = surfaceState.get()
                     codec.releaseOutputBuffer(
                         index,
-                        surfaceValid &&
-                            epoch == surfaceEpoch.get() &&
-                            surface.isValid &&
+                        latest.valid &&
+                            current.epoch == latest.epoch &&
+                            latest.surface.isValid &&
                             (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0,
                     )
                 },
                 onError = { error ->
-                    if (epoch == surfaceEpoch.get() && surfaceValid) {
+                    val latest = surfaceState.get()
+                    if (current.epoch == latest.epoch && latest.valid) {
                         decoderError = error
                         stop()
                     }
                 },
             )
-        pump = decoder
-        decoderEpoch = epoch
-        decoder.configure(MediaFormat.createVideoFormat(mime, width, height), surface)
-        config?.let { decoder.queue(it, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG) }
-        decoder
+        try {
+            decoder.configure(MediaFormat.createVideoFormat(mime, width, height), current.surface)
+            val latest = surfaceState.get()
+            if (latest.epoch != current.epoch || !latest.valid) {
+                withContext(NonCancellable) { runCatching { decoder.close() } }
+                return@withLock null
+            }
+            config?.let { decoder.queue(it, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG) }
+            pump = decoder
+            decoderEpoch = current.epoch
+            decoder
+        } catch (error: Exception) {
+            withContext(NonCancellable) { runCatching { decoder.close() } }
+            throw error
+        }
     }
 
     private fun requestKeyFrame() {
@@ -212,12 +234,20 @@ class ScrcpyVideoDecoder(
         val decoder = pump ?: return@withLock
         pump = null
         decoderEpoch = -1L
-        try {
-            decoder.close()
-        } finally {
-            statsTracker.onDecoderReset()
+        withContext(NonCancellable) {
+            try {
+                decoder.close()
+            } finally {
+                statsTracker.onDecoderReset()
+            }
         }
     }
+
+    private data class SurfaceState(
+        val surface: Surface,
+        val valid: Boolean,
+        val epoch: Long,
+    )
 
     private companion object {
         const val KeyFrameRequestIntervalNanos = 1_000_000_000L
