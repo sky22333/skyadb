@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 internal class MediaCodecPump(
     private val onCodecName: (String) -> Unit = {},
     private val onFormat: (MediaFormat) -> Unit = {},
+    private val onFrameSubmitted: () -> Unit = {},
     private val onOutput: (MediaCodec, Int, MediaCodec.BufferInfo) -> Unit,
     private val onError: (Throwable) -> Unit,
 ) {
@@ -195,6 +196,7 @@ internal class MediaCodecPump(
         buffer.clear()
         buffer.put(data)
         decoder.queueInputBuffer(index, 0, data.size, pts, flags)
+        if ((flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) onFrameSubmitted()
     }
 
     private fun fail(error: Throwable) {

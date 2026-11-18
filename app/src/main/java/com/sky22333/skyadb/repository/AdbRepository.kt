@@ -36,6 +36,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
+data class AdbSessionSnapshot(
+    val token: Any?,
+    val endpoint: String?,
+)
+
 interface AdbRepository {
     val recentDevices: Flow<List<AdbDevice>>
     val selectedDeviceInfo: Flow<DeviceInfo>
@@ -109,7 +114,7 @@ interface AdbRepository {
 
     fun sessionKind(): AdbSessionKind
 
-    fun sessionToken(): Any?
+    fun sessionSnapshot(): AdbSessionSnapshot
 
     fun currentSelectionVersion(): Long
 
@@ -409,7 +414,8 @@ class DefaultAdbRepository(
             .logFailure(DiagnosticModule.Shell, "执行 Shell", command.take(80))
     }
 
-    override fun sessionToken(): Any? = kadbManager.sessionToken()
+    override fun sessionSnapshot(): AdbSessionSnapshot =
+        kadbManager.sessionSnapshot().let { AdbSessionSnapshot(it.token, it.endpoint) }
 
     override fun currentSelectionVersion(): Long = selectionVersionState.value
 

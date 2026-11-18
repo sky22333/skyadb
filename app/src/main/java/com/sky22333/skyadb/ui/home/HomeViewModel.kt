@@ -116,6 +116,8 @@ class HomeViewModel(
         connectionJob = null
         state.value = state.value.copy(
             connectEnabled = validateForm(state.value.endpoint, state.value.defaultPort).isValid,
+            connectingUsbDeviceName =
+                if (cancelledPendingConnection) null else state.value.connectingUsbDeviceName,
             operationStatus = if (cancelledPendingConnection) OperationStatus.Idle else state.value.operationStatus,
         )
         if (device.linkKind == AdbLinkKind.Wifi) {

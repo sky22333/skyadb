@@ -184,7 +184,22 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         }
         val command = (parsed as CommandInputParser.Result.Ready).command
         val targetDeviceId = deviceId
-        val targetSessionToken = adbRepository.sessionToken()
+        val targetSession = adbRepository.sessionSnapshot()
+        if (
+            !fastboot &&
+                (targetSession.token == null || targetSession.endpoint != targetDeviceId)
+        ) {
+            state.value =
+                state.value.copy(
+                    operationStatus =
+                        OperationStatus.Failed(
+                            appString(R.string.kadb_not_connected),
+                            appString(R.string.kadb_connect_before_shell_suggestion),
+                        )
+                )
+            return
+        }
+        val targetSessionToken = targetSession.token
         val targetSelectionVersion = adbRepository.currentSelectionVersion()
         val targetCommandOwnership = ++commandOwnership
 

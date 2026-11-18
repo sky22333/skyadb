@@ -105,14 +105,10 @@ class ScrcpyVideoDecoder(
                                 decoder.queue(data, 0L, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
                         } else if (awaitingKeyFrame) {
                             decoder.queue(data, pts)
-                            statsTracker.onFrameSubmitted()
                             awaitingKeyFrame = false
-                        } else if (decoder.tryQueue(data, pts)) {
-                            statsTracker.onFrameSubmitted()
-                        } else {
+                        } else if (!decoder.tryQueue(data, pts)) {
                             if (isKeyFrame) {
                                 decoder.queue(data, pts)
-                                statsTracker.onFrameSubmitted()
                             } else {
                                 statsTracker.onFrameDropped()
                                 awaitingKeyFrame = true
@@ -176,6 +172,7 @@ class ScrcpyVideoDecoder(
         val decoder =
             MediaCodecPump(
                 onCodecName = statsTracker::onDecoderSelected,
+                onFrameSubmitted = statsTracker::onFrameSubmitted,
                 onOutput = { codec, index, info ->
                     if (
                         (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 &&
@@ -193,10 +190,14 @@ class ScrcpyVideoDecoder(
                     )
                 },
                 onError = { error ->
-                    val latest = surfaceState.get()
-                    if (current.epoch == latest.epoch && latest.valid) {
-                        decoderError = error
-                        stop()
+                    while (true) {
+                        val latest = surfaceState.get()
+                        if (current.epoch != latest.epoch || !latest.valid) break
+                        if (surfaceState.compareAndSet(latest, latest.copy(valid = false))) {
+                            decoderError = error
+                            stop()
+                            break
+                        }
                     }
                 },
             )
