@@ -59,6 +59,7 @@ fun ConnectionQrScreen(
         }
     }
     val context = LocalContext.current
+    val qrTitle = stringResource(R.string.connection_qr_title)
 
     Column(
         modifier = Modifier
@@ -124,7 +125,7 @@ fun ConnectionQrScreen(
                     val clipboard = context.getSystemService(ClipboardManager::class.java)
                     clipboard.setPrimaryClip(
                         ClipData.newPlainText(
-                            context.getString(R.string.connection_qr_title),
+                            qrTitle,
                             authority,
                         )
                     )
