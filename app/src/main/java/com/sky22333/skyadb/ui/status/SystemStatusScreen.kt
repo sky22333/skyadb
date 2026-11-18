@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -45,6 +46,7 @@ fun SystemStatusScreen(
     viewModel: SystemStatusViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val locale = LocalLocale.current.platformLocale
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,7 +90,7 @@ fun SystemStatusScreen(
                 description = if (uiState.updatedAtMillis > 0) {
                     stringResource(
                         R.string.system_status_updated_format,
-                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(uiState.updatedAtMillis)),
+                        SimpleDateFormat("HH:mm:ss", locale).format(Date(uiState.updatedAtMillis)),
                     )
                 } else {
                     stringResource(R.string.system_status_reading)
