@@ -31,6 +31,7 @@ class MirrorVideoCodecTest {
                 "max_fps=60",
                 "video_bit_rate=6000000",
                 "video_codec=h265",
+                "video_source=display",
             ),
             options.serverArguments(),
         )

@@ -57,7 +57,7 @@ object QrPayloadParser {
             .lineSequence()
             .map { it.trim() }
             .firstOrNull { it.startsWith("adb connect ", ignoreCase = true) }
-            ?.substringAfter(' ')
+            ?.substringAfter("adb connect ", "")
             ?.trim()
         val authority = adbConnectText ?: value.substringBefore('\n').trim()
         return AdbEndpoint.parseAuthority(authority)?.let(QrPayload::DirectConnect)
