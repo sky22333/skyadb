@@ -49,6 +49,8 @@ class ScrcpyRepository(
         surface: Surface,
         qualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
         videoCodec: MirrorVideoCodec = MirrorVideoCodec.H264,
+        videoSource: ScrcpyVideoSource = ScrcpyVideoSource.Display,
+        cameraFacing: ScrcpyCameraFacing = ScrcpyCameraFacing.Back,
         onVideoSize: (Int, Int) -> Unit,
         onStats: (MirrorStats) -> Unit = {},
         onStreamError: (Throwable) -> Unit = {},
@@ -72,9 +74,15 @@ class ScrcpyRepository(
                     } else {
                         videoCodec
                     }
-                var options = qualityPreset.options.copy(videoCodec = requestedCodec)
+                var options = qualityPreset.options.copy(
+                    videoCodec = requestedCodec,
+                    videoSource = videoSource,
+                    cameraFacing = cameraFacing,
+                )
                 var optionsText = options.diagnosticText()
-                val audioEnabled = (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
+                val audioEnabled =
+                    videoSource == ScrcpyVideoSource.Display &&
+                        (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
                 val mirrorClient =
                     when (val acquired = kadbManager.mirrorClient()) {
                         is AdbOperationResult.Failure -> return@withContext acquired
@@ -100,7 +108,11 @@ class ScrcpyRepository(
                             }
                         val created =
                             if (firstAttempt.isFailure && requestedCodec == MirrorVideoCodec.H265) {
-                                options = qualityPreset.options.copy(videoCodec = MirrorVideoCodec.H264)
+                                options = qualityPreset.options.copy(
+                                    videoCodec = MirrorVideoCodec.H264,
+                                    videoSource = videoSource,
+                                    cameraFacing = cameraFacing,
+                                )
                                 optionsText = options.diagnosticText()
                                 DiagnosticLogger.record(
                                     module = DiagnosticModule.Mirror,

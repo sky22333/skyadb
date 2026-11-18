@@ -55,6 +55,7 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ui.apps.AppsScreen
 import com.sky22333.skyadb.ui.ai.AiScreen
 import com.sky22333.skyadb.ui.ai.AiSettingsScreen
+import com.sky22333.skyadb.ui.camera.CameraPreviewScreen
 import com.sky22333.skyadb.ai.AiViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.ui.components.AppIcons
@@ -72,7 +73,10 @@ import com.sky22333.skyadb.ui.pairing.PairingScreen
 import com.sky22333.skyadb.ui.remote.RemoteControlScreen
 import com.sky22333.skyadb.ui.screenshot.ScreenshotScreen
 import com.sky22333.skyadb.ui.settings.SettingsScreen
+import com.sky22333.skyadb.ui.scanner.QrScanScreen
+import com.sky22333.skyadb.ui.share.ConnectionQrScreen
 import com.sky22333.skyadb.ui.shell.ShellScreen
+import com.sky22333.skyadb.ui.status.SystemStatusScreen
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
@@ -117,7 +121,7 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
     val pageFocusRequester = remember { FocusRequester() }
     val activity = LocalActivity.current
     val systemBarBackground = when (current) {
-        MirrorRoute -> Color.Black
+        MirrorRoute, CameraRoute -> Color.Black
         AppDestination.Files.route -> MiuixTheme.colorScheme.surface
         else -> MiuixTheme.colorScheme.background
     }
@@ -136,6 +140,7 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
     var homePort by rememberSaveable { mutableStateOf("") }
     var pairingHost by rememberSaveable { mutableStateOf("") }
     var pairingPort by rememberSaveable { mutableStateOf("") }
+    var connectionQrEndpoint by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(current, selectedTab) {
         focusManager.clearFocus(force = true)
@@ -224,13 +229,13 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
             entry<Route> { route ->
                 val pageModifier = Modifier.fillMaxSize().background(
                     when (route.name) {
-                        MirrorRoute -> Color.Black
+                        MirrorRoute, CameraRoute -> Color.Black
                         AppDestination.Files.route -> MiuixTheme.colorScheme.surface
                         RootRoute -> Color.Transparent
                         else -> MiuixTheme.colorScheme.background
                     },
                 ).then(
-                    if (route.name != RootRoute && route.name != MirrorRoute) Modifier.navigationBarsPadding() else Modifier,
+                    if (route.name != RootRoute && route.name != MirrorRoute && route.name != CameraRoute) Modifier.navigationBarsPadding() else Modifier,
                 )
                 Box(pageModifier) {
                 when (route.name) {
@@ -248,6 +253,7 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
                             when (tab) {
                                 AppDestination.Home.route -> HomeScreen(
                                     bottomPadding = 0.dp,
+                                    onScanClick = { navigate(ScanRoute) },
                                     onPairingClick = { navigate(AppDestination.Pairing.route) },
                                     onDiscoveryClick = { navigate(AppDestination.Discovery.route) },
                                     discoveredHost = homeHost,
@@ -265,6 +271,12 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
                                     onShellClick = { navigate(AppDestination.Shell.route) },
                                     onRemoteClick = { navigate(RemoteRoute) },
                                     onMirrorClick = { navigate(MirrorRoute) },
+                                    onCameraClick = { navigate(CameraRoute) },
+                                    onSystemStatusClick = { navigate(SystemStatusRoute) },
+                                    onConnectionQrClick = { endpoint ->
+                                        connectionQrEndpoint = endpoint
+                                        navigate(ConnectionQrRoute)
+                                    },
                                     onLogsClick = { navigate(LogsRoute) },
                                 )
                                 AppDestination.Settings.route -> SettingsScreen(
@@ -316,6 +328,21 @@ fun AdbManagerApp(aiViewModel: AiViewModel? = null, aiListState: LazyListState =
                     AppDestination.Screenshot.route -> ScreenshotScreen(bottomPadding = 0.dp, onBackClick = ::back)
                     RemoteRoute -> RemoteControlScreen(bottomPadding = 0.dp, onBackClick = ::back)
                     MirrorRoute -> MirrorScreen(onBackClick = ::back)
+                    CameraRoute -> CameraPreviewScreen(onBackClick = ::back)
+                    SystemStatusRoute -> SystemStatusScreen(bottomPadding = 0.dp, onBackClick = ::back)
+                    ConnectionQrRoute -> ConnectionQrScreen(
+                        endpoint = connectionQrEndpoint,
+                        bottomPadding = 0.dp,
+                        onBackClick = ::back,
+                    )
+                    ScanRoute -> QrScanScreen(
+                        bottomPadding = 0.dp,
+                        onBackClick = ::back,
+                        onConnected = {
+                            selectTab(AppDestination.Home.route)
+                            while (stack.size > 1) stack.removeAt(stack.lastIndex)
+                        },
+                    )
                     LogsRoute -> SystemLogScreen(bottomPadding = 0.dp, onBackClick = ::back)
                     DiagnosticsRoute -> DiagnosticLogScreen(bottomPadding = 0.dp, onBackClick = ::back)
                 }
@@ -366,5 +393,9 @@ private val PageTransition = object : NavTransition by NavTransitions.MiuixDefau
 private const val AiSettingsRoute = "ai-settings"
 private const val RemoteRoute = "remote"
 private const val MirrorRoute = "mirror"
+private const val CameraRoute = "camera"
+private const val SystemStatusRoute = "system-status"
+private const val ConnectionQrRoute = "connection-qr"
+private const val ScanRoute = "scan-qr"
 private const val LogsRoute = "logs"
 private const val DiagnosticsRoute = "diagnostics"

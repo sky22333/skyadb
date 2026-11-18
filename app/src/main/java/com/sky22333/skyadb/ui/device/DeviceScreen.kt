@@ -80,6 +80,9 @@ fun DeviceScreen(
     onShellClick: () -> Unit = {},
     onRemoteClick: () -> Unit = {},
     onMirrorClick: () -> Unit = {},
+    onCameraClick: () -> Unit = {},
+    onSystemStatusClick: () -> Unit = {},
+    onConnectionQrClick: (String) -> Unit = {},
     onLogsClick: () -> Unit = {},
     viewModel: DeviceViewModel = viewModel(),
 ) {
@@ -98,6 +101,9 @@ fun DeviceScreen(
         onShellClick = onShellClick,
         onRemoteClick = onRemoteClick,
         onMirrorClick = onMirrorClick,
+        onCameraClick = onCameraClick,
+        onSystemStatusClick = onSystemStatusClick,
+        onConnectionQrClick = onConnectionQrClick,
         onLogsClick = onLogsClick,
         onRefreshClick = viewModel::refreshDeviceInfo,
         onReboot = viewModel::reboot,
@@ -119,6 +125,9 @@ internal fun DeviceContent(
     onShellClick: () -> Unit,
     onRemoteClick: () -> Unit,
     onMirrorClick: () -> Unit,
+    onCameraClick: () -> Unit = {},
+    onSystemStatusClick: () -> Unit = {},
+    onConnectionQrClick: (String) -> Unit = {},
     onLogsClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onReboot: (RebootMode) -> Unit,
@@ -242,6 +251,14 @@ internal fun DeviceContent(
                         onShellClick = onShellClick,
                         onRemoteClick = onRemoteClick,
                         onMirrorClick = onMirrorClick,
+                        onCameraClick = onCameraClick,
+                        onSystemStatusClick = onSystemStatusClick,
+                        onConnectionQrClick = onConnectionQrClick,
+                        connected = uiState.connectionState == ConnectionState.Connected,
+                        wifiEndpoint = uiState.deviceId.takeIf {
+                            uiState.connectionState == ConnectionState.Connected &&
+                                uiState.sessionKind == AdbSessionKind.Wifi
+                        },
                         onLogsClick = onLogsClick,
                     )
                 }
@@ -346,21 +363,33 @@ private fun QuickActionGrid(
     onShellClick: () -> Unit,
     onRemoteClick: () -> Unit,
     onMirrorClick: () -> Unit,
+    onCameraClick: () -> Unit,
+    onSystemStatusClick: () -> Unit,
+    onConnectionQrClick: (String) -> Unit,
+    connected: Boolean,
+    wifiEndpoint: String?,
     onLogsClick: () -> Unit,
 ) {
     val shellLabel = stringResource(R.string.nav_shell)
-    val actions = listOf(
-            QuickActionSpec(stringResource(R.string.action_apps), MiuixIcons.GridView, onAppsClick),
-            QuickActionSpec(stringResource(R.string.nav_local_apps), AppIcons.DeviceApps, onLocalAppsClick),
-            QuickActionSpec(stringResource(R.string.action_install_apk), AppIcons.Install, onInstallClick),
-            QuickActionSpec(stringResource(R.string.action_download_online), MiuixIcons.Download, onDownloadClick),
-            QuickActionSpec(stringResource(R.string.action_file_manage), MiuixIcons.Folder, onFilesClick),
-            QuickActionSpec(shellLabel, AppIcons.Terminal, onShellClick),
-            QuickActionSpec(stringResource(R.string.action_mirror), MiuixIcons.ScreenMirroring, onMirrorClick),
-            QuickActionSpec(stringResource(R.string.action_remote), AppIcons.Remote, onRemoteClick),
-            QuickActionSpec(stringResource(R.string.action_system_log), MiuixIcons.Notes, onLogsClick),
-            QuickActionSpec(stringResource(R.string.nav_screenshot), MiuixIcons.ScreenCapture, onScreenshotClick),
-        )
+    val actions = buildList {
+            add(QuickActionSpec(stringResource(R.string.action_apps), MiuixIcons.GridView, onAppsClick))
+            add(QuickActionSpec(stringResource(R.string.nav_local_apps), AppIcons.DeviceApps, onLocalAppsClick))
+            add(QuickActionSpec(stringResource(R.string.action_install_apk), AppIcons.Install, onInstallClick))
+            add(QuickActionSpec(stringResource(R.string.action_download_online), MiuixIcons.Download, onDownloadClick))
+            add(QuickActionSpec(stringResource(R.string.action_file_manage), MiuixIcons.Folder, onFilesClick))
+            add(QuickActionSpec(shellLabel, AppIcons.Terminal, onShellClick))
+            add(QuickActionSpec(stringResource(R.string.action_mirror), MiuixIcons.ScreenMirroring, onMirrorClick))
+            add(QuickActionSpec(stringResource(R.string.action_remote), AppIcons.Remote, onRemoteClick))
+            if (connected) {
+                add(QuickActionSpec(stringResource(R.string.camera_preview_title), AppIcons.Camera, onCameraClick))
+                add(QuickActionSpec(stringResource(R.string.system_status_title), AppIcons.Activity, onSystemStatusClick))
+            }
+            wifiEndpoint?.let { endpoint ->
+                add(QuickActionSpec(stringResource(R.string.connection_qr_title), AppIcons.QrCode) { onConnectionQrClick(endpoint) })
+            }
+            add(QuickActionSpec(stringResource(R.string.action_system_log), MiuixIcons.Notes, onLogsClick))
+            add(QuickActionSpec(stringResource(R.string.nav_screenshot), MiuixIcons.ScreenCapture, onScreenshotClick))
+        }
 
     ActionGrid(actions)
 }

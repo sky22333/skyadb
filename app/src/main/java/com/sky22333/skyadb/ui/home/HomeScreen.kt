@@ -63,6 +63,7 @@ import com.sky22333.skyadb.usb.UsbOtgMode
 @Composable
 fun HomeScreen(
     bottomPadding: Dp = 0.dp,
+    onScanClick: () -> Unit = {},
     onPairingClick: () -> Unit = {},
     onDiscoveryClick: () -> Unit = {},
     discoveredHost: String = "",
@@ -88,6 +89,9 @@ fun HomeScreen(
             title = stringResource(R.string.home_title),
             color = MiuixTheme.colorScheme.background,
             actions = {
+                IconButton(onClick = onScanClick) {
+                    Icon(AppIcons.Scan, contentDescription = stringResource(R.string.action_scan_qr))
+                }
                 IconButton(onClick = onPairingClick) {
                     Icon(AppIcons.Wifi, contentDescription = stringResource(R.string.action_wireless_pairing))
                 }

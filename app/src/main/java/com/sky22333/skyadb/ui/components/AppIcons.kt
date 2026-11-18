@@ -26,6 +26,11 @@ object AppIcons {
     val SkipPrevious = icon("SkipPrevious", "M19 5 L9 12 L19 19 Z M5 5 L5 19")
     val Keyboard = icon("Keyboard", "M3 6 L21 6 L21 18 L3 18 Z M6 9 L7 9 M10 9 L11 9 M14 9 L15 9 M18 9 L19 9 M6 12 L7 12 M10 12 L11 12 M14 12 L15 12 M18 12 L19 12 M7 15 L17 15")
     val ArrowUp = icon("ArrowUp", "M12 20 V4 M5 11 L12 4 L19 11")
+    val Scan = icon("Scan", "M4 9 V5 Q4 4 5 4 H9 M15 4 H19 Q20 4 20 5 V9 M20 15 V19 Q20 20 19 20 H15 M9 20 H5 Q4 20 4 19 V15 M7 12 H17")
+    val QrCode = icon("QrCode", "M4 4 H10 V10 H4 Z M14 4 H20 V10 H14 Z M4 14 H10 V20 H4 Z M14 14 H16 V16 H14 Z M18 14 H20 V16 H18 Z M14 18 H16 V20 H14 Z M18 18 H20 V20 H18 Z")
+    val Camera = icon("Camera", "M4 7 H8 L10 4 H14 L16 7 H20 Q21 7 21 8 V19 Q21 20 20 20 H4 Q3 20 3 19 V8 Q3 7 4 7 M12 9 A4 4 0 1 0 12 17 A4 4 0 1 0 12 9")
+    val SwitchCamera = icon("SwitchCamera", "M4 7 H8 L10 4 H14 L16 7 H20 Q21 7 21 8 V13 M12 9 A4 4 0 0 0 8.5 12.5 M12 17 A4 4 0 0 0 15.5 13.5 M17 11 L19 13 L21 11 M3 18 V19 Q3 20 4 20 H7")
+    val Activity = icon("Activity", "M3 12 H6 L8 7 L12 18 L15 10 L17 12 H21")
 
     private fun icon(name: String, path: String): ImageVector = ImageVector.Builder(
         name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f,

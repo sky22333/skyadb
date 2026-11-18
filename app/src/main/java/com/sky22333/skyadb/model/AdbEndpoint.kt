@@ -124,7 +124,7 @@ data class AdbEndpoint(
             return null
         }
 
-        private fun parseAuthority(value: String): AdbEndpoint? {
+        fun parseAuthority(value: String): AdbEndpoint? {
             val input = value.trim()
             if (input.isEmpty()) return null
             if (input.startsWith('[')) {

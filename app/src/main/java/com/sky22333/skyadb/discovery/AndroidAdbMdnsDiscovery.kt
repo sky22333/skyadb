@@ -85,6 +85,38 @@ class AndroidAdbMdnsDiscovery(context: Context) : AdbMdnsDiscovery {
         }
     }
 
+    override suspend fun findPairingEndpoint(
+        serviceName: String,
+        timeoutMs: Long,
+    ): AdbMdnsEndpoint? {
+        val expectedName = serviceName.trim()
+        if (expectedName.isEmpty() || timeoutMs <= 0) return null
+        val discovery = createClient(setOf(AdbMdnsServiceType.Pairing))
+        return try {
+            discovery.start()
+            withTimeoutOrNull(timeoutMs) {
+                discovery.state
+                    .first { current ->
+                        current.pairDevices.any { endpoint ->
+                            endpoint.name.trim().equals(expectedName, ignoreCase = true)
+                        }
+                    }
+                    .pairDevices
+                    .first { endpoint -> endpoint.name.trim().equals(expectedName, ignoreCase = true) }
+                    .let { endpoint ->
+                        AdbMdnsEndpoint(
+                            name = endpoint.name,
+                            host = AdbEndpoint.hostForSocket(endpoint.host),
+                            port = endpoint.port,
+                            type = AdbMdnsServiceType.Pairing,
+                        )
+                    }
+            }
+        } finally {
+            discovery.close()
+        }
+    }
+
     private fun createClient(types: Set<AdbMdnsServiceType>) =
         KadbMdnsAndroid(
             context,

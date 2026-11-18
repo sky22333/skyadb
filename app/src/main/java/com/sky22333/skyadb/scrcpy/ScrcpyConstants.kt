@@ -18,17 +18,34 @@ data class ScrcpyOptions(
     val maxFps: Int = ScrcpyConstants.DefaultMaxFps,
     val videoBitRate: Int = ScrcpyConstants.DefaultVideoBitRate,
     val videoCodec: MirrorVideoCodec = MirrorVideoCodec.H264,
+    val videoSource: ScrcpyVideoSource = ScrcpyVideoSource.Display,
+    val cameraFacing: ScrcpyCameraFacing = ScrcpyCameraFacing.Back,
 ) {
     fun diagnosticText(): String {
         return serverArguments().joinToString(", ")
     }
 
     fun serverArguments(): List<String> {
-        return listOf(
-            "max_size=$maxSize",
-            "max_fps=$maxFps",
-            "video_bit_rate=$videoBitRate",
-            "video_codec=${videoCodec.scrcpyValue}",
-        )
+        return buildList {
+            add("max_size=$maxSize")
+            add("max_fps=$maxFps")
+            add("video_bit_rate=$videoBitRate")
+            add("video_codec=${videoCodec.scrcpyValue}")
+            add("video_source=${videoSource.scrcpyValue}")
+            if (videoSource == ScrcpyVideoSource.Camera) {
+                add("camera_facing=${cameraFacing.scrcpyValue}")
+                add("camera_fps=$maxFps")
+            }
+        }
     }
+}
+
+enum class ScrcpyVideoSource(val scrcpyValue: String) {
+    Display("display"),
+    Camera("camera"),
+}
+
+enum class ScrcpyCameraFacing(val scrcpyValue: String) {
+    Back("back"),
+    Front("front"),
 }

@@ -52,7 +52,14 @@ interface AdbMdnsDiscovery {
         timeoutMs: Long = DefaultConnectLookupTimeoutMs,
     ): Int?
 
+    /** 扫码配对二维码只包含服务名，需要短时发现对应的配对端口。 */
+    suspend fun findPairingEndpoint(
+        serviceName: String,
+        timeoutMs: Long = DefaultPairingLookupTimeoutMs,
+    ): AdbMdnsEndpoint?
+
     companion object {
         const val DefaultConnectLookupTimeoutMs = 2_500L
+        const val DefaultPairingLookupTimeoutMs = 8_000L
     }
 }
