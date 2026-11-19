@@ -77,7 +77,7 @@ object SystemStatusParser {
     private val UidRegex = Regex("""uid=(-?\d+)""")
     private val TagRegex = Regex("""tag=(0x[0-9a-fA-F]+)""")
     private val BucketRegex = Regex("""st=(\d+)\s+rb=(\d+)\s+rp=(\d+)\s+tb=(\d+)\s+tp=(\d+)""")
-    private val LegacyUidNetworkRegex = Regex("""\{uid=(\d+),package=[^}]*}=(\d+)""")
+    private val LegacyUidNetworkRegex = Regex("""\{uid=(\d+),package=[^}]*\}=(\d+)""")
     private val AppUidRegex = Regex("""u(\d+)_a(\d+)""")
 
     fun buildCommand(includeProcesses: Boolean = true): String =

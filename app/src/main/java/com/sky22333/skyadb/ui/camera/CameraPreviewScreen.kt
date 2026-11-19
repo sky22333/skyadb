@@ -5,8 +5,11 @@ import android.view.SurfaceView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -51,34 +54,40 @@ fun CameraPreviewScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(
+        BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
-            factory = { context ->
-                SurfaceView(context).apply {
-                    holder.addCallback(
-                        object : SurfaceHolder.Callback {
-                            override fun surfaceCreated(holder: SurfaceHolder) {
-                                viewModel.onSurfaceCreated(holder.surface)
+            contentAlignment = Alignment.Center,
+        ) {
+            AndroidView(
+                modifier = cameraSurface(
+                    containerWidth = maxWidth.value,
+                    containerHeight = maxHeight.value,
+                    videoWidth = uiState.videoWidth,
+                    videoHeight = uiState.videoHeight,
+                ),
+                factory = { context ->
+                    SurfaceView(context).apply {
+                        holder.addCallback(
+                            object : SurfaceHolder.Callback {
+                                override fun surfaceCreated(holder: SurfaceHolder) {
+                                    viewModel.onSurfaceCreated(holder.surface)
+                                }
+
+                                override fun surfaceChanged(
+                                    holder: SurfaceHolder,
+                                    format: Int,
+                                    width: Int,
+                                    height: Int,
+                                ) = Unit
+
+                                override fun surfaceDestroyed(holder: SurfaceHolder) {
+                                    viewModel.onSurfaceDestroyed()
+                                }
                             }
-
-                            override fun surfaceChanged(
-                                holder: SurfaceHolder,
-                                format: Int,
-                                width: Int,
-                                height: Int,
-                            ) = Unit
-
-                            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                                viewModel.onSurfaceDestroyed()
-                            }
-                        }
-                    )
-                }
-            },
-        )
-
-        if (uiState.videoWidth > 0 && uiState.videoHeight > 0) {
-            // SurfaceView already covers the screen; the status card communicates the active feed.
+                        )
+                    }
+                },
+            )
         }
 
         Row(
@@ -114,6 +123,24 @@ fun CameraPreviewScreen(
                 .navigationBarsPadding()
                 .padding(12.dp),
         )
+    }
+}
+
+private fun cameraSurface(
+    containerWidth: Float,
+    containerHeight: Float,
+    videoWidth: Int,
+    videoHeight: Int,
+): Modifier {
+    if (containerWidth <= 0f || containerHeight <= 0f || videoWidth <= 0 || videoHeight <= 0) {
+        return Modifier.fillMaxSize()
+    }
+    val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
+    val containerRatio = containerWidth / containerHeight
+    return if (containerRatio > videoRatio) {
+        Modifier.fillMaxHeight().aspectRatio(videoRatio)
+    } else {
+        Modifier.fillMaxWidth().aspectRatio(videoRatio)
     }
 }
 

@@ -35,6 +35,7 @@ data class ScrcpyOptions(
             if (videoSource == ScrcpyVideoSource.Camera) {
                 add("camera_facing=${cameraFacing.scrcpyValue}")
                 add("camera_fps=$maxFps")
+                add("capture_orientation=${if (cameraFacing == ScrcpyCameraFacing.Front) "270" else "90"}")
             }
         }
     }

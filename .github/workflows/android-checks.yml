@@ -59,6 +59,11 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
+      - name: Set incremental debug version
+        run: |
+          echo "VERSION_NAME=1.2.5.${GITHUB_RUN_NUMBER}" >> "${GITHUB_ENV}"
+          echo "VERSION_CODE=$((102050 + GITHUB_RUN_NUMBER))" >> "${GITHUB_ENV}"
+
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 

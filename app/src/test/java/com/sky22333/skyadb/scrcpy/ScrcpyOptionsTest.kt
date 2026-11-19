@@ -15,5 +15,6 @@ class ScrcpyOptionsTest {
         assertTrue("video_source=camera" in args)
         assertTrue("camera_facing=front" in args)
         assertTrue("camera_fps=30" in args)
+        assertTrue("capture_orientation=270" in args)
     }
 }
