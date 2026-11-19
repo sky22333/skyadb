@@ -83,7 +83,7 @@ class ScrcpyRepository(
                     videoSource == ScrcpyVideoSource.Display &&
                         (kadbManager.currentDeviceSdkInt() ?: 0) >= MinAudioSdkInt
                 val mirrorClient =
-                    when (val acquired = kadbManager.mirrorClient()) {
+                    when (val acquired = acquireMirrorClient()) {
                         is AdbOperationResult.Failure -> return@withContext acquired
                         is AdbOperationResult.Success -> acquired.data
                     }
@@ -178,6 +178,13 @@ class ScrcpyRepository(
                 }
             }
         }
+
+    private suspend fun acquireMirrorClient(): AdbOperationResult<MirrorClient> {
+        val first = kadbManager.mirrorClient()
+        if (first is AdbOperationResult.Success || kadbManager.isConnected()) return first
+        if (kadbManager.reconnectActiveWifi() !is AdbOperationResult.Success) return first
+        return kadbManager.mirrorClient()
+    }
 
     fun sendTouch(event: MirrorTouchEvent) {
         runCatching {

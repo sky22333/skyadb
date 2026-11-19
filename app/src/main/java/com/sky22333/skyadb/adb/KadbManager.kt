@@ -974,6 +974,32 @@ class KadbManager {
         }
     }
 
+    /** Reopen the active WiFi session after a mirror restart has consumed its transport. */
+    suspend fun reconnectActiveWifi(): AdbOperationResult<String> {
+        val connection = sessionMutex.withLock {
+            if (sessionKind != AdbSessionKind.Wifi) return@withLock null
+            val host = wifiHost ?: return@withLock null
+            val port = wifiPort ?: return@withLock null
+            WifiReconnect(host, port, wifiConnectTimeoutMillis, wifiSocketTimeoutMillis)
+        } ?: return AdbOperationResult.Failure(
+            message = appString(R.string.kadb_not_connected),
+            suggestion = appString(R.string.kadb_connect_before_mirror_suggestion),
+        )
+        return connect(
+            host = connection.host,
+            port = connection.port,
+            connectTimeoutMillis = connection.connectTimeoutMillis,
+            socketTimeoutMillis = connection.socketTimeoutMillis,
+        )
+    }
+
+    private data class WifiReconnect(
+        val host: String,
+        val port: Int,
+        val connectTimeoutMillis: Int,
+        val socketTimeoutMillis: Int,
+    )
+
     /**
      * Use a dedicated TCP ADB transport for WiFi mirroring when adbd accepts one. USB OTG
      * remains shared because a second USB transport would compete for the same device handle.
