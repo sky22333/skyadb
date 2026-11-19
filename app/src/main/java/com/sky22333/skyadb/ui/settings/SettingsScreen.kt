@@ -46,7 +46,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.BuildConfig
 import com.sky22333.skyadb.data.ThemeMode
@@ -59,8 +58,8 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.discovery.ScanRangeParser
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import com.sky22333.skyadb.ui.components.Button
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.foundation.layout.Row
 import top.yukonga.miuix.kmp.icon.extended.Info
@@ -213,25 +212,19 @@ private fun SettingsContent(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        PreferenceIcon(MiuixIcons.Info)
-                        Text(
-                            text = stringResource(R.string.settings_version_title),
-                            modifier = Modifier.weight(1f),
-                            style = MiuixTheme.textStyles.main,
-                        )
+                BasicComponent(
+                    modifier = Modifier.clip(RoundedCornerShape(AppDimens.ControlRadius)),
+                    title = stringResource(R.string.settings_version_title),
+                    startAction = { PreferenceIcon(MiuixIcons.Info) },
+                    endActions = {
                         Text(
                             text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             style = MiuixTheme.textStyles.footnote1,
                         )
-                    }
-                }
+                    },
+                    insideMargin = PaddingValues(0.dp),
+                )
             }
 
             item {

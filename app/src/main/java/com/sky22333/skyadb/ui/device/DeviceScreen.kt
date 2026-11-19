@@ -139,37 +139,11 @@ internal fun DeviceContent(
     }
     val infoLabel = stringResource(R.string.section_system_info)
     val rebootLabel = stringResource(R.string.fastboot_reboot_to)
-    val canUseAdbTools =
-        uiState.connectionState == ConnectionState.Connected &&
-            uiState.sessionKind != AdbSessionKind.UsbFastboot
-
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = stringResource(R.string.device_details_title),
             color = MiuixTheme.colorScheme.background,
             actions = {
-                IconButton(
-                    onClick = onSystemStatusClick,
-                    enabled = canUseAdbTools,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Activity,
-                        contentDescription = stringResource(R.string.system_status_title),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onCameraClick,
-                    enabled = canUseAdbTools,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Camera,
-                        contentDescription = stringResource(R.string.camera_preview_title),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
                 IconButton(
                     onClick = onRefreshClick,
                     enabled = !uiState.refreshing && uiState.connectionState == ConnectionState.Connected,

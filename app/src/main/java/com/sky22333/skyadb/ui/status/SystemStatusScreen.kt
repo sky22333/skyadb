@@ -1,6 +1,7 @@
 package com.sky22333.skyadb.ui.status
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -24,20 +30,34 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.scrcpy.MirrorSpeed
 import com.sky22333.skyadb.scrcpy.MirrorSpeedFormatter
 import com.sky22333.skyadb.ui.components.Button
+import com.sky22333.skyadb.ui.components.FlatButton
 import com.sky22333.skyadb.ui.components.SectionHeader
+import com.sky22333.skyadb.ui.components.TextField
 import com.sky22333.skyadb.ui.theme.AppDimens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+private enum class ProcessSort(val labelRes: Int) {
+    Cpu(R.string.system_status_sort_cpu),
+    Memory(R.string.system_status_sort_memory),
+    Io(R.string.system_status_sort_io),
+    Upload(R.string.system_status_sort_upload),
+    Download(R.string.system_status_sort_download),
+}
 
 @Composable
 fun SystemStatusScreen(
@@ -47,6 +67,11 @@ fun SystemStatusScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locale = LocalLocale.current.platformLocale
+    var processQuery by rememberSaveable { mutableStateOf("") }
+    var sortName by rememberSaveable { mutableStateOf(ProcessSort.Cpu.name) }
+    var sortDescending by rememberSaveable { mutableStateOf(true) }
+    val sort = ProcessSort.entries.firstOrNull { it.name == sortName } ?: ProcessSort.Cpu
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -58,6 +83,14 @@ fun SystemStatusScreen(
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(MiuixIcons.Back, contentDescription = stringResource(R.string.action_back))
+                }
+            },
+            actions = {
+                IconButton(onClick = viewModel::refreshNow, enabled = !uiState.loading) {
+                    Icon(
+                        MiuixIcons.Refresh,
+                        contentDescription = stringResource(R.string.system_status_refresh_now),
+                    )
                 }
             },
         )
@@ -85,6 +118,15 @@ fun SystemStatusScreen(
                 }
             }
 
+            SectionHeader(title = stringResource(R.string.system_status_monitor_settings))
+            MonitorSettingsCard(
+                uiState = uiState,
+                showProcesses = uiState.processListVisible,
+                onAutoRefreshChange = viewModel::setAutoRefresh,
+                onIntervalSelected = viewModel::setRefreshInterval,
+                onShowProcessesChange = viewModel::setProcessListVisible,
+            )
+
             SectionHeader(
                 title = stringResource(R.string.system_status_overview),
                 description = if (uiState.updatedAtMillis > 0) {
@@ -98,36 +140,229 @@ fun SystemStatusScreen(
             )
             StatusCard(uiState.metrics)
 
-            if (uiState.metrics.processes.isNotEmpty()) {
-                SectionHeader(title = stringResource(R.string.system_status_processes))
-                Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        uiState.metrics.processes.forEach { process ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Text(
-                                    text = process.pid.toString(),
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    style = MiuixTheme.textStyles.footnote1,
-                                )
-                                Text(
-                                    text = process.name,
-                                    modifier = Modifier.weight(1f),
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+            if (uiState.processListVisible) {
+                ProcessSection(
+                    processes = uiState.metrics.processes,
+                    query = processQuery,
+                    onQueryChange = { processQuery = it },
+                    sort = sort,
+                    sortDescending = sortDescending,
+                    onSortClick = { selected ->
+                        if (selected == sort) {
+                            sortDescending = !sortDescending
+                        } else {
+                            sortName = selected.name
+                            sortDescending = true
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorSettingsCard(
+    uiState: SystemStatusUiState,
+    showProcesses: Boolean,
+    onAutoRefreshChange: (Boolean) -> Unit,
+    onIntervalSelected: (Long) -> Unit,
+    onShowProcessesChange: (Boolean) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(stringResource(R.string.system_status_realtime_title), style = MiuixTheme.textStyles.main)
+                    Text(
+                        text = if (uiState.autoRefresh) {
+                            stringResource(
+                                R.string.system_status_realtime_on_format,
+                                (uiState.refreshIntervalMillis / 1000L).coerceAtLeast(1L).toInt(),
+                            )
+                        } else {
+                            stringResource(R.string.system_status_realtime_off)
+                        },
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        style = MiuixTheme.textStyles.footnote1,
+                    )
+                }
+                Switch(checked = uiState.autoRefresh, onCheckedChange = onAutoRefreshChange)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.system_status_interval_title),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SystemStatusRefreshInterval.entries.forEach { interval ->
+                        FlatButton(
+                            onClick = { onIntervalSelected(interval.millis) },
+                            primary = uiState.refreshIntervalMillis == interval.millis,
+                        ) {
+                            Text(stringResource(R.string.system_status_interval_seconds_format, interval.seconds))
                         }
                     }
                 }
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.system_status_show_processes),
+                    modifier = Modifier.weight(1f),
+                    style = MiuixTheme.textStyles.main,
+                )
+                Switch(checked = showProcesses, onCheckedChange = onShowProcessesChange)
+            }
         }
+    }
+}
+
+@Composable
+private fun ProcessSection(
+    processes: List<SystemProcess>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    sort: ProcessSort,
+    sortDescending: Boolean,
+    onSortClick: (ProcessSort) -> Unit,
+) {
+    val normalizedQuery = query.trim()
+    val filtered = remember(processes, normalizedQuery, sort, sortDescending) {
+        val matched = processes.filter { process ->
+            normalizedQuery.isEmpty() ||
+                process.name.contains(normalizedQuery, ignoreCase = true) ||
+                process.pid.toString().contains(normalizedQuery) ||
+                process.uid?.toString()?.contains(normalizedQuery) == true
+        }
+        val comparator = when (sort) {
+            ProcessSort.Cpu -> compareBy<SystemProcess> { it.cpuPercent }
+            ProcessSort.Memory -> compareBy<SystemProcess> { it.memoryBytes ?: 0L }
+            ProcessSort.Io -> compareBy<SystemProcess> { it.ioBytesPerSecond }
+            ProcessSort.Upload -> compareBy<SystemProcess> { it.txBytesPerSecond }
+            ProcessSort.Download -> compareBy<SystemProcess> { it.rxBytesPerSecond }
+        }.thenBy { it.name }
+        val sorted = matched.sortedWith(comparator)
+        if (sortDescending) sorted.reversed() else sorted
+    }
+
+    SectionHeader(
+        title = stringResource(R.string.system_status_processes),
+        description = stringResource(R.string.system_status_process_count_format, filtered.size),
+    )
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = stringResource(R.string.system_status_process_search),
+        useLabelAsPlaceholder = true,
+        singleLine = true,
+        leadingIcon = { Icon(MiuixIcons.Search, contentDescription = null) },
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ProcessSort.entries.forEach { option ->
+            val active = option == sort
+            val suffix = if (active) {
+                if (sortDescending) " ↓" else " ↑"
+            } else {
+                ""
+            }
+            FlatButton(
+                onClick = { onSortClick(option) },
+                primary = active,
+            ) {
+                Text(stringResource(option.labelRes) + suffix)
+            }
+        }
+    }
+
+    if (filtered.isEmpty()) {
+        Text(
+            text = stringResource(R.string.system_status_process_empty),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+        )
+    } else {
+        Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+            ) {
+                filtered.take(MaxVisibleProcesses).forEach { process ->
+                    ProcessRow(process)
+                }
+            }
+        }
+        if (filtered.size > MaxVisibleProcesses) {
+            Text(
+                text = stringResource(R.string.system_status_process_limit_format, MaxVisibleProcesses),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProcessRow(process: SystemProcess) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = process.name,
+                modifier = Modifier.weight(1f),
+                style = MiuixTheme.textStyles.footnote1,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(
+                    R.string.system_status_process_pid_format,
+                    process.pid,
+                    process.uid?.toString() ?: "—",
+                ),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
+            )
+        }
+        Text(
+            text = stringResource(
+                R.string.system_status_process_metrics_format,
+                formatPercent(process.cpuPercent),
+                process.memoryBytes?.let(::formatMemory) ?: "—",
+                speedLabel(process.ioBytesPerSecond),
+                speedLabel(process.txBytesPerSecond),
+                speedLabel(process.rxBytesPerSecond),
+            ),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -143,15 +378,12 @@ private fun StatusCard(metrics: SystemStatusMetrics) {
     } ?: "—"
     val memory = usageText(metrics.memoryUsedBytes, metrics.memoryTotalBytes)
     val storage = usageText(metrics.storageUsedBytes, metrics.storageTotalBytes)
-    val brightness = metrics.brightness?.let { value ->
-        if (metrics.autoBrightness == true) {
-            stringResource(R.string.system_status_brightness_auto_format, value)
-        } else {
-            value.toString()
-        }
-    } ?: "—"
+    val brightness = brightnessText(metrics)
     val rx = speedLabel(metrics.rxBytesPerSecond)
     val tx = speedLabel(metrics.txBytesPerSecond)
+    val network = metrics.networkInterface?.let { interfaceName ->
+        stringResource(R.string.system_status_network_detail_format, interfaceName, rx, tx)
+    } ?: stringResource(R.string.system_status_network_format, rx, tx)
     val currentApp = metrics.currentApp ?: "—"
 
     Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
@@ -167,12 +399,30 @@ private fun StatusCard(metrics: SystemStatusMetrics) {
             StatusRow(stringResource(R.string.system_status_cpu), cpu)
             StatusRow(stringResource(R.string.system_status_memory), memory)
             StatusRow(stringResource(R.string.system_status_storage), storage)
-            StatusRow(
-                stringResource(R.string.system_status_network),
-                stringResource(R.string.system_status_network_format, rx, tx),
-            )
+            StatusRow(stringResource(R.string.system_status_network), network)
             StatusRow(stringResource(R.string.system_status_brightness), brightness)
         }
+    }
+}
+
+@Composable
+private fun brightnessText(metrics: SystemStatusMetrics): String {
+    val current = metrics.backlightCurrent
+    val max = metrics.backlightMax
+    if (current != null && max != null && max > 0) {
+        val percent = (current.toDouble() / max * 100.0).roundToInt().coerceIn(0, 100)
+        val value = stringResource(R.string.system_status_brightness_sysfs_format, current, max, percent)
+        return if (metrics.autoBrightness == true) {
+            stringResource(R.string.system_status_brightness_auto_suffix_format, value)
+        } else {
+            value
+        }
+    }
+    val fallback = metrics.brightness ?: return "—"
+    return if (metrics.autoBrightness == true) {
+        stringResource(R.string.system_status_brightness_auto_format, fallback)
+    } else {
+        fallback.toString()
     }
 }
 
@@ -205,6 +455,8 @@ private fun usageText(used: Long?, total: Long?): String {
     return "${formatBytes(used)} / ${formatBytes(total)}  ·  ${"%.1f".format(Locale.US, percent)}%"
 }
 
+private fun formatPercent(value: Double): String = String.format(Locale.US, "%.1f%%", value)
+
 private fun speedLabel(bytesPerSecond: Double): String =
     when (val speed = MirrorSpeedFormatter.format(bytesPerSecond)) {
         is MirrorSpeed.KilobytesPerSecond -> "${speed.value} KB/s"
@@ -218,6 +470,16 @@ private fun formatBytes(bytes: Long): String {
     else String.format(Locale.US, "%.0f MB", bytes / mib)
 }
 
+private fun formatMemory(bytes: Long): String {
+    val kib = 1024.0
+    val mib = kib * 1024.0
+    return when {
+        bytes >= mib -> String.format(Locale.US, "%.1f MB", bytes / mib)
+        bytes >= kib -> String.format(Locale.US, "%.0f KB", bytes / kib)
+        else -> "$bytes B"
+    }
+}
+
 @Composable
 private fun batteryStatusLabel(status: Int): String = stringResource(
     when (status) {
@@ -228,3 +490,5 @@ private fun batteryStatusLabel(status: Int): String = stringResource(
         else -> R.string.unknown
     }
 )
+
+private const val MaxVisibleProcesses = 120
