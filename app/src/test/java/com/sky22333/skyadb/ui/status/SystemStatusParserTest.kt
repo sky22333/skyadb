@@ -224,4 +224,20 @@ class SystemStatusParserTest {
         assertNull(parsed.metrics.processes[1].uid)
         assertEquals(1_048_576L, parsed.metrics.processes[1].memoryBytes)
     }
+
+    @Test
+    fun keepsProcessListBeyondTheFirstThreeHundredEntries() {
+        val raw = buildString {
+            appendLine("__SKY_STATUS_PROCESSES__")
+            appendLine("PID UID RSS NAME")
+            repeat(350) { index ->
+                appendLine("${index + 100} 10000 1024 process-$index")
+            }
+        }
+
+        val parsed = SystemStatusParser.parse(raw)
+
+        assertEquals(350, parsed.metrics.processes.size)
+        assertEquals("process-349", parsed.metrics.processes.last().name)
+    }
 }

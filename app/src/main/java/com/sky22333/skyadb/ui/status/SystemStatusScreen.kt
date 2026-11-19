@@ -464,11 +464,15 @@ private fun usageText(used: Long?, total: Long?): String {
 
 private fun formatPercent(value: Double): String = String.format(Locale.US, "%.1f%%", value)
 
-private fun speedLabel(bytesPerSecond: Double): String =
-    when (val speed = MirrorSpeedFormatter.format(bytesPerSecond)) {
+private fun speedLabel(bytesPerSecond: Double): String {
+    if (bytesPerSecond.isFinite() && bytesPerSecond > 0.0 && bytesPerSecond < 512.0) {
+        return "<1 KB/s"
+    }
+    return when (val speed = MirrorSpeedFormatter.format(bytesPerSecond)) {
         is MirrorSpeed.KilobytesPerSecond -> "${speed.value} KB/s"
         is MirrorSpeed.MegabytesPerSecond -> String.format(Locale.US, "%.2f MB/s", speed.value)
     }
+}
 
 private fun formatBytes(bytes: Long): String {
     val gib = 1024.0 * 1024.0 * 1024.0
@@ -481,7 +485,7 @@ private fun formatMemory(bytes: Long): String {
     val kib = 1024.0
     val mib = kib * 1024.0
     return when {
-        bytes >= mib -> String.format(Locale.US, "%.1f MB", bytes / mib)
+        bytes >= mib -> String.format(Locale.US, "%.2f MB", bytes / mib)
         bytes >= kib -> String.format(Locale.US, "%.0f KB", bytes / kib)
         else -> "$bytes B"
     }

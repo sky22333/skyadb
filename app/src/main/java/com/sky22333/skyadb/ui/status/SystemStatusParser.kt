@@ -116,13 +116,8 @@ object SystemStatusParser {
 
     fun buildProcessCommand(): String = processCommand()
 
-    private fun processCommand(): String =
+    private val ProcessStatsLoop =
         """
-        echo '$CpuMarker'
-        grep '^cpu' /proc/stat 2>/dev/null
-        echo '$ProcessesMarker'
-        ps -A -o PID,UID,RSS,NAME 2>/dev/null || ps -A -o PID,USER,RSS,NAME 2>/dev/null || ps -A -o PID,RSS,NAME 2>/dev/null || ps -A -o PID,NAME 2>/dev/null
-        echo '$ProcessStatsMarker'
         for p in /proc/[0-9]*; do
           pid=${'$'}{p##*/}
           stat=
@@ -141,6 +136,22 @@ object SystemStatusParser {
           done 2>/dev/null < "${'$'}p/io"
           echo "${'$'}pid|${'$'}utime|${'$'}stime|${'$'}read_bytes|${'$'}write_bytes"
         done
+        """.trimIndent()
+
+    private fun processCommand(): String =
+        """
+        echo '$CpuMarker'
+        grep '^cpu' /proc/stat 2>/dev/null
+        echo '$ProcessesMarker'
+        ps -A -o PID,UID,RSS,NAME 2>/dev/null || ps -A -o PID,USER,RSS,NAME 2>/dev/null || ps -A -o PID,RSS,NAME 2>/dev/null || ps -A -o PID,NAME 2>/dev/null
+        echo '$ProcessStatsMarker'
+        process_stats_ok=0
+        if command -v su >/dev/null 2>&1; then
+          su -c '${ProcessStatsLoop}' 2>/dev/null && process_stats_ok=1
+        fi
+        if [ "${'$'}process_stats_ok" -ne 1 ]; then
+          ${ProcessStatsLoop}
+        fi
         echo '$UidNetworkMarker'
         dumpsys netstats detail 2>/dev/null | grep -E 'ident=|st=' | head -n 3000
         """.trimIndent()
@@ -610,5 +621,5 @@ object SystemStatusParser {
         return result.mapValues { it.value[0] to it.value[1] }
     }
 
-    private const val MaxProcessEntries = 300
+    private const val MaxProcessEntries = 2000
 }
