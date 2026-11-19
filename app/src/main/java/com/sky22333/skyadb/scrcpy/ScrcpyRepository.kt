@@ -59,7 +59,6 @@ class ScrcpyRepository(
         withContext(Dispatchers.IO) {
             val token = generation.incrementAndGet()
             lifecycleMutex.withLock {
-                stopLocked()
                 currentCoroutineContext().ensureActive()
                 val requestedCodec =
                     if (videoCodec == MirrorVideoCodec.H265 && !localDecoderSupports(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
@@ -88,6 +87,11 @@ class ScrcpyRepository(
                         is AdbOperationResult.Failure -> return@withContext acquired
                         is AdbOperationResult.Success -> acquired.data
                     }
+                // Switching cameras restarts the session. Acquire the replacement transport
+                // before tearing down the old one so a shared ADB connection is not left
+                // closed when the previous mirror session releases its streams.
+                stopLocked()
+                currentCoroutineContext().ensureActive()
                 try {
                     operationCatching {
                         val firstAttempt =
