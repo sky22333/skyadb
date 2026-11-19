@@ -8,6 +8,7 @@ import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.repository.AdbRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,11 +42,15 @@ class SystemStatusViewModel(
     private val state = MutableStateFlow(SystemStatusUiState())
     val uiState: StateFlow<SystemStatusUiState> = state.asStateFlow()
 
-    private val refreshMutex = Mutex()
+    private val metricsMutex = Mutex()
+    private val processMutex = Mutex()
     private var monitoringJob: Job? = null
+    private var processMonitoringJob: Job? = null
     private var manualRefreshJob: Job? = null
     private var previousSample: SystemStatusSample? = null
     private var previousSampleAtNanos: Long? = null
+    private var previousProcessSample: SystemStatusSample? = null
+    private var previousProcessSampleAtNanos: Long? = null
 
     init {
         restartMonitoring()
@@ -53,12 +58,14 @@ class SystemStatusViewModel(
 
     fun setAutoRefresh(enabled: Boolean) {
         if (state.value.autoRefresh == enabled) return
-        state.update { it.copy(autoRefresh = enabled) }
+        state.update { it.copy(autoRefresh = enabled, loading = if (enabled) it.loading else false) }
         if (enabled) {
-            resetSamples()
+            resetMetricSamples()
+            resetProcessSamples()
             restartMonitoring()
         } else {
             monitoringJob?.cancel()
+            processMonitoringJob?.cancel()
         }
     }
 
@@ -66,17 +73,25 @@ class SystemStatusViewModel(
         if (state.value.refreshIntervalMillis == millis) return
         state.update { it.copy(refreshIntervalMillis = millis) }
         if (state.value.autoRefresh) {
-            resetSamples()
+            resetMetricSamples()
+            resetProcessSamples()
             restartMonitoring()
         }
     }
 
     fun setProcessListVisible(visible: Boolean) {
         if (state.value.processListVisible == visible) return
-        state.update { it.copy(processListVisible = visible) }
-        resetSamples()
-        if (state.value.autoRefresh) {
-            restartMonitoring()
+        state.update {
+            it.copy(
+                processListVisible = visible,
+                metrics = if (visible) it.metrics else it.metrics.copy(processes = emptyList()),
+            )
+        }
+        resetProcessSamples()
+        if (!visible) {
+            processMonitoringJob?.cancel()
+        } else if (state.value.autoRefresh) {
+            startProcessMonitoring()
         } else {
             refreshNow()
         }
@@ -84,7 +99,14 @@ class SystemStatusViewModel(
 
     fun refreshNow() {
         if (manualRefreshJob?.isActive == true) return
-        manualRefreshJob = viewModelScope.launch { refreshOnce() }
+        manualRefreshJob = viewModelScope.launch {
+            coroutineScope {
+                launch { refreshMetrics() }
+                if (state.value.processListVisible) {
+                    launch { refreshProcesses() }
+                }
+            }
+        }
     }
 
     fun retry() {
@@ -93,18 +115,31 @@ class SystemStatusViewModel(
 
     private fun restartMonitoring() {
         monitoringJob?.cancel()
+        processMonitoringJob?.cancel()
         if (!state.value.autoRefresh) return
         monitoringJob = viewModelScope.launch {
             while (isActive) {
-                refreshOnce()
+                refreshMetrics()
+                delay(state.value.refreshIntervalMillis)
+            }
+        }
+        startProcessMonitoring()
+    }
+
+    private fun startProcessMonitoring() {
+        processMonitoringJob?.cancel()
+        if (!state.value.autoRefresh || !state.value.processListVisible) return
+        processMonitoringJob = viewModelScope.launch {
+            while (isActive) {
+                refreshProcesses()
                 delay(state.value.refreshIntervalMillis)
             }
         }
     }
 
-    private suspend fun refreshOnce() = refreshMutex.withLock {
+    private suspend fun refreshMetrics() = metricsMutex.withLock {
         state.update { it.copy(loading = true) }
-        val command = SystemStatusParser.buildCommand(includeProcesses = state.value.processListVisible)
+        val command = SystemStatusParser.buildCommand(includeProcesses = false)
         when (val result = adbRepository.runShell(command, timeoutMillis = 20_000)) {
             is AdbOperationResult.Success -> {
                 if (result.data.exitCode != 0 && result.data.output.isBlank()) {
@@ -127,9 +162,9 @@ class SystemStatusViewModel(
                 )
                 previousSample = parsed.sample
                 previousSampleAtNanos = sampledAtNanos
-                state.update {
-                    it.copy(
-                        metrics = parsed.metrics,
+                state.update { current ->
+                    current.copy(
+                        metrics = parsed.metrics.copy(processes = current.metrics.processes),
                         loading = false,
                         error = null,
                         updatedAtMillis = System.currentTimeMillis(),
@@ -142,8 +177,44 @@ class SystemStatusViewModel(
         }
     }
 
-    private fun resetSamples() {
+    private suspend fun refreshProcesses() {
+        if (!state.value.processListVisible) return
+        processMutex.withLock {
+            if (!state.value.processListVisible) return@withLock
+            when (val result = adbRepository.runShell(
+                SystemStatusParser.buildProcessCommand(),
+                timeoutMillis = 20_000,
+            )) {
+                is AdbOperationResult.Success -> {
+                    if (result.data.exitCode != 0 && result.data.output.isBlank()) return@withLock
+                    val sampledAtNanos = System.nanoTime()
+                    val elapsedMillis = previousProcessSampleAtNanos?.let { previous ->
+                        ((sampledAtNanos - previous) / 1_000_000).coerceAtLeast(1L)
+                    } ?: 0L
+                    val parsed = SystemStatusParser.parseProcesses(
+                        raw = result.data.output,
+                        previous = previousProcessSample,
+                        elapsedMillis = elapsedMillis,
+                    )
+                    previousProcessSample = parsed.sample
+                    previousProcessSampleAtNanos = sampledAtNanos
+                    if (!state.value.processListVisible) return@withLock
+                    state.update { current ->
+                        current.copy(metrics = current.metrics.copy(processes = parsed.processes))
+                    }
+                }
+                is AdbOperationResult.Failure -> Unit
+            }
+        }
+    }
+
+    private fun resetMetricSamples() {
         previousSample = null
         previousSampleAtNanos = null
+    }
+
+    private fun resetProcessSamples() {
+        previousProcessSample = null
+        previousProcessSampleAtNanos = null
     }
 }

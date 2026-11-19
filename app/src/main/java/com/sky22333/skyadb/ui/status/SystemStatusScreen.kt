@@ -498,4 +498,4 @@ private fun batteryStatusLabel(status: Int): String = stringResource(
     }
 )
 
-private const val MaxVisibleProcesses = 120
+private const val MaxVisibleProcesses = 20

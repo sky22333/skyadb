@@ -171,6 +171,42 @@ class SystemStatusParserTest {
     }
 
     @Test
+    fun parsesProcessSamplesIndependentlyFromBaseMetrics() {
+        val first = SystemStatusParser.parseProcesses(
+            raw =
+                """
+                __SKY_STATUS_CPU__
+                cpu  100 0 50 850 0 0 0 0 0 0
+                __SKY_STATUS_PROCESSES__
+                PID UID RSS NAME
+                123 10123 2048 com.example.app
+                __SKY_STATUS_PROCESS_STATS__
+                123|10|5|1000|500
+                """.trimIndent(),
+        )
+        val second = SystemStatusParser.parseProcesses(
+            raw =
+                """
+                __SKY_STATUS_CPU__
+                cpu  150 0 80 870 0 0 0 0 0 0
+                __SKY_STATUS_PROCESSES__
+                PID UID RSS NAME
+                123 10123 2048 com.example.app
+                __SKY_STATUS_PROCESS_STATS__
+                123|30|10| 3000| 1500
+                """.trimIndent(),
+            previous = first.sample,
+            elapsedMillis = 1_000,
+        )
+
+        val process = second.processes.single()
+        assertEquals(25.0, process.cpuPercent, 0.001)
+        assertEquals(2_000.0, process.ioReadBytesPerSecond, 0.001)
+        assertEquals(1_000.0, process.ioWriteBytesPerSecond, 0.001)
+        assertEquals(870L, second.sample.cpuIdleTicks)
+    }
+
+    @Test
     fun parsesUserColumnWhenUidColumnIsUnavailable() {
         val parsed = SystemStatusParser.parse(
             raw =

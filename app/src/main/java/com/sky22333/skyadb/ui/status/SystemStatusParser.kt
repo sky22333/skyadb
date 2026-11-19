@@ -59,6 +59,11 @@ data class ParsedSystemStatus(
     val sample: SystemStatusSample,
 )
 
+data class ParsedProcessStatus(
+    val processes: List<SystemProcess>,
+    val sample: SystemStatusSample,
+)
+
 object SystemStatusParser {
     private const val BatteryMarker = "__SKY_STATUS_BATTERY__"
     private const val MemoryMarker = "__SKY_STATUS_MEMORY__"
@@ -109,25 +114,31 @@ object SystemStatusParser {
         dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'
         """.trimIndent() + if (includeProcesses) "\n${processCommand()}" else ""
 
+    fun buildProcessCommand(): String = processCommand()
+
     private fun processCommand(): String =
         """
+        echo '$CpuMarker'
+        grep '^cpu' /proc/stat 2>/dev/null
         echo '$ProcessesMarker'
         ps -A -o PID,UID,RSS,NAME 2>/dev/null || ps -A -o PID,USER,RSS,NAME 2>/dev/null || ps -A -o PID,RSS,NAME 2>/dev/null || ps -A -o PID,NAME 2>/dev/null
         echo '$ProcessStatsMarker'
         for p in /proc/[0-9]*; do
           pid=${'$'}{p##*/}
-          stat=${'$'}(cat "${'$'}p/stat" 2>/dev/null) || continue
+          stat=
+          read -r stat 2>/dev/null < "${'$'}p/stat" || continue
           rest=${'$'}{stat##*) }
           set -- ${'$'}rest
           utime=${'$'}{12}
           stime=${'$'}{13}
-          io=${'$'}(cat "${'$'}p/io" 2>/dev/null)
           read_bytes=0
           write_bytes=0
-          if [ -n "${'$'}io" ]; then
-            read_bytes=${'$'}(printf '%s\n' "${'$'}io" | sed -n 's/^read_bytes: //p')
-            write_bytes=${'$'}(printf '%s\n' "${'$'}io" | sed -n 's/^write_bytes: //p')
-          fi
+          while IFS=: read -r key value; do
+            case "${'$'}key" in
+              read_bytes) read_bytes=${'$'}{value# } ;;
+              write_bytes) write_bytes=${'$'}{value# } ;;
+            esac
+          done 2>/dev/null < "${'$'}p/io"
           echo "${'$'}pid|${'$'}utime|${'$'}stime|${'$'}read_bytes|${'$'}write_bytes"
         done
         echo '$UidNetworkMarker'
@@ -186,53 +197,15 @@ object SystemStatusParser {
             0.0
         }
 
-        val processes = processMetadata.map { metadata ->
-            val stats = processStats[metadata.pid]
-            val previousTicks = previous?.processCpuTicks?.get(metadata.pid)
-            val currentTicks = stats?.let { it.utime + it.stime }
-            val processCpu = if (
-                previousTicks != null && currentTicks != null && totalDelta > 0 &&
-                    currentTicks >= previousTicks
-            ) {
-                ((currentTicks - previousTicks).toDouble() / totalDelta * 100.0 * cores)
-                    .coerceIn(0.0, 100.0 * cores)
-            } else {
-                0.0
-            }
-            val ioReadRate = rate(
-                current = stats?.readBytes,
-                previousValue = previous?.processIoReadBytes?.get(metadata.pid),
-                elapsedSeconds = elapsedSeconds,
-            )
-            val ioWriteRate = rate(
-                current = stats?.writeBytes,
-                previousValue = previous?.processIoWriteBytes?.get(metadata.pid),
-                elapsedSeconds = elapsedSeconds,
-            )
-            val uidRx = metadata.uid?.let { uidNetwork[it]?.first }
-            val uidTx = metadata.uid?.let { uidNetwork[it]?.second }
-            val rxRate = rate(
-                current = uidRx,
-                previousValue = metadata.uid?.let { previous?.uidRxBytes?.get(it) },
-                elapsedSeconds = elapsedSeconds,
-            )
-            val txRate = rate(
-                current = uidTx,
-                previousValue = metadata.uid?.let { previous?.uidTxBytes?.get(it) },
-                elapsedSeconds = elapsedSeconds,
-            )
-            SystemProcess(
-                pid = metadata.pid,
-                name = metadata.name,
-                uid = metadata.uid,
-                cpuPercent = processCpu,
-                memoryBytes = metadata.rssKb?.times(1024L),
-                ioReadBytesPerSecond = ioReadRate,
-                ioWriteBytesPerSecond = ioWriteRate,
-                rxBytesPerSecond = rxRate,
-                txBytesPerSecond = txRate,
-            )
-        }
+        val processes = buildProcessList(
+            processMetadata = processMetadata,
+            processStats = processStats,
+            uidNetwork = uidNetwork,
+            totalDelta = totalDelta,
+            cores = cores,
+            elapsedSeconds = elapsedSeconds,
+            previous = previous,
+        )
 
         return ParsedSystemStatus(
             metrics =
@@ -272,6 +245,102 @@ object SystemStatusParser {
                     uidRxBytes = uidNetwork.mapValues { it.value.first },
                     uidTxBytes = uidNetwork.mapValues { it.value.second },
                 ),
+        )
+    }
+
+    fun parseProcesses(
+        raw: String,
+        previous: SystemStatusSample? = null,
+        elapsedMillis: Long = 0,
+    ): ParsedProcessStatus {
+        val sections = sections(raw)
+        val cpu = parseCpu(sections[CpuMarker].orEmpty())
+        val processMetadata = parseProcessMetadata(sections[ProcessesMarker].orEmpty())
+        val processStats = parseProcessStats(sections[ProcessStatsMarker].orEmpty())
+        val uidNetwork = parseUidNetwork(sections[UidNetworkMarker].orEmpty())
+        val totalDelta = if (previous != null && cpu.totalTicks > previous.cpuTotalTicks) {
+            cpu.totalTicks - previous.cpuTotalTicks
+        } else {
+            0L
+        }
+        val cores = cpu.coreCount.coerceAtLeast(1)
+        val elapsedSeconds = max(elapsedMillis, 1L) / 1000.0
+        return ParsedProcessStatus(
+            processes = buildProcessList(
+                processMetadata = processMetadata,
+                processStats = processStats,
+                uidNetwork = uidNetwork,
+                totalDelta = totalDelta,
+                cores = cores,
+                elapsedSeconds = elapsedSeconds,
+                previous = previous,
+            ),
+            sample = SystemStatusSample(
+                cpuTotalTicks = cpu.totalTicks,
+                cpuIdleTicks = cpu.idleTicks,
+                cpuCoreCount = cpu.coreCount,
+                processCpuTicks = processStats.mapValues { it.value.utime + it.value.stime },
+                processIoReadBytes = processStats.mapValues { it.value.readBytes },
+                processIoWriteBytes = processStats.mapValues { it.value.writeBytes },
+                uidRxBytes = uidNetwork.mapValues { it.value.first },
+                uidTxBytes = uidNetwork.mapValues { it.value.second },
+            ),
+        )
+    }
+
+    private fun buildProcessList(
+        processMetadata: List<ProcessMetadata>,
+        processStats: Map<Int, ProcessStat>,
+        uidNetwork: Map<Int, Pair<Long, Long>>,
+        totalDelta: Long,
+        cores: Int,
+        elapsedSeconds: Double,
+        previous: SystemStatusSample?,
+    ): List<SystemProcess> = processMetadata.map { metadata ->
+        val stats = processStats[metadata.pid]
+        val previousTicks = previous?.processCpuTicks?.get(metadata.pid)
+        val currentTicks = stats?.let { it.utime + it.stime }
+        val processCpu = if (
+            previousTicks != null && currentTicks != null && totalDelta > 0 &&
+                currentTicks >= previousTicks
+        ) {
+            ((currentTicks - previousTicks).toDouble() / totalDelta * 100.0 * cores)
+                .coerceIn(0.0, 100.0 * cores)
+        } else {
+            0.0
+        }
+        val ioReadRate = rate(
+            current = stats?.readBytes,
+            previousValue = previous?.processIoReadBytes?.get(metadata.pid),
+            elapsedSeconds = elapsedSeconds,
+        )
+        val ioWriteRate = rate(
+            current = stats?.writeBytes,
+            previousValue = previous?.processIoWriteBytes?.get(metadata.pid),
+            elapsedSeconds = elapsedSeconds,
+        )
+        val uidRx = metadata.uid?.let { uidNetwork[it]?.first }
+        val uidTx = metadata.uid?.let { uidNetwork[it]?.second }
+        val rxRate = rate(
+            current = uidRx,
+            previousValue = metadata.uid?.let { previous?.uidRxBytes?.get(it) },
+            elapsedSeconds = elapsedSeconds,
+        )
+        val txRate = rate(
+            current = uidTx,
+            previousValue = metadata.uid?.let { previous?.uidTxBytes?.get(it) },
+            elapsedSeconds = elapsedSeconds,
+        )
+        SystemProcess(
+            pid = metadata.pid,
+            name = metadata.name,
+            uid = metadata.uid,
+            cpuPercent = processCpu,
+            memoryBytes = metadata.rssKb?.times(1024L),
+            ioReadBytesPerSecond = ioReadRate,
+            ioWriteBytesPerSecond = ioWriteRate,
+            rxBytesPerSecond = rxRate,
+            txBytesPerSecond = txRate,
         )
     }
 
@@ -501,10 +570,10 @@ object SystemStatusParser {
             if (parts.size < 5) return@mapNotNull null
             val pid = parts[0].toIntOrNull() ?: return@mapNotNull null
             pid to ProcessStat(
-                utime = parts[1].toLongOrNull() ?: 0L,
-                stime = parts[2].toLongOrNull() ?: 0L,
-                readBytes = parts[3].toLongOrNull() ?: 0L,
-                writeBytes = parts[4].toLongOrNull() ?: 0L,
+                utime = parts[1].trim().toLongOrNull() ?: 0L,
+                stime = parts[2].trim().toLongOrNull() ?: 0L,
+                readBytes = parts[3].trim().toLongOrNull() ?: 0L,
+                writeBytes = parts[4].trim().toLongOrNull() ?: 0L,
             )
         }.toMap()
 
