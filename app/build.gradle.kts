@@ -48,8 +48,8 @@ android {
         applicationId = "com.sky22333.skyadb"
         minSdk = 24
         targetSdk = 37
-        versionCode = ciVersionCode ?: 10000
-        versionName = ciVersionName ?: "1.0.0"
+        versionCode = ciVersionCode ?: 102049
+        versionName = ciVersionName ?: "1.2.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

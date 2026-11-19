@@ -139,12 +139,37 @@ internal fun DeviceContent(
     }
     val infoLabel = stringResource(R.string.section_system_info)
     val rebootLabel = stringResource(R.string.fastboot_reboot_to)
+    val canUseAdbTools =
+        uiState.connectionState == ConnectionState.Connected &&
+            uiState.sessionKind != AdbSessionKind.UsbFastboot
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = stringResource(R.string.device_details_title),
             color = MiuixTheme.colorScheme.background,
             actions = {
+                IconButton(
+                    onClick = onSystemStatusClick,
+                    enabled = canUseAdbTools,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Activity,
+                        contentDescription = stringResource(R.string.system_status_title),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onCameraClick,
+                    enabled = canUseAdbTools,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Camera,
+                        contentDescription = stringResource(R.string.camera_preview_title),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 IconButton(
                     onClick = onRefreshClick,
                     enabled = !uiState.refreshing && uiState.connectionState == ConnectionState.Connected,
@@ -223,7 +248,7 @@ internal fun DeviceContent(
                 item { DeviceRefreshStatus(status = uiState.rebootStatus) }
             }
             if (uiState.sessionKind == AdbSessionKind.UsbFastboot) {
-                item { SectionHeader(title = stringResource(R.string.fb_images)) }
+                item { SectionHeader(title = stringResource(R.string.section_quick_actions)) }
                 item {
                     ActionGrid(listOf(
                         QuickActionSpec(stringResource(R.string.fb_flash), AppIcons.Install) { onFastbootAction(FastbootPanel.Flash) },

@@ -79,6 +79,7 @@
     <string name="settings_diagnostics_title">诊断日志</string>
     <string name="settings_clear_recent_devices_title">清理最近设备</string>
     <string name="settings_project_url_title">项目地址</string>
+    <string name="settings_version_title">当前版本</string>
 
     <!-- Home screen -->
     <string name="home_title">设备连接</string>

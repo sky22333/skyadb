@@ -79,6 +79,7 @@
     <string name="settings_diagnostics_title">Diagnostic log</string>
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
     <string name="settings_project_url_title">Project URL</string>
+    <string name="settings_version_title">Current version</string>
 
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
