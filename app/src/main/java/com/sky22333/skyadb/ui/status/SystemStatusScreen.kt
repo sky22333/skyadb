@@ -3,7 +3,9 @@ package com.sky22333.skyadb.ui.status
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +33,7 @@ import com.sky22333.skyadb.scrcpy.MirrorSpeed
 import com.sky22333.skyadb.scrcpy.MirrorSpeedFormatter
 import com.sky22333.skyadb.ui.components.Button
 import com.sky22333.skyadb.ui.components.FlatButton
+import com.sky22333.skyadb.ui.components.PopupAnchor
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.components.TextField
 import com.sky22333.skyadb.ui.theme.AppDimens
@@ -49,14 +52,14 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private enum class ProcessSort(val labelRes: Int) {
     Cpu(R.string.system_status_sort_cpu),
     Memory(R.string.system_status_sort_memory),
     Io(R.string.system_status_sort_io),
-    Upload(R.string.system_status_sort_upload),
-    Download(R.string.system_status_sort_download),
+    Network(R.string.system_status_sort_network),
 }
 
 @Composable
@@ -127,7 +130,7 @@ fun SystemStatusScreen(
                 onShowProcessesChange = viewModel::setProcessListVisible,
             )
 
-            SectionHeader(
+            InlineSectionHeader(
                 title = stringResource(R.string.system_status_overview),
                 description = if (uiState.updatedAtMillis > 0) {
                     stringResource(
@@ -169,53 +172,36 @@ private fun MonitorSettingsCard(
     onIntervalSelected: (Long) -> Unit,
     onShowProcessesChange: (Boolean) -> Unit,
 ) {
+    val refreshItems = listOf(stringResource(R.string.system_status_refresh_off)) +
+        SystemStatusRefreshInterval.entries.map { interval ->
+            stringResource(R.string.system_status_interval_seconds_format, interval.seconds)
+        }
+    val intervalIndex = SystemStatusRefreshInterval.entries.indexOfFirst {
+        it.millis == uiState.refreshIntervalMillis
+    }.coerceAtLeast(0)
+    val selectedRefreshIndex = if (uiState.autoRefresh) intervalIndex + 1 else 0
+
     Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(stringResource(R.string.system_status_realtime_title), style = MiuixTheme.textStyles.main)
-                    Text(
-                        text = if (uiState.autoRefresh) {
-                            stringResource(
-                                R.string.system_status_realtime_on_format,
-                                (uiState.refreshIntervalMillis / 1000L).coerceAtLeast(1L).toInt(),
-                            )
+            PopupAnchor {
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.system_status_realtime_title),
+                    items = refreshItems,
+                    selectedIndex = selectedRefreshIndex,
+                    onSelectedIndexChange = { index ->
+                        if (index == 0) {
+                            onAutoRefreshChange(false)
                         } else {
-                            stringResource(R.string.system_status_realtime_off)
-                        },
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.footnote1,
-                    )
-                }
-                Switch(checked = uiState.autoRefresh, onCheckedChange = onAutoRefreshChange)
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = stringResource(R.string.system_status_interval_title),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    style = MiuixTheme.textStyles.footnote1,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    SystemStatusRefreshInterval.entries.forEach { interval ->
-                        FlatButton(
-                            onClick = { onIntervalSelected(interval.millis) },
-                            primary = uiState.refreshIntervalMillis == interval.millis,
-                        ) {
-                            Text(stringResource(R.string.system_status_interval_seconds_format, interval.seconds))
+                            onIntervalSelected(SystemStatusRefreshInterval.entries[index - 1].millis)
+                            onAutoRefreshChange(true)
                         }
-                    }
-                }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = PaddingValues(0.dp),
+                )
             }
 
             Row(
@@ -255,14 +241,15 @@ private fun ProcessSection(
             ProcessSort.Cpu -> compareBy<SystemProcess> { it.cpuPercent }
             ProcessSort.Memory -> compareBy<SystemProcess> { it.memoryBytes ?: 0L }
             ProcessSort.Io -> compareBy<SystemProcess> { it.ioBytesPerSecond }
-            ProcessSort.Upload -> compareBy<SystemProcess> { it.txBytesPerSecond }
-            ProcessSort.Download -> compareBy<SystemProcess> { it.rxBytesPerSecond }
+            ProcessSort.Network -> compareBy<SystemProcess> {
+                it.txBytesPerSecond + it.rxBytesPerSecond
+            }
         }.thenBy { it.name }
         val sorted = matched.sortedWith(comparator)
         if (sortDescending) sorted.reversed() else sorted
     }
 
-    SectionHeader(
+    InlineSectionHeader(
         title = stringResource(R.string.system_status_processes),
         description = stringResource(R.string.system_status_process_count_format, filtered.size),
     )
@@ -273,7 +260,11 @@ private fun ProcessSection(
         label = stringResource(R.string.system_status_process_search),
         useLabelAsPlaceholder = true,
         singleLine = true,
-        leadingIcon = { Icon(MiuixIcons.Search, contentDescription = null) },
+        leadingIcon = {
+            Box(modifier = Modifier.padding(start = 8.dp, end = 8.dp)) {
+                Icon(MiuixIcons.Search, contentDescription = null)
+            }
+        },
     )
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -355,13 +346,29 @@ private fun ProcessRow(process: SystemProcess) {
                 formatPercent(process.cpuPercent),
                 process.memoryBytes?.let(::formatMemory) ?: "—",
                 speedLabel(process.ioBytesPerSecond),
-                speedLabel(process.txBytesPerSecond),
-                speedLabel(process.rxBytesPerSecond),
+                "${speedLabel(process.txBytesPerSecond)} / ${speedLabel(process.rxBytesPerSecond)}",
             ),
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             style = MiuixTheme.textStyles.footnote1,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun InlineSectionHeader(title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, style = MiuixTheme.textStyles.subtitle)
+        Text(
+            text = description,
+            modifier = Modifier.padding(start = 12.dp),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
         )
     }
 }

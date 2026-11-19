@@ -32,7 +32,7 @@ data class SystemStatusUiState(
     val updatedAtMillis: Long = 0L,
     val autoRefresh: Boolean = true,
     val refreshIntervalMillis: Long = SystemStatusRefreshInterval.OneSecond.millis,
-    val processListVisible: Boolean = true,
+    val processListVisible: Boolean = false,
 )
 
 class SystemStatusViewModel(

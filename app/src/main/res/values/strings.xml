@@ -938,6 +938,7 @@
     <string name="system_status_brightness_auto_suffix_format">%1$s (auto)</string>
     <string name="system_status_monitor_settings">Monitor settings</string>
     <string name="system_status_realtime_title">Live updates</string>
+    <string name="system_status_refresh_off">Off</string>
     <string name="system_status_realtime_on_format">On, every %1$d s</string>
     <string name="system_status_realtime_off">Off, refresh manually</string>
     <string name="system_status_interval_title">Refresh interval</string>
@@ -951,10 +952,9 @@
     <string name="system_status_sort_cpu">CPU</string>
     <string name="system_status_sort_memory">Memory</string>
     <string name="system_status_sort_io">IO</string>
-    <string name="system_status_sort_upload">Upload</string>
-    <string name="system_status_sort_download">Download</string>
+    <string name="system_status_sort_network">Network</string>
     <string name="system_status_process_pid_format">PID %1$d · UID %2$s</string>
-    <string name="system_status_process_metrics_format">CPU %1$s · MEM %2$s · IO %3$s · UP %4$s · DOWN %5$s</string>
+    <string name="system_status_process_metrics_format">%1$s · %2$s · %3$s · %4$s</string>
     <string name="camera_preview_title">Camera preview</string>
     <string name="camera_preview_starting">Starting camera preview…</string>
     <string name="camera_preview_active">Camera preview active</string>

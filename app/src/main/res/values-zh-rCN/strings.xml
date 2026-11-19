@@ -938,6 +938,7 @@
     <string name="system_status_brightness_auto_suffix_format">%1$s（自动）</string>
     <string name="system_status_monitor_settings">监控设置</string>
     <string name="system_status_realtime_title">实时更新</string>
+    <string name="system_status_refresh_off">关闭</string>
     <string name="system_status_realtime_on_format">已开启，每 %1$d 秒刷新</string>
     <string name="system_status_realtime_off">已关闭，可手动刷新</string>
     <string name="system_status_interval_title">更新周期</string>
@@ -951,10 +952,9 @@
     <string name="system_status_sort_cpu">CPU</string>
     <string name="system_status_sort_memory">内存</string>
     <string name="system_status_sort_io">IO</string>
-    <string name="system_status_sort_upload">上传</string>
-    <string name="system_status_sort_download">下载</string>
+    <string name="system_status_sort_network">网速</string>
     <string name="system_status_process_pid_format">PID %1$d · UID %2$s</string>
-    <string name="system_status_process_metrics_format">CPU %1$s · 内存 %2$s · IO %3$s · 上传 %4$s · 下载 %5$s</string>
+    <string name="system_status_process_metrics_format">%1$s · %2$s · %3$s · %4$s</string>
     <string name="camera_preview_title">摄像头预览</string>
     <string name="camera_preview_starting">正在启动摄像头预览…</string>
     <string name="camera_preview_active">摄像头预览中</string>
