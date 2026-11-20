@@ -411,11 +411,11 @@ private val ProcessSort.columnWeight: Float
         ProcessSort.Network -> ProcessNetworkColumnWeight
     }
 
-private val ProcessNameColumnWeight = 2.2f
-private val ProcessCpuColumnWeight = 0.9f
-private val ProcessMemoryColumnWeight = 1.3f
-private val ProcessIoColumnWeight = 1.2f
-private val ProcessNetworkColumnWeight = 1.9f
+private val ProcessNameColumnWeight = 2.0f
+private val ProcessCpuColumnWeight = 0.85f
+private val ProcessMemoryColumnWeight = 1.45f
+private val ProcessIoColumnWeight = 1.05f
+private val ProcessNetworkColumnWeight = 1.7f
 private val ProcessColumnSpacing = 4.dp
 
 @Composable
@@ -546,7 +546,7 @@ private fun formatMemory(bytes: Long): String {
     val kib = 1024.0
     val mib = kib * 1024.0
     return when {
-        bytes >= mib -> String.format(Locale.US, "%.2f MB", bytes / mib)
+        bytes >= mib -> String.format(Locale.US, "%.1f MB", bytes / mib)
         bytes >= kib -> String.format(Locale.US, "%.0f KB", bytes / kib)
         else -> "$bytes B"
     }
