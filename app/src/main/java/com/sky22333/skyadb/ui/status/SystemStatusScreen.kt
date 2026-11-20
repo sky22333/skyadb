@@ -411,8 +411,8 @@ private val ProcessSort.columnWeight: Float
         ProcessSort.Network -> ProcessNetworkColumnWeight
     }
 
-private val ProcessNameColumnWeight = 2.0f
-private val ProcessCpuColumnWeight = 0.85f
+private val ProcessNameColumnWeight = 1.85f
+private val ProcessCpuColumnWeight = 1.05f
 private val ProcessMemoryColumnWeight = 1.45f
 private val ProcessIoColumnWeight = 1.05f
 private val ProcessNetworkColumnWeight = 1.7f
