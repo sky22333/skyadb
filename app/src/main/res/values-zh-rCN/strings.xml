@@ -930,8 +930,8 @@
     <string name="system_status_memory">内存</string>
     <string name="system_status_storage">数据存储</string>
     <string name="system_status_network">网络</string>
-    <string name="system_status_network_format">接收 %1$s · 发送 %2$s</string>
-    <string name="system_status_network_detail_format">%1$s · 接收 %2$s · 发送 %3$s</string>
+    <string name="system_status_network_format">接收 ↓ %1$s · 发送 ↑ %2$s</string>
+    <string name="system_status_network_detail_format">%1$s · 接收 ↓ %2$s · 发送 ↑ %3$s</string>
     <string name="system_status_brightness">屏幕亮度</string>
     <string name="system_status_brightness_auto_format">%1$d（自动）</string>
     <string name="system_status_brightness_sysfs_format">%1$d / %2$d（%3$d%%）</string>
@@ -953,8 +953,8 @@
     <string name="system_status_sort_memory">内存</string>
     <string name="system_status_sort_io">IO</string>
     <string name="system_status_sort_network">网速</string>
+    <string name="system_status_process_column_process">进程</string>
     <string name="system_status_process_pid_format">PID %1$d · UID %2$s</string>
-    <string name="system_status_process_metrics_format">%1$s · %2$s · %3$s · %4$s</string>
     <string name="camera_preview_title">摄像头预览</string>
     <string name="camera_preview_starting">正在启动摄像头预览…</string>
     <string name="camera_preview_active">摄像头预览中</string>

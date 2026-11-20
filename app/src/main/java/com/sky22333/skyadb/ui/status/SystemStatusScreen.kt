@@ -1,12 +1,13 @@
 package com.sky22333.skyadb.ui.status
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -23,16 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
-import com.sky22333.skyadb.scrcpy.MirrorSpeed
-import com.sky22333.skyadb.scrcpy.MirrorSpeedFormatter
 import com.sky22333.skyadb.ui.components.Button
-import com.sky22333.skyadb.ui.components.FlatButton
 import com.sky22333.skyadb.ui.components.PopupAnchor
 import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.components.TextField
@@ -266,25 +265,11 @@ private fun ProcessSection(
             }
         },
     )
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        ProcessSort.entries.forEach { option ->
-            val active = option == sort
-            val suffix = if (active) {
-                if (sortDescending) " ↓" else " ↑"
-            } else {
-                ""
-            }
-            FlatButton(
-                onClick = { onSortClick(option) },
-                primary = active,
-            ) {
-                Text(stringResource(option.labelRes) + suffix)
-            }
-        }
-    }
+    ProcessListHeader(
+        sort = sort,
+        sortDescending = sortDescending,
+        onSortClick = onSortClick,
+    )
 
     if (filtered.isEmpty()) {
         Text(
@@ -313,19 +298,55 @@ private fun ProcessSection(
 }
 
 @Composable
-private fun ProcessRow(process: SystemProcess) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+private fun ProcessListHeader(
+    sort: ProcessSort,
+    sortDescending: Boolean,
+    onSortClick: (ProcessSort) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(ProcessColumnSpacing),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Text(
+            text = stringResource(R.string.system_status_process_column_process),
+            modifier = Modifier.weight(ProcessNameColumnWeight),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+            maxLines = 1,
+        )
+        ProcessSort.entries.forEach { option ->
+            val active = option == sort
+            val suffix = if (active) {
+                if (sortDescending) " ↓" else " ↑"
+            } else {
+                ""
+            }
+            Text(
+                text = stringResource(option.labelRes) + suffix,
+                modifier = Modifier
+                    .weight(option.columnWeight)
+                    .clickable { onSortClick(option) }
+                    .padding(vertical = 6.dp),
+                color = if (active) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                style = MiuixTheme.textStyles.footnote1,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProcessRow(process: SystemProcess) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(ProcessColumnSpacing),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(ProcessNameColumnWeight)) {
             Text(
                 text = process.name,
-                modifier = Modifier.weight(1f),
                 style = MiuixTheme.textStyles.footnote1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -338,23 +359,64 @@ private fun ProcessRow(process: SystemProcess) {
                 ),
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 style = MiuixTheme.textStyles.footnote1,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            text = stringResource(
-                R.string.system_status_process_metrics_format,
-                formatPercent(process.cpuPercent),
-                process.memoryBytes?.let(::formatMemory) ?: "—",
-                speedLabel(process.ioBytesPerSecond),
-                "${speedLabel(process.txBytesPerSecond)} / ${speedLabel(process.rxBytesPerSecond)}",
-            ),
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            style = MiuixTheme.textStyles.footnote1,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        ProcessMetricText(formatPercent(process.cpuPercent), ProcessCpuColumnWeight)
+        ProcessMetricText(process.memoryBytes?.let(::formatMemory) ?: "—", ProcessMemoryColumnWeight)
+        ProcessMetricText(speedLabel(process.ioBytesPerSecond), ProcessIoColumnWeight)
+        Column(
+            modifier = Modifier.weight(ProcessNetworkColumnWeight),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = "↑ ${speedLabel(process.txBytesPerSecond)}",
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "↓ ${speedLabel(process.rxBytesPerSecond)}",
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.footnote1,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
+
+@Composable
+private fun RowScope.ProcessMetricText(value: String, weight: Float) {
+    Text(
+        text = value,
+        modifier = Modifier.weight(weight),
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        style = MiuixTheme.textStyles.footnote1,
+        textAlign = TextAlign.End,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+private val ProcessSort.columnWeight: Float
+    get() = when (this) {
+        ProcessSort.Cpu -> ProcessCpuColumnWeight
+        ProcessSort.Memory -> ProcessMemoryColumnWeight
+        ProcessSort.Io -> ProcessIoColumnWeight
+        ProcessSort.Network -> ProcessNetworkColumnWeight
+    }
+
+private val ProcessNameColumnWeight = 2.2f
+private val ProcessCpuColumnWeight = 0.9f
+private val ProcessMemoryColumnWeight = 1.3f
+private val ProcessIoColumnWeight = 1.2f
+private val ProcessNetworkColumnWeight = 1.9f
+private val ProcessColumnSpacing = 4.dp
 
 @Composable
 private fun InlineSectionHeader(title: String, description: String) {
@@ -465,12 +527,11 @@ private fun usageText(used: Long?, total: Long?): String {
 private fun formatPercent(value: Double): String = String.format(Locale.US, "%.1f%%", value)
 
 private fun speedLabel(bytesPerSecond: Double): String {
-    if (bytesPerSecond.isFinite() && bytesPerSecond > 0.0 && bytesPerSecond < 512.0) {
-        return "<1 KB/s"
-    }
-    return when (val speed = MirrorSpeedFormatter.format(bytesPerSecond)) {
-        is MirrorSpeed.KilobytesPerSecond -> "${speed.value} KB/s"
-        is MirrorSpeed.MegabytesPerSecond -> String.format(Locale.US, "%.2f MB/s", speed.value)
+    val bytes = bytesPerSecond.takeIf { it.isFinite() && it > 0.0 } ?: 0.0
+    return when {
+        bytes < 1024.0 -> String.format(Locale.US, "%.0f B/s", bytes)
+        bytes < 1024.0 * 1024.0 -> String.format(Locale.US, "%.0f KB/s", bytes / 1024.0)
+        else -> String.format(Locale.US, "%.2f MB/s", bytes / (1024.0 * 1024.0))
     }
 }
 
