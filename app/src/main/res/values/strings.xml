@@ -39,6 +39,19 @@
     <string name="mirror_quality_smooth">Smooth</string>
     <string name="mirror_quality_balanced">Balanced</string>
     <string name="mirror_quality_high">High</string>
+    <string name="mirror_video_codec_h264">H.264</string>
+    <string name="mirror_video_codec_h265">H.265</string>
+    <string name="mirror_stats_frames">Received %1$d · Decoded %2$d · Dropped %3$d</string>
+    <string name="mirror_stats_rates">RX %1$.1f FPS · Decode %2$.1f FPS</string>
+    <string name="mirror_stats_speed_kbps">%1$d KB/s</string>
+    <string name="mirror_stats_speed_mbps">%1$.2f MB/s</string>
+    <string name="mirror_stats_pipeline">%1$s · Queue %2$d · +%3$d ms · Resets %4$d</string>
+    <string name="mirror_stats_connection">%1$s · %2$s · %3$s</string>
+    <string name="mirror_transport_wifi">WiFi</string>
+    <string name="mirror_transport_usb">USB</string>
+    <string name="mirror_connection_shared">Shared ADB</string>
+    <string name="mirror_connection_dedicated">Dedicated ADB</string>
+    <string name="mirror_decoder_unknown">Decoder pending</string>
 
     <!-- Navigation / common -->
     <string name="nav_devices">Devices</string>
@@ -61,25 +74,35 @@
     <string name="settings_scan_ranges_title">Scan ranges</string>
     <string name="settings_scan_ranges_placeholder">e.g. 10.43.180.0/24</string>
     <string name="settings_mirror_quality_title">Mirror quality</string>
+    <string name="settings_mirror_video_codec_title">Mirror codec</string>
     <string name="settings_theme_mode_title">Theme mode</string>
     <string name="settings_diagnostics_title">Diagnostic log</string>
     <string name="settings_clear_recent_devices_title">Clear recent devices</string>
     <string name="settings_project_url_title">Project URL</string>
+    <string name="settings_version_title">Current version</string>
 
     <!-- Home screen -->
     <string name="home_title">Device connection</string>
     <string name="action_disconnect">Disconnect</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_clear_input">Clear input</string>
     <string name="home_refresh_usb_desc">Refresh USB devices</string>
     <string name="device_authorized">Authorized</string>
     <string name="device_unauthorized">Pending authorization</string>
     <string name="action_connecting">Connecting\u2026</string>
     <string name="action_connect">Connect</string>
     <string name="home_manual_connect_title">Manual connection</string>
-    <string name="home_endpoint_label">IP address:port</string>
+    <string name="home_endpoint_label">IP/domain:port</string>
     <string name="action_wireless_pairing">Pair</string>
     <string name="action_discover_devices">Discover</string>
     <string name="home_recent_devices_title">Recent devices</string>
     <string name="home_no_recent_devices">No device history</string>
+    <string name="home_current_device">Current device</string>
+    <string name="home_device_actions">Device actions</string>
+    <string name="home_edit_device_title">Edit device name</string>
+    <string name="home_device_name_label">Device name</string>
+    <string name="home_delete_device_title">Delete %1$s?</string>
+    <string name="home_delete_device_confirm">Remove this device from recent devices? If it is connected, the connection will also be closed.</string>
 
     <!-- Device screen -->
     <string name="device_details_title">Device details</string>
@@ -282,10 +305,10 @@
     <string name="action_collapse">Collapse</string>
     <string name="action_expand">Expand</string>
     <string name="pairing_guide_step1">Enable wireless debugging on the target device and choose pairing code pairing.</string>
-    <string name="pairing_guide_step2">Enter the IP, temporary port, and 6-digit pairing code from the pairing dialog.</string>
+    <string name="pairing_guide_step2">Enter the IP/domain, temporary port, and 6-digit pairing code from the pairing dialog.</string>
     <string name="pairing_guide_step3">After pairing succeeds, tap \"Go connect\" and confirm the address to connect.</string>
     <string name="pairing_info_title">Pairing info</string>
-    <string name="pairing_ip_label">Pairing IP</string>
+    <string name="pairing_ip_label">Pairing IP/domain</string>
     <string name="pairing_port_label">Pairing port</string>
     <string name="pairing_code_label">Pairing code</string>
     <string name="action_go_connect">Go connect</string>
@@ -398,6 +421,7 @@
     <string name="scrcpy_audio_stream_error">Audio unavailable; video is still playing</string>
     <string name="scrcpy_start_failed">Failed to start screen mirroring</string>
     <string name="scrcpy_start_failed_fallback_suggestion">Check the diagnostic logs in Settings.</string>
+    <string name="scrcpy_mirror_codec_fallback_suggestion">H.265 requires support from both the target encoder and this device decoder. The mirror automatically retried with H.264.</string>
     <string name="scrcpy_control_disconnected_suggestion">The mirroring connection may have dropped. Please re-enter screen mirroring.</string>
     <string name="scrcpy_send_touch_failed">Failed to send the remote touch event</string>
     <string name="scrcpy_send_key_failed">Failed to send the remote key event</string>
@@ -493,7 +517,7 @@
     <string name="scan_range_error_invalid">Invalid format or range too large: %1$s</string>
 
     <!-- Input validation -->
-    <string name="error_ipv4_invalid">Please enter a valid IPv4 address</string>
+    <string name="error_ipv4_invalid">Please enter a valid IP address or domain name</string>
     <string name="error_port_not_number">%1$s must be numeric</string>
     <string name="error_port_out_of_range">%1$s must be between 1-65535</string>
     <string name="error_url_scheme">Please enter a link starting with http:// or https://</string>
@@ -555,7 +579,7 @@
     <!-- ViewModel operation status: Pairing -->
     <string name="pairing_autofill_hint">Filled in the auto-discovered pairing address. Please enter the 6-digit pairing code.</string>
     <string name="pairing_cannot_start">Cannot start pairing</string>
-    <string name="pairing_check_fields">Check that the pairing IP, pairing port, and 6-digit pairing code are correct.</string>
+    <string name="pairing_check_fields">Check that the pairing IP/domain, pairing port, and 6-digit pairing code are correct.</string>
     <string name="pairing_pairing_with">Pairing with %1$s:%2$s</string>
     <string name="pairing_finding_port">Finding connect port\u2026</string>
     <string name="pairing_success_port_found">Paired successfully, found connect port %1$d.</string>
@@ -601,6 +625,18 @@
     <string name="home_waiting_usb_permission">Waiting for USB permission\u2026</string>
     <string name="home_usb_otg_connecting">Connecting to %1$s device via USB OTG\u2026</string>
     <string name="home_usb_connect_success">USB connected: %1$s</string>
+    <string name="home_device_unavailable">This device is no longer connected</string>
+    <string name="home_device_unavailable_hint">Reconnect it and try again.</string>
+    <string name="home_device_name_invalid">Invalid device name</string>
+    <string name="home_device_name_invalid_hint">Enter a name between 1 and 80 characters.</string>
+    <string name="home_device_disconnected">Disconnected: %1$s</string>
+    <string name="home_device_renamed">Device renamed: %1$s</string>
+    <string name="home_device_deleted">Device deleted: %1$s</string>
+    <string name="home_switching_device">Switching to %1$s\u2026</string>
+    <string name="home_switch_device_success">Switched to %1$s</string>
+    <string name="ai_conversation_device">Device: %1$s</string>
+    <string name="ai_conversation_device_with_id">%1$s (%2$s)</string>
+    <string name="ai_conversation_no_device">No device recorded</string>
 
     <!-- ViewModel operation status: Device discovery -->
     <string name="discovery_cannot_scan_lan">Cannot scan the LAN</string>
@@ -850,4 +886,82 @@
     <string name="ai_attachment_read_failed">Cannot read %1$s: %2$s</string>
     <string name="ai_remove_attachment_named">Remove %1$s</string>
     <string name="ai_attachments_loading">Preparing attachments</string>
+    <string name="action_done">Done</string>
+    <string name="action_scan_qr">Scan QR</string>
+    <string name="scan_qr_title">Scan to connect</string>
+    <string name="scan_qr_instruction">Align the wireless debugging pairing QR code or a sky adb connection QR code inside the frame.</string>
+    <string name="scan_camera_permission_required">Camera permission is required to scan QR codes.</string>
+    <string name="scan_grant_camera">Allow camera access</string>
+    <string name="scan_qr_unsupported">This QR code is not supported</string>
+    <string name="scan_qr_unsupported_hint">Use an Android wireless debugging pairing QR code or a connection QR generated by sky adb.</string>
+    <string name="scan_finding_pairing_service">Finding the pairing service…</string>
+    <string name="scan_pairing_service_not_found">Pairing service not found</string>
+    <string name="scan_pairing_service_not_found_hint">Keep the wireless debugging pairing screen open and make sure both devices are on the same local network, then try again.</string>
+    <string name="scan_pairing_with">Pairing with %1$s…</string>
+    <string name="scan_finding_connect_port">Finding the wireless debugging port…</string>
+    <string name="scan_connect_port_not_found">Wireless debugging port not found</string>
+    <string name="scan_connect_port_not_found_hint">Pairing succeeded, but the connect service was not discovered. Keep wireless debugging enabled and scan again.</string>
+    <string name="scan_connecting_endpoint">Connecting to %1$s…</string>
+    <string name="scan_connected">Connected to %1$s</string>
+    <string name="scan_scan_again">Scan again</string>
+    <string name="connection_qr_title">Connection QR</string>
+    <string name="connection_qr_scan_title">Share this connection</string>
+    <string name="connection_qr_scan_description">Open sky adb on another device and scan this code.</string>
+    <string name="connection_qr_content_description">ADB connection QR code</string>
+    <string name="connection_qr_generating">Generating QR code…</string>
+    <string name="connection_qr_hint">The QR code contains the current IPv4, IPv6, or domain address. Keep this device connected while the other device scans it.</string>
+    <string name="connection_qr_copy_address">Copy address</string>
+    <string name="system_status_title">System status</string>
+    <string name="system_status_overview">Live overview</string>
+    <string name="system_status_reading">Reading device status…</string>
+    <string name="system_status_updated_format">Updated %1$s</string>
+    <string name="system_status_read_failed">Could not read system status.</string>
+    <string name="system_status_processes">Processes</string>
+    <string name="system_status_current_app">Current app</string>
+    <string name="system_status_battery">Battery</string>
+    <string name="system_status_battery_format">%1$s · %2$s · %3$s</string>
+    <string name="system_status_battery_charging">Charging</string>
+    <string name="system_status_battery_discharging">Discharging</string>
+    <string name="system_status_battery_not_charging">Not charging</string>
+    <string name="system_status_battery_full">Full</string>
+    <string name="system_status_temperature_format">%1$.1f °C</string>
+    <string name="system_status_percent_format">%1$.1f%%</string>
+    <string name="system_status_cpu">CPU</string>
+    <string name="system_status_memory">Memory</string>
+    <string name="system_status_storage">Data storage</string>
+    <string name="system_status_network">Network</string>
+    <string name="system_status_network_format">RX ↓ %1$s · TX ↑ %2$s</string>
+    <string name="system_status_network_detail_format">%1$s · RX ↓ %2$s · TX ↑ %3$s</string>
+    <string name="system_status_brightness">Brightness</string>
+    <string name="system_status_brightness_auto_format">%1$d (auto)</string>
+    <string name="system_status_brightness_sysfs_format">%1$d / %2$d (%3$d%%)</string>
+    <string name="system_status_brightness_auto_suffix_format">%1$s (auto)</string>
+    <string name="system_status_monitor_settings">Monitor settings</string>
+    <string name="system_status_realtime_title">Live updates</string>
+    <string name="system_status_refresh_off">Off</string>
+    <string name="system_status_realtime_on_format">On, every %1$d s</string>
+    <string name="system_status_realtime_off">Off, refresh manually</string>
+    <string name="system_status_interval_title">Refresh interval</string>
+    <string name="system_status_interval_seconds_format">%1$d s</string>
+    <string name="system_status_refresh_now">Refresh now</string>
+    <string name="system_status_show_processes">Show process list</string>
+    <string name="system_status_process_count_format">%1$d total</string>
+    <string name="system_status_process_search">Search process name, PID, or UID</string>
+    <string name="system_status_process_empty">No matching processes</string>
+    <string name="system_status_process_limit_format">Showing first %1$d processes</string>
+    <string name="system_status_sort_cpu">CPU</string>
+    <string name="system_status_sort_memory">Memory</string>
+    <string name="system_status_sort_io">IO</string>
+    <string name="system_status_sort_network">Network</string>
+    <string name="system_status_process_column_process">Process</string>
+    <string name="system_status_process_pid_format">PID %1$d · UID %2$s</string>
+    <string name="camera_preview_title">Camera preview</string>
+    <string name="camera_preview_starting">Starting camera preview…</string>
+    <string name="camera_preview_active">Camera preview active</string>
+    <string name="camera_preview_disconnected">Camera preview disconnected</string>
+    <string name="camera_preview_retry_hint">Check that the device supports camera mirroring on Android 12 or newer, then retry.</string>
+    <string name="camera_preview_switch">Switch camera</string>
+    <string name="camera_preview_current">%1$s camera</string>
+    <string name="camera_preview_front">Front</string>
+    <string name="camera_preview_back">Back</string>
 </resources>

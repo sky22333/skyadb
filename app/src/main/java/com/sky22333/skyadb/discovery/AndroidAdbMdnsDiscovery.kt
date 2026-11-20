@@ -7,6 +7,7 @@ import com.flyfishxu.kadb.mdns.MdnsServiceType
 import com.flyfishxu.kadb.mdns.MdnsStatus
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.i18n.appString
+import com.sky22333.skyadb.model.AdbEndpoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,7 +43,7 @@ class AndroidAdbMdnsDiscovery(context: Context) : AdbMdnsDiscovery {
                                 .map { endpoint ->
                                     AdbMdnsEndpoint(
                                         endpoint.name,
-                                        endpoint.host,
+                                        AdbEndpoint.hostForSocket(endpoint.host),
                                         endpoint.port,
                                         endpoint.serviceType.toUiType(),
                                     )
@@ -67,16 +68,49 @@ class AndroidAdbMdnsDiscovery(context: Context) : AdbMdnsDiscovery {
     }
 
     override suspend fun findConnectPort(host: String, timeoutMs: Long): Int? {
-        if (host.isBlank() || timeoutMs <= 0) return null
+        val socketHost = AdbEndpoint.hostForSocket(host)
+        if (socketHost.isBlank() || timeoutMs <= 0) return null
         val discovery = createClient(setOf(AdbMdnsServiceType.Connect))
         return try {
             discovery.start()
             withTimeoutOrNull(timeoutMs) {
                 discovery.state
-                    .first { current -> current.connectDevices.any { it.host == host } }
+                    .first { current -> current.connectDevices.any { AdbEndpoint.sameHost(it.host, socketHost) } }
                     .connectDevices
-                    .first { it.host == host }
+                    .first { AdbEndpoint.sameHost(it.host, socketHost) }
                     .port
+            }
+        } finally {
+            discovery.close()
+        }
+    }
+
+    override suspend fun findPairingEndpoint(
+        serviceName: String,
+        timeoutMs: Long,
+    ): AdbMdnsEndpoint? {
+        val expectedName = serviceName.trim()
+        if (expectedName.isEmpty() || timeoutMs <= 0) return null
+        val discovery = createClient(setOf(AdbMdnsServiceType.Pairing))
+        return try {
+            discovery.start()
+            withTimeoutOrNull(timeoutMs) {
+                discovery.state
+                    .first { current ->
+                        current.pairDevices.any { endpoint ->
+                            endpoint.name.trim().equals(expectedName, ignoreCase = true)
+                        }
+                    }
+                    .pairDevices
+                    .first { endpoint -> endpoint.name.trim().equals(expectedName, ignoreCase = true) }
+                    .let { endpoint ->
+                        AdbMdnsEndpoint(
+                            name = endpoint.name,
+                            host = AdbEndpoint.hostForSocket(endpoint.host),
+                            port = endpoint.port,
+                            type = AdbMdnsServiceType.Pairing,
+                        )
+                    }
             }
         } finally {
             discovery.close()

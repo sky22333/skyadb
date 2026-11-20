@@ -7,7 +7,6 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.adb.AdbSessionKind
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
-import com.sky22333.skyadb.model.ConnectionState
 import com.sky22333.skyadb.model.FastbootDeviceSummary
 import com.sky22333.skyadb.model.OperationStatus
 import com.sky22333.skyadb.repository.AdbRepository
@@ -15,6 +14,7 @@ import com.sky22333.skyadb.validation.CommandInputParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -42,31 +42,44 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         )
     val uiState: StateFlow<ShellUiState> = state.asStateFlow()
     private var deviceId: String? = null
+    private var commandOwnership = 0L
+    private var summaryRequestVersion = 0L
 
     init {
         viewModelScope.launch {
-            var previousId: String? = null
-            adbRepository.recentDevices.collect { devices ->
+            var observedId: String? = null
+            var observedVersion = -1L
+            combine(adbRepository.activeDeviceId, adbRepository.selectionVersion) { id, version ->
+                id to version
+            }.collect { (connectedId, selectionVersion) ->
                 val kind = adbRepository.sessionKind()
-                val connectedId =
-                    devices.firstOrNull { it.connectionState == ConnectionState.Connected }?.id
+                val deviceChanged =
+                    observedVersion >= 0 &&
+                        (selectionVersion != observedVersion || connectedId != observedId)
+                if (deviceChanged) summaryRequestVersion++
                 deviceId = connectedId
                 state.update { snapshot ->
+                    val nextStatus = if (deviceChanged) OperationStatus.Idle else snapshot.operationStatus
                     snapshot.copy(
                         fastboot =
                             if (kind == AdbSessionKind.None) snapshot.fastboot
                             else kind == AdbSessionKind.UsbFastboot,
                         connected = kind != AdbSessionKind.None,
+                        output = if (deviceChanged) "" else snapshot.output,
+                        operationStatus = nextStatus,
                         executeEnabled =
                             snapshot.command.isNotBlank() &&
                                 kind != AdbSessionKind.None &&
-                                snapshot.operationStatus !is OperationStatus.Running,
-                        summary = if (connectedId != previousId) null else snapshot.summary,
+                                nextStatus !is OperationStatus.Running,
+                        summary = if (deviceChanged) null else snapshot.summary,
+                        summaryLoading = if (deviceChanged) false else snapshot.summaryLoading,
+                        summaryError = if (deviceChanged) null else snapshot.summaryError,
                     )
                 }
-                if (kind == AdbSessionKind.UsbFastboot && connectedId != previousId)
+                if (kind == AdbSessionKind.UsbFastboot && deviceChanged)
                     refreshSummary()
-                previousId = connectedId
+                observedId = connectedId
+                observedVersion = selectionVersion
             }
         }
     }
@@ -79,12 +92,19 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                 state.value.operationStatus is OperationStatus.Running
         )
             return
+        val requestVersion = ++summaryRequestVersion
         state.update { it.copy(summaryLoading = true, summaryError = null) }
         val requestedId = deviceId
+        val requestedSelectionVersion = adbRepository.currentSelectionVersion()
         viewModelScope.launch {
             try {
                 val result = adbRepository.fastbootSummary()
-                if (deviceId != requestedId) return@launch
+                if (
+                    summaryRequestVersion != requestVersion ||
+                        deviceId != requestedId ||
+                        adbRepository.currentSelectionVersion() != requestedSelectionVersion
+                )
+                    return@launch
                 when (result) {
                     is AdbOperationResult.Success -> state.update { it.copy(summary = result.data) }
                     is AdbOperationResult.Failure ->
@@ -93,8 +113,9 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                         }
                 }
             } finally {
-                state.update { it.copy(summaryLoading = false) }
-                if (deviceId != requestedId && state.value.connected) refreshSummary()
+                if (summaryRequestVersion == requestVersion) {
+                    state.update { it.copy(summaryLoading = false) }
+                }
             }
         }
     }
@@ -162,6 +183,30 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
             return
         }
         val command = (parsed as CommandInputParser.Result.Ready).command
+        val targetDeviceId = deviceId
+        val targetSession = adbRepository.sessionSnapshot()
+        if (
+            !fastboot &&
+                (targetSession.token == null || targetSession.endpoint != targetDeviceId)
+        ) {
+            state.value =
+                state.value.copy(
+                    operationStatus =
+                        OperationStatus.Failed(
+                            appString(R.string.kadb_not_connected),
+                            appString(R.string.kadb_connect_before_shell_suggestion),
+                        )
+                )
+            return
+        }
+        val targetSessionToken = targetSession.token
+        val targetSelectionVersion = adbRepository.currentSelectionVersion()
+        val targetCommandOwnership = ++commandOwnership
+
+        fun isCurrentTarget() =
+            deviceId == targetDeviceId &&
+                commandOwnership == targetCommandOwnership &&
+                adbRepository.currentSelectionVersion() == targetSelectionVersion
 
         state.value =
             state.value.copy(
@@ -176,15 +221,24 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
         viewModelScope.launch {
             if (fastboot) {
                 when (val result = adbRepository.runFastbootCommand(command)) {
-                    is AdbOperationResult.Success ->
+                    is AdbOperationResult.Success -> if (isCurrentTarget()) {
                         applySuccess(command, result.data, exitCode = 0)
-                    is AdbOperationResult.Failure -> applyFailure(result)
+                    }
+                    is AdbOperationResult.Failure -> if (isCurrentTarget()) applyFailure(result)
                 }
                 return@launch
             }
 
-            when (val result = adbRepository.runShell(command, timeoutMillis = null)) {
+            when (
+                val result =
+                    adbRepository.runShell(
+                        command,
+                        timeoutMillis = null,
+                        expectedSessionToken = targetSessionToken,
+                    )
+            ) {
                 is AdbOperationResult.Success -> {
+                    if (!isCurrentTarget()) return@launch
                     val commandResult = result.data
                     val combinedOutput = buildString {
                         if (commandResult.output.isNotBlank()) append(commandResult.output.trim())
@@ -196,7 +250,7 @@ class ShellViewModel(private val adbRepository: AdbRepository = AppServices.adbR
                     }
                     applySuccess(command, combinedOutput, commandResult.exitCode)
                 }
-                is AdbOperationResult.Failure -> applyFailure(result)
+                is AdbOperationResult.Failure -> if (isCurrentTarget()) applyFailure(result)
             }
         }
     }

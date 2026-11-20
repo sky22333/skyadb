@@ -47,6 +47,23 @@ class RecentDeviceStore(context: Context) {
         }
     }
 
+    suspend fun remove(deviceId: String) {
+        remove(setOf(deviceId))
+    }
+
+    suspend fun remove(deviceIds: Set<String>) {
+        if (deviceIds.isEmpty()) return
+        dataStore.edit { preferences ->
+            val next = preferences[Keys.Devices]
+                .orEmpty()
+                .lineSequence()
+                .mapNotNull(RecentDeviceCodec::decode)
+                .filterNot { it.id in deviceIds }
+                .joinToString(separator = "\n", transform = RecentDeviceCodec::encode)
+            if (next.isEmpty()) preferences.remove(Keys.Devices) else preferences[Keys.Devices] = next
+        }
+    }
+
     private object Keys {
         val Devices = stringPreferencesKey("devices")
     }

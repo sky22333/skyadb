@@ -90,7 +90,7 @@ internal class DeviceAppsProbe private constructor(private val stream: AdbStream
                 var client: Kadb? = null
                 var stream: AdbStream? = null
                 try {
-                    client = when (val result = manager.mirrorClient()) {
+                    client = when (val result = manager.sharedClient()) {
                         is AdbOperationResult.Success -> result.data
                         is AdbOperationResult.Failure -> error(result.message)
                     }

@@ -47,18 +47,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sky22333.skyadb.BuildConfig
 import com.sky22333.skyadb.data.ThemeMode
 import com.sky22333.skyadb.i18n.AppLanguage
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
+import com.sky22333.skyadb.scrcpy.MirrorVideoCodec
 import com.sky22333.skyadb.ui.theme.AdbManagerTheme
 import com.sky22333.skyadb.ui.theme.AppDimens
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.discovery.ScanRangeParser
 import com.sky22333.skyadb.validation.NetworkInputValidator
 import com.sky22333.skyadb.ui.components.Button
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.foundation.layout.Row
+import top.yukonga.miuix.kmp.icon.extended.Info
 
 @Composable
 fun SettingsScreen(
@@ -77,6 +81,7 @@ fun SettingsScreen(
         onScanRangesChanged = viewModel::onScanRangesChanged,
         onThemeModeSelected = viewModel::onThemeModeSelected,
         onMirrorQualityPresetSelected = viewModel::onMirrorQualityPresetSelected,
+        onMirrorVideoCodecSelected = viewModel::onMirrorVideoCodecSelected,
         onLanguageSelected = viewModel::onLanguageSelected,
         onClearRecentDevicesClicked = viewModel::onClearRecentDevicesClicked,
         onDiagnosticsClick = onDiagnosticsClick,
@@ -93,6 +98,7 @@ private fun SettingsContent(
     onScanRangesChanged: (String) -> Unit,
     onThemeModeSelected: (ThemeMode) -> Unit,
     onMirrorQualityPresetSelected: (MirrorQualityPreset) -> Unit,
+    onMirrorVideoCodecSelected: (MirrorVideoCodec) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearRecentDevicesClicked: () -> Unit,
     onDiagnosticsClick: () -> Unit,
@@ -150,6 +156,20 @@ private fun SettingsContent(
                 PopupAnchor {
                     OverlayDropdownPreference(
                         modifier = Modifier.clip(RoundedCornerShape(AppDimens.ControlRadius)),
+                        title = stringResource(R.string.settings_mirror_video_codec_title),
+                        items = MirrorVideoCodec.entries.map { stringResource(it.labelRes) },
+                        selectedIndex = MirrorVideoCodec.entries.indexOf(uiState.mirrorVideoCodec),
+                        onSelectedIndexChange = { onMirrorVideoCodecSelected(MirrorVideoCodec.entries[it]) },
+                        startAction = { PreferenceIcon(MiuixIcons.Tune) },
+                        insideMargin = PaddingValues(0.dp),
+                    )
+                }
+            }
+
+            item {
+                PopupAnchor {
+                    OverlayDropdownPreference(
+                        modifier = Modifier.clip(RoundedCornerShape(AppDimens.ControlRadius)),
                         title = stringResource(R.string.settings_theme_mode_title),
                         items = ThemeMode.entries.map { stringResource(it.labelRes) },
                         selectedIndex = ThemeMode.entries.indexOf(uiState.themeMode),
@@ -188,6 +208,22 @@ private fun SettingsContent(
                     startAction = { PreferenceIcon(MiuixIcons.Clear) },
                     insideMargin = PaddingValues(0.dp),
                     onClick = onClearRecentDevicesClicked,
+                )
+            }
+
+            item {
+                BasicComponent(
+                    modifier = Modifier.clip(RoundedCornerShape(AppDimens.ControlRadius)),
+                    title = stringResource(R.string.settings_version_title),
+                    startAction = { PreferenceIcon(MiuixIcons.Info) },
+                    endActions = {
+                        Text(
+                            text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            style = MiuixTheme.textStyles.footnote1,
+                        )
+                    },
+                    insideMargin = PaddingValues(0.dp),
                 )
             }
 
@@ -302,6 +338,7 @@ private fun SettingsContentPreview() {
             onScanRangesChanged = {},
             onThemeModeSelected = {},
             onMirrorQualityPresetSelected = {},
+            onMirrorVideoCodecSelected = {},
             onLanguageSelected = {},
             onClearRecentDevicesClicked = {},
             onDiagnosticsClick = {},

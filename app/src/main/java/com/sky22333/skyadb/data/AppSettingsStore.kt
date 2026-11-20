@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.annotation.StringRes
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.scrcpy.MirrorQualityPreset
+import com.sky22333.skyadb.scrcpy.MirrorVideoCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
@@ -22,6 +23,7 @@ data class AppSettings(
     val scanRanges: String = "",
     val themeMode: ThemeMode = ThemeMode.System,
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
+    val mirrorVideoCodec: MirrorVideoCodec = MirrorVideoCodec.H264,
 )
 
 enum class ThemeMode(@param:StringRes val labelRes: Int) {
@@ -46,6 +48,7 @@ class AppSettingsStore(context: Context) {
                     it.name == preferences[Keys.ThemeMode]
                 } ?: ThemeMode.System,
                 mirrorQualityPreset = MirrorQualityPreset.fromName(preferences[Keys.MirrorQualityPreset]),
+                mirrorVideoCodec = MirrorVideoCodec.fromName(preferences[Keys.MirrorVideoCodec]),
             )
         }
 
@@ -85,6 +88,12 @@ class AppSettingsStore(context: Context) {
         }
     }
 
+    suspend fun updateMirrorVideoCodec(codec: MirrorVideoCodec) {
+        dataStore.edit { preferences ->
+            preferences[Keys.MirrorVideoCodec] = codec.name
+        }
+    }
+
     private object Keys {
         val DefaultPort = intPreferencesKey("default_port")
         val ConnectionTimeoutSeconds = intPreferencesKey("connection_timeout_seconds")
@@ -92,5 +101,6 @@ class AppSettingsStore(context: Context) {
         val ScanRanges = stringPreferencesKey("scan_ranges")
         val ThemeMode = stringPreferencesKey("theme_mode")
         val MirrorQualityPreset = stringPreferencesKey("mirror_quality_preset")
+        val MirrorVideoCodec = stringPreferencesKey("mirror_video_codec")
     }
 }

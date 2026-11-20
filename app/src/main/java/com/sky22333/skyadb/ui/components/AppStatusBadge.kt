@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sky22333.skyadb.model.ConnectionState
+import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ui.theme.Success
 import com.sky22333.skyadb.ui.theme.Warning
 
@@ -18,8 +19,9 @@ import com.sky22333.skyadb.ui.theme.Warning
 fun AppStatusBadge(
     state: ConnectionState,
     modifier: Modifier = Modifier,
+    current: Boolean = false,
 ) {
-    val color = when (state) {
+    val color = if (current) MiuixTheme.colorScheme.primary else when (state) {
         ConnectionState.Connected -> Success
         ConnectionState.Offline -> Warning
         ConnectionState.Disconnected -> MiuixTheme.colorScheme.onSurfaceVariantSummary
@@ -31,7 +33,7 @@ fun AppStatusBadge(
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
         Text(
-            text = stringResource(state.labelRes),
+            text = stringResource(if (current) R.string.home_current_device else state.labelRes),
             color = color,
             style = MiuixTheme.textStyles.footnote1,
         )

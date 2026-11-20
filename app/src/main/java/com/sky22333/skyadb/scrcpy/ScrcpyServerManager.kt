@@ -24,22 +24,21 @@ class ScrcpyServerManager(
         audioEnabled: Boolean,
     ): String {
         val socketId = ScrcpyConstants.formatScid(scid)
-        return listOf(
-            "CLASSPATH=${ScrcpyConstants.RemoteServerPath}",
-            "app_process",
-            "/",
-            "com.genymobile.scrcpy.Server",
-            ScrcpyConstants.ServerVersion,
-            "scid=$socketId",
-            "log_level=info",
-            "video=true",
-            "audio=${if (audioEnabled) "true" else "false"}",
-            "audio_codec=aac",
-            "control=true",
-            "tunnel_forward=true",
-            "max_size=${options.maxSize}",
-            "max_fps=${options.maxFps}",
-            "video_bit_rate=${options.videoBitRate}",
+        return (
+            listOf(
+                "CLASSPATH=${ScrcpyConstants.RemoteServerPath}",
+                "app_process",
+                "/",
+                "com.genymobile.scrcpy.Server",
+                ScrcpyConstants.ServerVersion,
+                "scid=$socketId",
+                "log_level=info",
+                "video=true",
+                "audio=${if (audioEnabled) "true" else "false"}",
+                "audio_codec=aac",
+                "control=true",
+                "tunnel_forward=true",
+            ) + options.serverArguments()
         ).joinToString(" ")
     }
 }

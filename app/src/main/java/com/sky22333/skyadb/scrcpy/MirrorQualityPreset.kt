@@ -17,7 +17,7 @@ enum class MirrorQualityPreset(
     ),
     High(
         labelRes = R.string.mirror_quality_high,
-        options = ScrcpyOptions(maxSize = 1920, maxFps = 60, videoBitRate = 8_000_000),
+        options = ScrcpyOptions(maxSize = 1920, maxFps = 60, videoBitRate = 10_000_000),
     );
 
     companion object {

@@ -20,6 +20,7 @@ import com.sky22333.skyadb.R
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.download.NetworkDownloadManager
 import com.sky22333.skyadb.download.DownloadResult
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +49,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 @Serializable data class AiAttachment(val id: String = UUID.randomUUID().toString(), val uri: String, val name: String)
 @Serializable data class AiMessage(val id: String = UUID.randomUUID().toString(), val role: String, val text: String, val attachmentName: String = "", val toolStatus: AiToolStatus? = null, val attachments: List<AiAttachment> = emptyList())
 data class AiApproval(val title: String, val detail: String)
-data class AiConversationSummary(val id: String, val title: String)
+data class AiConversationSummary(val id: String, val title: String, val deviceId: String = "", val deviceName: String = "")
 data class AiDownload(val file: java.io.File, val name: String, val size: Long)
 enum class AiRunPhase { Preparing, Waiting, Answering, Tool }
 data class AiState(
@@ -77,7 +78,14 @@ internal fun resolveAttachment(attachments: List<AiAttachment>, id: String): AiA
     @Serializable
     data class Result(val call: ToolCall, val output: String, val error: Boolean = false) : Turn
 }
-@Serializable internal data class AiConversation(val id: String, val title: String, val messages: List<AiMessage>, val turns: List<Turn>)
+@Serializable internal data class AiConversation(
+    val id: String,
+    val title: String,
+    val messages: List<AiMessage>,
+    val turns: List<Turn>,
+    val deviceId: String = "",
+    val deviceName: String = "",
+)
 @Serializable internal data class AiHistory(val currentId: String = "", val conversations: List<AiConversation> = emptyList(), val drafts: Map<String, String> = emptyMap(), val draftAttachments: Map<String, List<AiAttachment>> = emptyMap())
 
 class AiViewModel internal constructor(private val store: AiConfigStore, private val testDownloadsDirectory: java.io.File? = null) : ViewModel() {
@@ -92,6 +100,8 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     private var currentId = UUID.randomUUID().toString()
     private var historyReadable = false
     private val drafts = mutableMapOf<String, String>()
+    private var currentDeviceId = ""
+    private var currentDeviceName = ""
     private val draftAttachments = mutableMapOf<String, List<AiAttachment>>()
     private val pendingPermissionReleases = mutableSetOf<String>()
     private val writes = Channel<AiHistory>(Channel.CONFLATED)
@@ -126,9 +136,15 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                 if (!newSession) {
                     currentId = savedId
                     val current = conversations.firstOrNull { it.id == currentId }
-                    if (current != null) { history.addAll(current.turns); state.update { it.copy(messages = current.messages.markInterrupted()) }; completeInterruptedCalls() }
+                    if (current != null) {
+                        currentDeviceId = current.deviceId
+                        currentDeviceName = current.deviceName
+                        history.addAll(current.turns)
+                        state.update { it.copy(messages = current.messages.markInterrupted()) }
+                        completeInterruptedCalls()
+                    }
                 }
-                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }, draft = drafts[currentId].orEmpty(), attachments = draftAttachments[currentId].orEmpty(), historyLoading = false) }
+                state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title, c.deviceId, c.deviceName) }, draft = drafts[currentId].orEmpty(), attachments = draftAttachments[currentId].orEmpty(), historyLoading = false) }
                 if (newSession) persist()
             }.onFailure { state.update { it.copy(historyLoading = false, error = appString(R.string.ai_history_read_failed)) } }
         }
@@ -187,7 +203,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (messages.isNotEmpty() || state.value.draft.isNotBlank() || state.value.attachments.isNotEmpty()) {
             val firstUser = messages.firstOrNull { it.role == "user" }
             val title = (firstUser?.text?.ifBlank { firstUser.attachments.firstOrNull()?.name ?: firstUser.attachmentName } ?: state.value.draft.ifBlank { state.value.attachments.firstOrNull()?.name.orEmpty() }).lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(50).orEmpty()
-            conversations.add(0, AiConversation(currentId, title, messages, history.toList()))
+            conversations.add(0, AiConversation(currentId, title, messages, history.toList(), currentDeviceId, currentDeviceName))
         }
         var chars = 0
         conversations = conversations.take(10).takeWhile { conversation ->
@@ -200,7 +216,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             }
             chars <= 2_000_000 || conversation.id == currentId
         }.toMutableList()
-        state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title) }) }
+        state.update { it.copy(conversations = conversations.map { c -> AiConversationSummary(c.id, c.title, c.deviceId, c.deviceName) }) }
         drafts.keys.retainAll(conversations.map { it.id }.toSet() + currentId)
         draftAttachments.keys.retainAll(conversations.map { it.id }.toSet() + currentId)
         pendingPermissionReleases.addAll(previouslyUsed)
@@ -210,7 +226,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if (state.value.busy || state.value.historyLoading || state.value.attachmentsLoading) return
         persist()
         val selected = conversations.firstOrNull { it.id == id } ?: return
-        currentId = selected.id; history.clear(); history.addAll(selected.turns); completeInterruptedCalls()
+        currentId = selected.id; currentDeviceId = selected.deviceId; currentDeviceName = selected.deviceName; history.clear(); history.addAll(selected.turns); completeInterruptedCalls()
         state.update { it.copy(messages = selected.messages.markInterrupted(), draft = drafts[currentId].orEmpty(), attachments = draftAttachments[currentId].orEmpty()) }
         persist()
     }
@@ -220,7 +236,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         conversations.removeAll { it.id == id }
         drafts.remove(id)
         draftAttachments.remove(id)
-        if (currentId == id) { currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachments = emptyList()) } }
+        if (currentId == id) { currentId = UUID.randomUUID().toString(); currentDeviceId = ""; currentDeviceName = ""; history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachments = emptyList()) } }
         pendingPermissionReleases.addAll(removedUris)
         persist()
     }
@@ -401,7 +417,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
     }
     fun respond(allow: Boolean) { approval?.complete(allow); approval = null; state.update { it.copy(approval = null) } }
     fun stop() { approval?.cancel(); approval = null; job?.cancel() }
-    fun clear() { if (!state.value.busy && !state.value.historyLoading && !state.value.attachmentsLoading) { draftJob?.cancel(); persist(); currentId = UUID.randomUUID().toString(); history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachments = emptyList()) }; persist() } }
+    fun clear() { if (!state.value.busy && !state.value.historyLoading && !state.value.attachmentsLoading) { draftJob?.cancel(); persist(); currentId = UUID.randomUUID().toString(); currentDeviceId = ""; currentDeviceName = ""; history.clear(); state.update { it.copy(messages = emptyList(), draft = "", attachments = emptyList()) }; persist() } }
 
     fun send(text: String): Boolean {
         val input = text
@@ -409,8 +425,25 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
         if ((input.isBlank() && state.value.attachments.isEmpty()) || state.value.busy || state.value.historyLoading || state.value.attachmentsLoading) return false
         if (inputLength(input) > AI_INPUT_LIMIT) { state.update { it.copy(error = appString(R.string.ai_input_too_long, AI_INPUT_LIMIT)) }; return false }
         if (config.baseUrl.toHttpUrlOrNull() == null || config.model.isBlank()) { state.update { it.copy(error = appString(R.string.ai_config_required)) }; return false }
-        val token = AppServices.kadbManager.sessionToken()
-        val endpoint = AppServices.kadbManager.currentEndpoint()
+        val session = AppServices.kadbManager.sessionSnapshot()
+        val token = session.token
+        val endpoint = session.endpoint
+        if (currentDeviceId.isNotBlank() && endpoint != null && !AdbEndpoint.sameAuthority(endpoint, currentDeviceId)) {
+            draftJob?.cancel()
+            val pendingDraft = state.value.draft
+            val pendingAttachments = state.value.attachments
+            state.update { it.copy(draft = "", attachments = emptyList()) }
+            persist()
+            state.update { it.copy(messages = emptyList(), draft = pendingDraft, attachments = pendingAttachments) }
+            currentId = UUID.randomUUID().toString()
+            currentDeviceId = endpoint
+            currentDeviceName = AppServices.adbRepository.deviceDisplayName(endpoint) ?: endpoint
+            history.clear()
+        }
+        if (currentDeviceId.isBlank()) {
+            currentDeviceId = endpoint.orEmpty()
+            currentDeviceName = endpoint?.let { AppServices.adbRepository.deviceDisplayName(it) } ?: endpoint.orEmpty()
+        }
         val selectedAttachments = state.value.attachments
         val nextHistory = history.toMutableList()
         val userTurns = nextHistory.indices.filter { nextHistory[it] is Turn.User }
@@ -658,7 +691,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
                 "export_device_apk" -> packageName
                 "open_local_app" -> packageName
                 "agent_shell" -> "$environment\n$command"
-                "agent_connect" -> "$deviceId: $host:$port"
+                "agent_connect" -> "$deviceId: ${port?.let { AdbEndpoint.format(host, it) } ?: AdbEndpoint.hostForSocket(host)}"
                 "agent_disconnect" -> deviceId
                 "agent_screen" -> environment
                 "agent_transfer" -> "$sourceEnvironment:$sourcePath → $destinationEnvironment:$path"
@@ -937,7 +970,7 @@ class AiViewModel internal constructor(private val store: AiConfigStore, private
             ToolDescriptor("fastboot_image", "Flash, boot, or stage an image on the connected Fastboot device. Large flash images are streamed and split into sparse pieces. If a split fails, earlier pieces may already be written. Use only for the user's requested operation.", listOf(parameter("action", "flash, boot, or stage"), parameter("partition", "Partition for flash; empty for boot or stage"), parameter("source", "selected for the conversation attachment, authorized for a user-authorized directory, or local for shared storage or app downloads"), parameter("path", "Relative authorized path or absolute local path; empty for selected"), parameter("max_chunk_size", "Optional flash download limit in bytes (decimal or 0x hexadecimal); empty to query the device"), attachmentParameter)),
             ToolDescriptor("agent_environments", "List connected execution environments and recently connected devices; call this before selecting an environment. Connect a recent device on demand if needed."),
             ToolDescriptor("agent_discover", "Discover nearby ADB network services; discovery does not pair or connect devices."),
-            ToolDescriptor("agent_connect", "Connect or reuse an already paired or authorized remote ADB endpoint, including a recent device. Always use the environment ID returned by this tool. The user pairs new devices separately using the app's wireless pairing screen.", listOf(parameter("device_id", "Unique short device ID using letters, digits, underscore or hyphen"), parameter("host", "Remote device IP address"), parameter("port", "ADB connection port as a decimal string"))),
+            ToolDescriptor("agent_connect", "Connect or reuse an already paired or authorized remote ADB endpoint, including a recent device. Always use the environment ID returned by this tool. The user pairs new devices separately using the app's wireless pairing screen.", listOf(parameter("device_id", "Unique short device ID using letters, digits, underscore or hyphen"), parameter("host", "Remote device IPv4 or IPv6 address"), parameter("port", "ADB connection port as a decimal string"))),
             ToolDescriptor("agent_disconnect", "Disconnect an additional ADB device when the user asks to release it. The active device is managed from the app home screen.", listOf(parameter("device_id", "Connected additional device ID"))),
             ToolDescriptor("agent_shell", "Run any shell command on an explicit environment. Use app for this app's UID, active for the selected device, or a connected device ID. On ADB devices input commands can control the interface.", listOf(parameter("environment", "Exact environment ID"), parameter("command", "Shell command"))),
             ToolDescriptor("agent_screen", "Inspect the current UI hierarchy of an ADB device; use agent_shell with input commands to interact.", listOf(parameter("environment", "Exact ADB device ID"))),

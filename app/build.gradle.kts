@@ -48,12 +48,21 @@ android {
         applicationId = "com.sky22333.skyadb"
         minSdk = 24
         targetSdk = 37
-        versionCode = ciVersionCode ?: 10000
-        versionName = ciVersionName ?: "1.0.0"
+        versionCode = ciVersionCode ?: 102059
+        versionName = ciVersionName ?: "1.2.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
+        getByName("debug") {
+            if (releaseSigningEnabled) {
+                storeFile = file(signingStoreFile!!)
+                storeType = "PKCS12"
+                keyAlias = keyAliasValue!!
+                storePassword = keyStorePasswordValue!!
+                keyPassword = keyPasswordValue!!
+            }
+        }
         create("release") {
             if (releaseSigningEnabled) {
                 storeFile = file(signingStoreFile!!)
@@ -116,6 +125,10 @@ dependencies {
 
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
     implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui)
@@ -130,6 +143,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okio)
     implementation(libs.timber)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)

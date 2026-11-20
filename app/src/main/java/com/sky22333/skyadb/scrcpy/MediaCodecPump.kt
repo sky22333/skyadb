@@ -9,10 +9,13 @@ import android.os.HandlerThread
 import android.os.Process
 import android.view.Surface
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 
 /** One codec owner thread. Output is delivered even while the network reader is blocked. */
 internal class MediaCodecPump(
+    private val onCodecName: (String) -> Unit = {},
     private val onFormat: (MediaFormat) -> Unit = {},
+    private val onFrameSubmitted: () -> Unit = {},
     private val onOutput: (MediaCodec, Int, MediaCodec.BufferInfo) -> Unit,
     private val onError: (Throwable) -> Unit,
 ) {
@@ -30,6 +33,7 @@ internal class MediaCodecPump(
         val mime = requireNotNull(format.getString(MediaFormat.KEY_MIME))
         val decoder = MediaCodec.createDecoderByType(mime)
         codec = decoder // Ownership starts before configure, including its failure path.
+        runCatching { onCodecName(decoder.name) }
         if (
             surface != null &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
@@ -81,40 +85,90 @@ internal class MediaCodecPump(
 
     /** Await submission: at most one encoded packet is retained, with natural backpressure. */
     suspend fun queue(data: ByteArray, pts: Long, flags: Int = 0) {
-        val submitted = CompletableDeferred<Unit>()
+        while (true) {
+            val submitted = CompletableDeferred<Unit>()
+            val accepted = CompletableDeferred<Boolean>()
+            check(!closed) { "Decoder closed" }
+            check(
+                handler.post {
+                    val error = failure
+                    when {
+                        closed -> {
+                            accepted.completeExceptionally(IllegalStateException("Decoder closed"))
+                        }
+                        error != null -> {
+                            accepted.completeExceptionally(error)
+                        }
+                        pending != null -> accepted.complete(false)
+                        else -> {
+                            pending = Pending(data, pts, flags, submitted)
+                            accepted.complete(true)
+                            feed()
+                        }
+                    }
+                }
+            ) {
+                "Decoder thread stopped"
+            }
+            if (accepted.await()) {
+                submitted.await()
+                return
+            }
+            // A configuration/key packet must not be dropped when the single slot is occupied.
+            delay(1)
+        }
+    }
+
+    /**
+     * Submit only when an input buffer is available when the codec owner thread handles the call.
+     * Unlike [queue], this never waits for a codec buffer and lets the caller drop a frame instead.
+     */
+    suspend fun tryQueue(data: ByteArray, pts: Long, flags: Int = 0): Boolean {
+        val accepted = CompletableDeferred<Boolean>()
         check(!closed) { "Decoder closed" }
         check(
             handler.post {
                 val error = failure
                 when {
                     closed ->
-                        submitted.completeExceptionally(IllegalStateException("Decoder closed"))
-                    error != null -> submitted.completeExceptionally(error)
+                        accepted.completeExceptionally(IllegalStateException("Decoder closed"))
+                    error != null -> accepted.completeExceptionally(error)
+                    pending != null || inputIndices.isEmpty() -> accepted.complete(false)
                     else -> {
-                        check(pending == null)
-                        pending = Pending(data, pts, flags, submitted)
-                        feed()
+                        try {
+                            submitImmediately(data, pts, flags)
+                            accepted.complete(true)
+                        } catch (error: Exception) {
+                            fail(error)
+                            accepted.completeExceptionally(error)
+                        }
                     }
                 }
             }
         ) {
             "Decoder thread stopped"
         }
-        submitted.await()
+        return accepted.await()
     }
 
     suspend fun close() {
         if (!closed) {
             closed = true
-            handler.post {
-                pending?.submitted?.completeExceptionally(IllegalStateException("Decoder closed"))
-                pending = null
-                inputIndices.clear()
-                runCatching { codec?.stop() }
+            val posted =
+                handler.post {
+                    pending?.submitted?.completeExceptionally(IllegalStateException("Decoder closed"))
+                    pending = null
+                    inputIndices.clear()
+                    runCatching { codec?.stop() }
+                    runCatching { codec?.release() }
+                    codec = null
+                    released.complete(Unit)
+                    thread.quitSafely()
+                }
+            if (!posted) {
                 runCatching { codec?.release() }
                 codec = null
                 released.complete(Unit)
-                thread.quitSafely()
             }
         }
         released.await()
@@ -124,20 +178,25 @@ internal class MediaCodecPump(
         val packet = pending ?: return
         if (inputIndices.isEmpty()) return
         try {
-            val decoder = requireNotNull(codec)
-            val index = inputIndices.removeFirst()
-            val buffer = requireNotNull(decoder.getInputBuffer(index))
-            check(buffer.capacity() >= packet.data.size) {
-                "Encoded packet exceeds decoder input capacity"
-            }
-            buffer.clear()
-            buffer.put(packet.data)
-            decoder.queueInputBuffer(index, 0, packet.data.size, packet.pts, packet.flags)
+            submitImmediately(packet.data, packet.pts, packet.flags)
             pending = null
             packet.submitted.complete(Unit)
         } catch (error: Exception) {
             fail(error)
         }
+    }
+
+    private fun submitImmediately(data: ByteArray, pts: Long, flags: Int) {
+        val decoder = requireNotNull(codec)
+        val index = inputIndices.removeFirst()
+        val buffer = requireNotNull(decoder.getInputBuffer(index))
+        check(buffer.capacity() >= data.size) {
+            "Encoded packet exceeds decoder input capacity"
+        }
+        buffer.clear()
+        buffer.put(data)
+        decoder.queueInputBuffer(index, 0, data.size, pts, flags)
+        if ((flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) onFrameSubmitted()
     }
 
     private fun fail(error: Throwable) {

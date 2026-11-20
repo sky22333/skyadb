@@ -1,6 +1,7 @@
 package com.sky22333.skyadb.ai
 
 import com.sky22333.skyadb.adb.KadbManager
+import com.sky22333.skyadb.model.AdbEndpoint
 import com.sky22333.skyadb.model.AdbOperationResult
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -16,13 +17,16 @@ class AgentSessions(private val primary: KadbManager) {
 
     suspend fun connect(id: String, host: String, port: Int): AdbOperationResult<Device> = mutex.withLock {
         require(id.matches(Regex("[A-Za-z0-9_-]{1,32}")) && id !in setOf("active", "app", "authorized")) { "Invalid or reserved device ID" }
-        require(host.isNotBlank() && host.length <= 255 && port in 1..65535) { "Invalid ADB endpoint" }
-        val endpoint = "$host:$port"
-        if (primary.currentEndpoint() == endpoint && primary.isConnected()) return@withLock AdbOperationResult.Success(Device("active", endpoint))
-        devices.values.firstOrNull { it.endpoint == endpoint }?.let { existing ->
+        require(AdbEndpoint.isValidHost(host) && port in 1..65535) { "Invalid ADB endpoint" }
+        val socketHost = requireNotNull(AdbEndpoint.normalizeHost(host))
+        val endpoint = AdbEndpoint.format(socketHost, port)
+        if (AdbEndpoint.sameAuthority(primary.currentEndpoint().orEmpty(), endpoint) && primary.isConnected()) {
+            return@withLock AdbOperationResult.Success(Device("active", endpoint))
+        }
+        devices.values.firstOrNull { AdbEndpoint.sameAuthority(it.endpoint, endpoint) }?.let { existing ->
             val manager = requireNotNull(managers[existing.id])
             if (manager.isConnected()) return@withLock AdbOperationResult.Success(existing)
-            return@withLock when (val result = manager.connect(host, port)) {
+            return@withLock when (val result = manager.connect(socketHost, port)) {
                 is AdbOperationResult.Success -> AdbOperationResult.Success(existing)
                 is AdbOperationResult.Failure -> result
             }
@@ -31,7 +35,7 @@ class AgentSessions(private val primary: KadbManager) {
         val manager = KadbManager()
         var registered = false
         try {
-            val result = manager.connect(host, port)
+            val result = manager.connect(socketHost, port)
             if (result is AdbOperationResult.Success) {
                 val device = Device(id, result.data)
                 managers[id] = manager

@@ -10,6 +10,7 @@ import com.sky22333.skyadb.data.AppSettingsStore
 import com.sky22333.skyadb.i18n.appString
 import com.sky22333.skyadb.model.AdbOperationResult
 import com.sky22333.skyadb.model.OperationStatus
+import com.sky22333.skyadb.scrcpy.MirrorStats
 import com.sky22333.skyadb.scrcpy.MirrorTouchEvent
 import com.sky22333.skyadb.scrcpy.ScrcpyRepository
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,7 @@ data class MirrorUiState(
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
     val audioError: String? = null,
+    val stats: MirrorStats = MirrorStats(),
 )
 
 class MirrorViewModel(
@@ -74,7 +76,7 @@ class MirrorViewModel(
             snapshot.copy(status = OperationStatus.Running(appString(R.string.mirror_starting)))
         }
         startJob = viewModelScope.launch {
-            val qualityPreset = settingsStore.settings.first().mirrorQualityPreset
+            val settings = settingsStore.settings.first()
             if (!started) return@launch
             val launchSurface = latestSurface?.takeIf { it.isValid } ?: surface
             if (!launchSurface.isValid) {
@@ -94,12 +96,14 @@ class MirrorViewModel(
                 val result =
                     repository.start(
                         surface = launchSurface,
-                        qualityPreset = qualityPreset,
+                        qualityPreset = settings.mirrorQualityPreset,
+                        videoCodec = settings.mirrorVideoCodec,
                         onVideoSize = { width, height ->
                             state.update { snapshot ->
                                 snapshot.copy(videoWidth = width, videoHeight = height)
                             }
                         },
+                        onStats = { stats -> state.update { it.copy(stats = stats) } },
                         onStreamError = { error ->
                             started = false
                             state.update { snapshot ->

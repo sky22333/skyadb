@@ -2,6 +2,7 @@ package com.sky22333.skyadb.discovery
 
 import androidx.annotation.StringRes
 import com.sky22333.skyadb.R
+import com.sky22333.skyadb.model.AdbEndpoint
 
 data class LocalNetwork(
     val deviceIp: String,
@@ -38,7 +39,7 @@ data class AdbScanResult(
     val state: AdbProbeState,
     val latencyMs: Long,
 ) {
-    val endpoint: String = "$host:$port"
+    val endpoint: String = AdbEndpoint.format(host, port)
 }
 
 enum class AdbProbeState(
