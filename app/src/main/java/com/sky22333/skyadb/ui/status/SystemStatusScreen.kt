@@ -546,7 +546,9 @@ private fun formatMemory(bytes: Long): String {
     val kib = 1024.0
     val mib = kib * 1024.0
     return when {
-        bytes >= mib -> String.format(Locale.US, "%.1f MB", bytes / mib)
+        bytes >= 100 * mib -> String.format(Locale.US, "%.0f MB", bytes / mib)
+        bytes >= 10 * mib -> String.format(Locale.US, "%.1f MB", bytes / mib)
+        bytes >= mib -> String.format(Locale.US, "%.2f MB", bytes / mib)
         bytes >= kib -> String.format(Locale.US, "%.0f KB", bytes / kib)
         else -> "$bytes B"
     }
