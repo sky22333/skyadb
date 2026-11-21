@@ -2,6 +2,7 @@ package com.sky22333.skyadb.ui.status
 
 internal class SystemProcessNetworkRateTracker(
     private val holdMillis: Long = 2_500L,
+    private val maxHoldMillis: Long = 30_000L,
 ) {
     data class Rate(
         val rxBytesPerSecond: Double,
@@ -16,8 +17,18 @@ internal class SystemProcessNetworkRateTracker(
     )
 
     private val baselines = HashMap<Int, Baseline>()
+    private var previousUpdateMillis: Long? = null
+    private var observedSampleIntervalMillis: Long = 0L
 
     fun update(current: Map<Int, Pair<Long, Long>>, nowMillis: Long): Map<Int, Rate> {
+        previousUpdateMillis?.let { previous ->
+            observedSampleIntervalMillis = (nowMillis - previous).coerceAtLeast(0L)
+        }
+        previousUpdateMillis = nowMillis
+        val effectiveHoldMillis = maxOf(
+            holdMillis,
+            (observedSampleIntervalMillis * 2 + 1_000L).coerceAtMost(maxHoldMillis),
+        )
         val result = HashMap<Int, Rate>(current.size)
         current.forEach { (uid, bytes) ->
             val rxBytes = bytes.first.coerceAtLeast(0)
@@ -43,7 +54,7 @@ internal class SystemProcessNetworkRateTracker(
                 result[uid] = rate
                 return@forEach
             }
-            if (nowMillis - previous.sampledAtMillis <= holdMillis) {
+            if (nowMillis - previous.sampledAtMillis <= effectiveHoldMillis) {
                 result[uid] = previous.rate
             } else {
                 val rate = Rate(0.0, 0.0)
@@ -51,11 +62,20 @@ internal class SystemProcessNetworkRateTracker(
                 result[uid] = rate
             }
         }
-        baselines.keys.retainAll(current.keys)
+        baselines.forEach { (uid, baseline) ->
+            if (uid !in current && nowMillis - baseline.sampledAtMillis <= effectiveHoldMillis) {
+                result[uid] = baseline.rate
+            }
+        }
+        val retainedUids = HashSet<Int>(current.keys)
+        retainedUids.addAll(result.keys)
+        baselines.keys.retainAll(retainedUids)
         return result
     }
 
     fun reset() {
         baselines.clear()
+        previousUpdateMillis = null
+        observedSampleIntervalMillis = 0L
     }
 }
