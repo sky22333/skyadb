@@ -470,7 +470,7 @@ private fun StatusCard(
 
     Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             StatusRow(stringResource(R.string.system_status_current_app), currentApp)
