@@ -1,7 +1,7 @@
 package com.sky22333.skyadb.ui.status
 
 internal class SystemProcessNetworkRateTracker(
-    private val holdMillis: Long = 2_500L,
+    private val holdMillis: Long = 8_000L,
     private val maxHoldMillis: Long = 30_000L,
 ) {
     data class Rate(
