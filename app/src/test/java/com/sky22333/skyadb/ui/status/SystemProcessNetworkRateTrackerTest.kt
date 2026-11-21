@@ -33,14 +33,14 @@ class SystemProcessNetworkRateTrackerTest {
         val uid = 10123
 
         tracker.update(mapOf(uid to (1000L to 500L)), 0)
-        val changed = tracker.update(mapOf(uid to (3000L to 1500L)), 1_000)[uid]!!
+        val changed = tracker.update(mapOf(uid to (2000L to 1000L)), 1_000)[uid]!!
         assertEquals(1_000.0, changed.rxBytesPerSecond, 0.001)
 
-        val held = tracker.update(mapOf(uid to (3000L to 1500L)), 7_000)[uid]!!
+        val held = tracker.update(mapOf(uid to (2000L to 1000L)), 7_000)[uid]!!
         assertEquals(1_000.0, held.rxBytesPerSecond, 0.001)
         assertEquals(500.0, held.txBytesPerSecond, 0.001)
 
-        val expired = tracker.update(mapOf(uid to (3000L to 1500L)), 8_000)[uid]!!
+        val expired = tracker.update(mapOf(uid to (2000L to 1000L)), 8_000)[uid]!!
         assertEquals(0.0, expired.rxBytesPerSecond, 0.001)
         assertEquals(0.0, expired.txBytesPerSecond, 0.001)
     }
