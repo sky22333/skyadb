@@ -15,6 +15,7 @@ enum class AppLanguage(
 ) {
     FollowSystem(languageTag = null, labelRes = R.string.language_follow_system),
     Chinese(languageTag = "zh-CN", labelRes = R.string.language_chinese),
+    ChineseTraditional(languageTag = "zh-TW", labelRes = R.string.language_chinese_traditional),
     English(languageTag = "en", labelRes = R.string.language_english),
     ;
 
@@ -30,10 +31,19 @@ enum class AppLanguage(
         fun current(): AppLanguage {
             val locales = AppCompatDelegate.getApplicationLocales()
             if (locales.isEmpty) return FollowSystem
-            val tag = locales[0]?.toLanguageTag().orEmpty()
-            return when {
-                tag.startsWith("zh", ignoreCase = true) -> Chinese
-                tag.startsWith("en", ignoreCase = true) -> English
+            return fromLanguageTag(locales[0]?.toLanguageTag().orEmpty())
+        }
+
+        internal fun fromLanguageTag(tag: String): AppLanguage {
+            val locale = java.util.Locale.forLanguageTag(tag)
+            return when (locale.language) {
+                "zh" -> when {
+                    locale.script.equals("Hant", ignoreCase = true) -> ChineseTraditional
+                    locale.script.equals("Hans", ignoreCase = true) -> Chinese
+                    locale.country in setOf("TW", "HK", "MO") -> ChineseTraditional
+                    else -> Chinese
+                }
+                "en" -> English
                 else -> FollowSystem
             }
         }
