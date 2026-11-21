@@ -39,7 +39,14 @@ internal class SystemProcessNetworkRateTracker(
                 rxBytes < previous.rxBytes ||
                 txBytes < previous.txBytes
             ) {
-                val rate = Rate(0.0, 0.0)
+                val rate = if (
+                    previous != null &&
+                    nowMillis - previous.sampledAtMillis <= effectiveHoldMillis
+                ) {
+                    previous.rate
+                } else {
+                    Rate(0.0, 0.0)
+                }
                 baselines[uid] = Baseline(rxBytes, txBytes, nowMillis, rate)
                 result[uid] = rate
                 return@forEach

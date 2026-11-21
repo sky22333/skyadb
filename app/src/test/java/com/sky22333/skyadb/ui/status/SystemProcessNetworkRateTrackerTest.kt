@@ -44,4 +44,17 @@ class SystemProcessNetworkRateTrackerTest {
         assertEquals(0.0, expired.rxBytesPerSecond, 0.001)
         assertEquals(0.0, expired.txBytesPerSecond, 0.001)
     }
+
+    @Test
+    fun keepsPreviousRateWhenCountersReset() {
+        val tracker = SystemProcessNetworkRateTracker(holdMillis = 2_500L)
+        val uid = 10123
+
+        tracker.update(mapOf(uid to (1000L to 500L)), 0)
+        tracker.update(mapOf(uid to (2000L to 1000L)), 1_000)
+
+        val reset = tracker.update(mapOf(uid to (500L to 200L)), 2_000)[uid]!!
+        assertEquals(1_000.0, reset.rxBytesPerSecond, 0.001)
+        assertEquals(500.0, reset.txBytesPerSecond, 0.001)
+    }
 }
