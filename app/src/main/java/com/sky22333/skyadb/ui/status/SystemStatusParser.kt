@@ -114,7 +114,11 @@ object SystemStatusParser {
           if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then
             echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"
           elif command -v su >/dev/null 2>&1; then
-            su -c "cat '${'$'}d/brightness' '${'$'}d/max_brightness' 2>/dev/null | tr '\n' '|'; echo '${'$'}{d##*/}'" 2>/dev/null
+            current=$(su 0 cat "${'$'}d/brightness" 2>/dev/null)
+            maximum=$(su 0 cat "${'$'}d/max_brightness" 2>/dev/null)
+            if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then
+              echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"
+            fi
           fi
           break
         done

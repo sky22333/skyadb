@@ -2,9 +2,15 @@ package com.sky22333.skyadb.ui.status
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SystemStatusParserTest {
+    @Test
+    fun backlightCommandUsesKernelSuFallback() {
+        assertTrue(SystemStatusParser.buildCommand(includeProcesses = false).contains("su 0 cat"))
+    }
+
     @Test
     fun parsesBatteryMemoryStorageNetworkAndProcesses() {
         val parsed = SystemStatusParser.parse(
@@ -161,6 +167,25 @@ class SystemStatusParserTest {
         assertEquals(2047, parsed.metrics.backlightMax)
         assertEquals("backlight", parsed.metrics.backlightName)
         assertEquals(true, parsed.metrics.autoBrightness)
+    }
+
+    @Test
+    fun keepsZeroBacklightInsteadOfSettingsBrightnessFallback() {
+        val parsed = SystemStatusParser.parse(
+            raw =
+                """
+                __SKY_STATUS_BRIGHTNESS__
+                1483
+                __SKY_STATUS_BRIGHTNESS_MODE__
+                0
+                __SKY_STATUS_BACKLIGHT__
+                0|4094|panel0-backlight
+                """.trimIndent(),
+        )
+
+        assertEquals(0, parsed.metrics.backlightCurrent)
+        assertEquals(4094, parsed.metrics.backlightMax)
+        assertEquals("panel0-backlight", parsed.metrics.backlightName)
     }
 
     @Test

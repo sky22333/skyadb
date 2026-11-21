@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +50,6 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
@@ -470,11 +468,6 @@ private fun StatusCard(
     val memory = usageText(metrics.memoryUsedBytes, metrics.memoryTotalBytes)
     val storage = usageText(metrics.storageUsedBytes, metrics.storageTotalBytes)
     val brightness = brightnessText(metrics)
-    val rx = speedLabel(metrics.rxBytesPerSecond)
-    val tx = speedLabel(metrics.txBytesPerSecond)
-    val network = metrics.networkInterface?.let { interfaceName ->
-        stringResource(R.string.system_status_network_detail_format, interfaceName, rx, tx)
-    } ?: stringResource(R.string.system_status_network_format, rx, tx)
     val currentApp = metrics.currentApp ?: "—"
 
     Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
@@ -490,10 +483,11 @@ private fun StatusCard(
             StatusRow(stringResource(R.string.system_status_cpu), cpu)
             StatusRow(stringResource(R.string.system_status_memory), memory)
             StatusRow(stringResource(R.string.system_status_storage), storage)
-            StatusRow(
-                label = stringResource(R.string.system_status_network),
-                value = network,
-                onClick = onNetworkClick.takeIf { metrics.networkInterfaces.isNotEmpty() },
+            NetworkStatusRow(
+                interfaceName = metrics.networkInterface,
+                rxBytesPerSecond = metrics.rxBytesPerSecond,
+                txBytesPerSecond = metrics.txBytesPerSecond,
+                onInterfaceClick = onNetworkClick.takeIf { metrics.networkInterfaces.isNotEmpty() },
             )
             StatusRow(stringResource(R.string.system_status_brightness), brightness)
         }
@@ -570,13 +564,11 @@ private fun brightnessText(metrics: SystemStatusMetrics): String {
 private fun StatusRow(
     label: String,
     value: String,
-    onClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 22.dp)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .heightIn(min = 22.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -595,12 +587,62 @@ private fun StatusRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        if (onClick != null) {
-            Icon(
-                imageVector = MiuixIcons.ChevronForward,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+    }
+}
+
+@Composable
+private fun NetworkStatusRow(
+    interfaceName: String?,
+    rxBytesPerSecond: Double,
+    txBytesPerSecond: Double,
+    onInterfaceClick: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 22.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.system_status_network),
+            modifier = Modifier.width(84.dp),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (interfaceName != null) {
+                Text(
+                    text = interfaceName,
+                    modifier = if (onInterfaceClick != null) {
+                        Modifier.clickable(onClick = onInterfaceClick).padding(vertical = 4.dp)
+                    } else {
+                        Modifier
+                    },
+                    color = if (onInterfaceClick != null) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                    style = MiuixTheme.textStyles.footnote1,
+                    maxLines = 1,
+                )
+                Text(
+                    text = " · ",
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.footnote1,
+                    maxLines = 1,
+                )
+            }
+            Text(
+                text = stringResource(
+                    R.string.system_status_network_format,
+                    speedLabel(rxBytesPerSecond),
+                    speedLabel(txBytesPerSecond),
+                ),
+                modifier = Modifier.weight(1f),
+                style = MiuixTheme.textStyles.footnote1,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
