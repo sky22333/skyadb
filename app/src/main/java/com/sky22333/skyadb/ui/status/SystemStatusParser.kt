@@ -28,6 +28,7 @@ data class SystemStatusSample(
     val processIoWriteBytes: Map<Int, Long> = emptyMap(),
     val uidRxBytes: Map<Int, Long> = emptyMap(),
     val uidTxBytes: Map<Int, Long> = emptyMap(),
+    val networkInterface: String? = null,
 )
 
 data class SystemStatusMetrics(
@@ -47,6 +48,8 @@ data class SystemStatusMetrics(
     val autoBrightness: Boolean? = null,
     val currentApp: String? = null,
     val processes: List<SystemProcess> = emptyList(),
+    val activeNetworkInterface: String? = null,
+    val networkInterfaces: List<String> = emptyList(),
     val networkInterface: String? = null,
     val rxBytesPerSecond: Double = 0.0,
     val txBytesPerSecond: Double = 0.0,
@@ -105,13 +108,18 @@ object SystemStatusParser {
         settings get system screen_brightness_mode 2>/dev/null
         echo '$BacklightMarker'
         for d in /sys/class/backlight/*; do
-          if [ -r "${'$'}d/brightness" ] && [ -r "${'$'}d/max_brightness" ]; then
-            echo "${'$'}(cat "${'$'}d/brightness")|${'$'}(cat "${'$'}d/max_brightness")|${'$'}{d##*/}"
-            break
+          [ -e "${'$'}d/brightness" ] || continue
+          current=$(cat "${'$'}d/brightness" 2>/dev/null)
+          maximum=$(cat "${'$'}d/max_brightness" 2>/dev/null)
+          if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then
+            echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"
+          elif command -v su >/dev/null 2>&1; then
+            su -c "cat '${'$'}d/brightness' '${'$'}d/max_brightness' 2>/dev/null | tr '\n' '|'; echo '${'$'}{d##*/}'" 2>/dev/null
           fi
+          break
         done
         echo '$FocusMarker'
-        dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'
+        (dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'; dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity' | head -n 5)
         """.trimIndent() + if (includeProcesses) "\n${processCommand()}" else ""
 
     fun buildProcessCommand(): String = processCommand()
@@ -160,6 +168,7 @@ object SystemStatusParser {
         raw: String,
         previous: SystemStatusSample? = null,
         elapsedMillis: Long = 0,
+        preferredNetworkInterface: String? = null,
     ): ParsedSystemStatus {
         val sections = sections(raw)
         val battery = parseBattery(sections[BatteryMarker].orEmpty())
@@ -170,7 +179,11 @@ object SystemStatusParser {
             ?.lineSequence()
             ?.map { it.trim() }
             ?.firstOrNull { it.isNotEmpty() }
-        val (network, networkInterface) = parseNetwork(sections[NetworkMarker].orEmpty(), activeInterface)
+        val networkSelection = parseNetwork(
+            raw = sections[NetworkMarker].orEmpty(),
+            activeInterface = activeInterface,
+            preferredInterface = preferredNetworkInterface,
+        )
         val backlight = parseBacklight(sections[BacklightMarker].orEmpty())
         val brightness = sections[BrightnessMarker]?.trim()?.toIntOrNull()
         val brightnessMode = sections[BrightnessModeMarker]?.trim()?.toIntOrNull()
@@ -195,15 +208,16 @@ object SystemStatusParser {
         val elapsedSeconds = max(elapsedMillis, 1L) / 1000.0
         val hasNetworkDelta =
             previous != null &&
-                network.rxBytes >= previous.networkRxBytes &&
-                network.txBytes >= previous.networkTxBytes
+                previous.networkInterface == networkSelection.selectedInterface &&
+                networkSelection.network.rxBytes >= previous.networkRxBytes &&
+                networkSelection.network.txBytes >= previous.networkTxBytes
         val rxSpeed = if (hasNetworkDelta) {
-            (network.rxBytes - previous.networkRxBytes) / elapsedSeconds
+            (networkSelection.network.rxBytes - previous.networkRxBytes) / elapsedSeconds
         } else {
             0.0
         }
         val txSpeed = if (hasNetworkDelta) {
-            (network.txBytes - previous.networkTxBytes) / elapsedSeconds
+            (networkSelection.network.txBytes - previous.networkTxBytes) / elapsedSeconds
         } else {
             0.0
         }
@@ -237,24 +251,27 @@ object SystemStatusParser {
                     autoBrightness = brightnessMode?.let { it == 1 },
                     currentApp = focus,
                     processes = processes,
-                    networkInterface = networkInterface,
+                    activeNetworkInterface = networkSelection.activeInterface,
+                    networkInterfaces = networkSelection.interfaces,
+                    networkInterface = networkSelection.selectedInterface,
                     rxBytesPerSecond = rxSpeed,
                     txBytesPerSecond = txSpeed,
-                    networkRxBytes = network.rxBytes,
-                    networkTxBytes = network.txBytes,
+                    networkRxBytes = networkSelection.network.rxBytes,
+                    networkTxBytes = networkSelection.network.txBytes,
                 ),
             sample =
                 SystemStatusSample(
                     cpuTotalTicks = cpu.totalTicks,
                     cpuIdleTicks = cpu.idleTicks,
                     cpuCoreCount = cpu.coreCount,
-                    networkRxBytes = network.rxBytes,
-                    networkTxBytes = network.txBytes,
+                    networkRxBytes = networkSelection.network.rxBytes,
+                    networkTxBytes = networkSelection.network.txBytes,
                     processCpuTicks = processStats.mapValues { it.value.utime + it.value.stime },
                     processIoReadBytes = processStats.mapValues { it.value.readBytes },
                     processIoWriteBytes = processStats.mapValues { it.value.writeBytes },
                     uidRxBytes = uidNetwork.mapValues { it.value.first },
                     uidTxBytes = uidNetwork.mapValues { it.value.second },
+                    networkInterface = networkSelection.selectedInterface,
                 ),
         )
     }
@@ -468,7 +485,18 @@ object SystemStatusParser {
 
     private data class Network(val rxBytes: Long, val txBytes: Long)
 
-    private fun parseNetwork(raw: String, activeInterface: String?): Pair<Network, String?> {
+    private data class NetworkSelection(
+        val network: Network,
+        val selectedInterface: String?,
+        val activeInterface: String?,
+        val interfaces: List<String>,
+    )
+
+    private fun parseNetwork(
+        raw: String,
+        activeInterface: String?,
+        preferredInterface: String?,
+    ): NetworkSelection {
         val interfaces = LinkedHashMap<String, Network>()
         raw.lineSequence().forEach { line ->
             val separator = line.indexOf(':')
@@ -483,8 +511,11 @@ object SystemStatusParser {
                 )
             }
         }
-        val selectedName = activeInterface
+        val routeInterface = activeInterface
             ?.takeIf { it.isNotBlank() && interfaces.containsKey(it) }
+        val selectedName = preferredInterface
+            ?.takeIf { it.isNotBlank() && interfaces.containsKey(it) }
+            ?: routeInterface
             ?: interfaces.entries
                 .filter { isPhysicalInterface(it.key) }
                 .maxByOrNull { it.value.rxBytes + it.value.txBytes }
@@ -493,7 +524,21 @@ object SystemStatusParser {
                 .filter { it.key != "lo" }
                 .maxByOrNull { it.value.rxBytes + it.value.txBytes }
                 ?.key
-        return (selectedName?.let { interfaces[it] } ?: Network(0, 0)) to selectedName
+        val visibleInterfaces = buildList {
+            listOfNotNull(routeInterface ?: selectedName, selectedName).forEach { name ->
+                if (name !in this) add(name)
+            }
+            interfaces.keys
+                .filter { it != "lo" && (isPhysicalInterface(it) || it == preferredInterface) }
+                .sorted()
+                .forEach { name -> if (name !in this) add(name) }
+        }
+        return NetworkSelection(
+            network = selectedName?.let { interfaces[it] } ?: Network(0, 0),
+            selectedInterface = selectedName,
+            activeInterface = routeInterface ?: selectedName,
+            interfaces = visibleInterfaces,
+        )
     }
 
     private fun isPhysicalInterface(name: String): Boolean {
@@ -525,13 +570,10 @@ object SystemStatusParser {
     }
 
     private fun parseCurrentApp(raw: String): String? {
-        val focusLine = raw.lineSequence().firstOrNull { it.contains("mCurrentFocus") }
-            ?: raw.lineSequence().firstOrNull { it.contains("mFocusedApp") }
-            ?: return null
-        return Regex("([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+)")
-            .find(focusLine)
-            ?.groupValues
-            ?.getOrNull(1)
+        val packageActivity = Regex("([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+)")
+        return raw.lineSequence()
+            .mapNotNull { packageActivity.find(it)?.groupValues?.getOrNull(1) }
+            .firstOrNull()
     }
 
     private data class ProcessMetadata(

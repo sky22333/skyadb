@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -49,10 +51,12 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 private enum class ProcessSort(val labelRes: Int) {
     Cpu(R.string.system_status_sort_cpu),
@@ -72,6 +76,7 @@ fun SystemStatusScreen(
     var processQuery by rememberSaveable { mutableStateOf("") }
     var sortName by rememberSaveable { mutableStateOf(ProcessSort.Cpu.name) }
     var sortDescending by rememberSaveable { mutableStateOf(true) }
+    var showNetworkInterfaceDialog by rememberSaveable { mutableStateOf(false) }
     val sort = ProcessSort.entries.firstOrNull { it.name == sortName } ?: ProcessSort.Cpu
 
     Column(
@@ -140,7 +145,10 @@ fun SystemStatusScreen(
                     stringResource(R.string.system_status_reading)
                 },
             )
-            StatusCard(uiState.metrics)
+            StatusCard(
+                metrics = uiState.metrics,
+                onNetworkClick = { showNetworkInterfaceDialog = true },
+            )
 
             if (uiState.processListVisible) {
                 ProcessSection(
@@ -159,6 +167,17 @@ fun SystemStatusScreen(
                     },
                 )
             }
+        }
+        if (showNetworkInterfaceDialog) {
+            NetworkInterfaceDialog(
+                interfaces = uiState.metrics.networkInterfaces,
+                selectedInterface = uiState.metrics.networkInterface,
+                onSelect = { interfaceName ->
+                    showNetworkInterfaceDialog = false
+                    viewModel.setNetworkInterface(interfaceName)
+                },
+                onDismiss = { showNetworkInterfaceDialog = false },
+            )
         }
     }
 }
@@ -436,7 +455,10 @@ private fun InlineSectionHeader(title: String, description: String) {
 }
 
 @Composable
-private fun StatusCard(metrics: SystemStatusMetrics) {
+private fun StatusCard(
+    metrics: SystemStatusMetrics,
+    onNetworkClick: () -> Unit,
+) {
     val batteryStatus = metrics.batteryStatus?.let { batteryStatusLabel(it) } ?: "—"
     val battery = metrics.batteryLevel?.let { "$it%" } ?: "—"
     val temperature = metrics.batteryTemperatureCelsius?.let {
@@ -468,8 +490,57 @@ private fun StatusCard(metrics: SystemStatusMetrics) {
             StatusRow(stringResource(R.string.system_status_cpu), cpu)
             StatusRow(stringResource(R.string.system_status_memory), memory)
             StatusRow(stringResource(R.string.system_status_storage), storage)
-            StatusRow(stringResource(R.string.system_status_network), network)
+            StatusRow(
+                label = stringResource(R.string.system_status_network),
+                value = network,
+                onClick = onNetworkClick.takeIf { metrics.networkInterfaces.isNotEmpty() },
+            )
             StatusRow(stringResource(R.string.system_status_brightness), brightness)
+        }
+    }
+}
+
+@Composable
+private fun NetworkInterfaceDialog(
+    interfaces: List<String>,
+    selectedInterface: String?,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    WindowDialog(
+        show = true,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.system_status_network_select_title),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            interfaces.forEach { interfaceName ->
+                val selected = interfaceName == selectedInterface
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(interfaceName) }
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = interfaceName,
+                        modifier = Modifier.weight(1f),
+                        color = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                        style = MiuixTheme.textStyles.main,
+                    )
+                    if (selected) {
+                        Text(
+                            text = stringResource(R.string.system_status_network_current),
+                            color = MiuixTheme.colorScheme.primary,
+                            style = MiuixTheme.textStyles.footnote1,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -496,24 +567,42 @@ private fun brightnessText(metrics: SystemStatusMetrics): String {
 }
 
 @Composable
-private fun StatusRow(label: String, value: String) {
+private fun StatusRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 22.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 22.dp)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.width(84.dp),
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             style = MiuixTheme.textStyles.footnote1,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = value,
-            modifier = Modifier.weight(1.35f),
+            modifier = Modifier.weight(1f),
             style = MiuixTheme.textStyles.footnote1,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (onClick != null) {
+            Icon(
+                imageVector = MiuixIcons.ChevronForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
     }
 }
 

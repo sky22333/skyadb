@@ -34,6 +34,7 @@ data class SystemStatusUiState(
     val autoRefresh: Boolean = true,
     val refreshIntervalMillis: Long = SystemStatusRefreshInterval.OneSecond.millis,
     val processListVisible: Boolean = false,
+    val networkInterfaceOverride: String? = null,
 )
 
 class SystemStatusViewModel(
@@ -51,6 +52,7 @@ class SystemStatusViewModel(
     private var previousSampleAtNanos: Long? = null
     private var previousProcessSample: SystemStatusSample? = null
     private var previousProcessSampleAtNanos: Long? = null
+    private val processNetworkRateTracker = SystemProcessNetworkRateTracker()
 
     init {
         restartMonitoring()
@@ -95,6 +97,12 @@ class SystemStatusViewModel(
         } else {
             refreshNow()
         }
+    }
+
+    fun setNetworkInterface(interfaceName: String) {
+        if (state.value.networkInterfaceOverride == interfaceName) return
+        state.update { it.copy(networkInterfaceOverride = interfaceName) }
+        refreshNow()
     }
 
     fun refreshNow() {
@@ -159,6 +167,7 @@ class SystemStatusViewModel(
                     raw = result.data.output,
                     previous = previousSample,
                     elapsedMillis = elapsedMillis,
+                    preferredNetworkInterface = state.value.networkInterfaceOverride,
                 )
                 previousSample = parsed.sample
                 previousSampleAtNanos = sampledAtNanos
@@ -198,9 +207,22 @@ class SystemStatusViewModel(
                     )
                     previousProcessSample = parsed.sample
                     previousProcessSampleAtNanos = sampledAtNanos
+                    val networkRates = processNetworkRateTracker.update(
+                        current = parsed.sample.uidRxBytes.mapValues { (uid, rxBytes) ->
+                            rxBytes to (parsed.sample.uidTxBytes[uid] ?: 0L)
+                        },
+                        nowMillis = System.nanoTime() / 1_000_000,
+                    )
+                    val processes = parsed.processes.map { process ->
+                        val rate = process.uid?.let(networkRates::get) ?: return@map process
+                        process.copy(
+                            rxBytesPerSecond = rate.rxBytesPerSecond,
+                            txBytesPerSecond = rate.txBytesPerSecond,
+                        )
+                    }
                     if (!state.value.processListVisible) return@withLock
                     state.update { current ->
-                        current.copy(metrics = current.metrics.copy(processes = parsed.processes))
+                        current.copy(metrics = current.metrics.copy(processes = processes))
                     }
                 }
                 is AdbOperationResult.Failure -> Unit
@@ -216,5 +238,6 @@ class SystemStatusViewModel(
     private fun resetProcessSamples() {
         previousProcessSample = null
         previousProcessSampleAtNanos = null
+        processNetworkRateTracker.reset()
     }
 }

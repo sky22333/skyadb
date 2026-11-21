@@ -930,11 +930,13 @@
     <string name="system_status_memory">Memory</string>
     <string name="system_status_storage">Data storage</string>
     <string name="system_status_network">Network</string>
-    <string name="system_status_network_format">RX ↓ %1$s · TX ↑ %2$s</string>
-    <string name="system_status_network_detail_format">%1$s · RX ↓ %2$s · TX ↑ %3$s</string>
+    <string name="system_status_network_format">↓ %1$s · ↑ %2$s</string>
+    <string name="system_status_network_detail_format">%1$s · ↓ %2$s · ↑ %3$s</string>
+    <string name="system_status_network_select_title">Select network interface</string>
+    <string name="system_status_network_current">Current</string>
     <string name="system_status_brightness">Brightness</string>
     <string name="system_status_brightness_auto_format">%1$d (auto)</string>
-    <string name="system_status_brightness_sysfs_format">%1$d / %2$d (%3$d%%)</string>
+    <string name="system_status_brightness_sysfs_format">Current %1$d / total %2$d · %3$d%%</string>
     <string name="system_status_brightness_auto_suffix_format">%1$s (auto)</string>
     <string name="system_status_monitor_settings">Monitor settings</string>
     <string name="system_status_realtime_title">Live updates</string>

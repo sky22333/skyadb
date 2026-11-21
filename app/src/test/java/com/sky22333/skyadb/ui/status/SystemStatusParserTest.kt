@@ -101,8 +101,46 @@ class SystemStatusParserTest {
         )
 
         assertEquals("wlan0", parsed.metrics.networkInterface)
+        assertEquals("wlan0", parsed.metrics.activeNetworkInterface)
+        assertEquals(listOf("wlan0", "rmnet0"), parsed.metrics.networkInterfaces)
         assertEquals(1000L, parsed.metrics.networkRxBytes)
         assertEquals(500L, parsed.metrics.networkTxBytes)
+    }
+
+    @Test
+    fun selectsPreferredNetworkInterfaceWhileKeepingActiveInterfaceFirst() {
+        val parsed = SystemStatusParser.parse(
+            raw =
+                """
+                __SKY_STATUS_NETWORK__
+                 wlan0: 1000 0 0 0 0 0 0 0 500 0 0 0 0 0 0 0
+                 rmnet_data0: 9000 0 0 0 0 0 0 0 4000 0 0 0 0 0 0 0
+                __SKY_STATUS_NETWORK_IFACE__
+                wlan0
+                """.trimIndent(),
+            preferredNetworkInterface = "rmnet_data0",
+        )
+
+        assertEquals("wlan0", parsed.metrics.activeNetworkInterface)
+        assertEquals("rmnet_data0", parsed.metrics.networkInterface)
+        assertEquals(listOf("wlan0", "rmnet_data0"), parsed.metrics.networkInterfaces)
+        assertEquals(9000L, parsed.metrics.networkRxBytes)
+        assertEquals(4000L, parsed.metrics.networkTxBytes)
+    }
+
+    @Test
+    fun skipsEmptyCurrentFocusAndUsesResumedActivity() {
+        val parsed = SystemStatusParser.parse(
+            raw =
+                """
+                __SKY_STATUS_FOCUS__
+                mCurrentFocus=null
+                mFocusedApp=null
+                topResumedActivity=ActivityRecord{123 u0 com.example.app/.MainActivity t1}
+                """.trimIndent(),
+        )
+
+        assertEquals("com.example.app/.MainActivity", parsed.metrics.currentApp)
     }
 
     @Test
