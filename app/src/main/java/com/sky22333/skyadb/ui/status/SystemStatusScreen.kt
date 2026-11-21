@@ -34,7 +34,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sky22333.skyadb.R
 import com.sky22333.skyadb.ui.components.Button
 import com.sky22333.skyadb.ui.components.PopupAnchor
-import com.sky22333.skyadb.ui.components.SectionHeader
 import com.sky22333.skyadb.ui.components.TextField
 import com.sky22333.skyadb.ui.theme.AppDimens
 import java.text.SimpleDateFormat
@@ -123,7 +122,6 @@ fun SystemStatusScreen(
                 }
             }
 
-            SectionHeader(title = stringResource(R.string.system_status_monitor_settings))
             MonitorSettingsCard(
                 uiState = uiState,
                 showProcesses = uiState.processListVisible,
@@ -199,7 +197,7 @@ private fun MonitorSettingsCard(
 
     Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppDimens.ControlRadius) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PopupAnchor {
