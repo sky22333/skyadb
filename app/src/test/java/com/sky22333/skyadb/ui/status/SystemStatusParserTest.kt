@@ -1,6 +1,7 @@
 package com.sky22333.skyadb.ui.status
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,6 +14,16 @@ class SystemStatusParserTest {
         assertTrue(command.contains("backlight_ok=0"))
         assertTrue(command.contains("su 0 sh -c"))
         assertTrue(command.contains("max_brightness"))
+    }
+
+    @Test
+    fun networkCommandOnlySamplesInterfaceCounters() {
+        val command = SystemStatusParser.buildNetworkCommand()
+
+        assertTrue(command.contains("cat /proc/net/dev"))
+        assertTrue(command.contains("__SKY_STATUS_NETWORK_IFACE__"))
+        assertFalse(command.contains("dumpsys battery"))
+        assertFalse(command.contains("dumpsys window"))
     }
 
     @Test

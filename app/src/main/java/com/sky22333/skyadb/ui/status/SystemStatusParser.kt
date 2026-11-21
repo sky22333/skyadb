@@ -98,10 +98,7 @@ object SystemStatusParser {
         grep '^cpu' /proc/stat 2>/dev/null
         echo '$DiskMarker'
         df -k /data 2>/dev/null
-        echo '$NetworkMarker'
-        cat /proc/net/dev 2>/dev/null
-        echo '$NetworkInterfaceMarker'
-        (ip route get 1.1.1.1 2>/dev/null; ip -6 route get 2606:4700:4700::1111 2>/dev/null; ip route 2>/dev/null | grep '^default'; ip -6 route 2>/dev/null | grep '^default') | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n 1
+        ${networkCommand()}
         echo '$BrightnessMarker'
         settings get system screen_brightness 2>/dev/null
         echo '$BrightnessModeMarker'
@@ -124,6 +121,16 @@ object SystemStatusParser {
         echo '$FocusMarker'
         (dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'; dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity' | head -n 5)
         """.trimIndent() + if (includeProcesses) "\n${processCommand()}" else ""
+
+    fun buildNetworkCommand(): String = networkCommand()
+
+    private fun networkCommand(): String =
+        """
+        echo '$NetworkMarker'
+        cat /proc/net/dev 2>/dev/null
+        echo '$NetworkInterfaceMarker'
+        (ip route get 1.1.1.1 2>/dev/null; ip -6 route get 2606:4700:4700::1111 2>/dev/null; ip route 2>/dev/null | grep '^default'; ip -6 route 2>/dev/null | grep '^default') | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n 1
+        """.trimIndent()
 
     fun buildProcessCommand(): String = processCommand()
 

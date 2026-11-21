@@ -44,12 +44,16 @@ class SystemStatusViewModel(
     val uiState: StateFlow<SystemStatusUiState> = state.asStateFlow()
 
     private val metricsMutex = Mutex()
+    private val networkMutex = Mutex()
     private val processMutex = Mutex()
     private var monitoringJob: Job? = null
+    private var networkMonitoringJob: Job? = null
     private var processMonitoringJob: Job? = null
     private var manualRefreshJob: Job? = null
     private var previousSample: SystemStatusSample? = null
     private var previousSampleAtNanos: Long? = null
+    private var previousNetworkSample: SystemStatusSample? = null
+    private var previousNetworkSampleAtNanos: Long? = null
     private var previousProcessSample: SystemStatusSample? = null
     private var previousProcessSampleAtNanos: Long? = null
     private val processNetworkRateTracker = SystemProcessNetworkRateTracker()
@@ -63,10 +67,12 @@ class SystemStatusViewModel(
         state.update { it.copy(autoRefresh = enabled, loading = if (enabled) it.loading else false) }
         if (enabled) {
             resetMetricSamples()
+            resetNetworkSamples()
             resetProcessSamples()
             restartMonitoring()
         } else {
             monitoringJob?.cancel()
+            networkMonitoringJob?.cancel()
             processMonitoringJob?.cancel()
         }
     }
@@ -76,6 +82,7 @@ class SystemStatusViewModel(
         state.update { it.copy(refreshIntervalMillis = millis) }
         if (state.value.autoRefresh) {
             resetMetricSamples()
+            resetNetworkSamples()
             resetProcessSamples()
             restartMonitoring()
         }
@@ -102,6 +109,7 @@ class SystemStatusViewModel(
     fun setNetworkInterface(interfaceName: String) {
         if (state.value.networkInterfaceOverride == interfaceName) return
         state.update { it.copy(networkInterfaceOverride = interfaceName) }
+        resetNetworkSamples()
         refreshNow()
     }
 
@@ -123,6 +131,7 @@ class SystemStatusViewModel(
 
     private fun restartMonitoring() {
         monitoringJob?.cancel()
+        networkMonitoringJob?.cancel()
         processMonitoringJob?.cancel()
         if (!state.value.autoRefresh) return
         monitoringJob = viewModelScope.launch {
@@ -131,7 +140,21 @@ class SystemStatusViewModel(
                 delay(state.value.refreshIntervalMillis)
             }
         }
+        startNetworkMonitoring()
         startProcessMonitoring()
+    }
+
+    private fun startNetworkMonitoring() {
+        networkMonitoringJob?.cancel()
+        if (!state.value.autoRefresh) return
+        networkMonitoringJob = viewModelScope.launch {
+            while (isActive) {
+                val startedAtNanos = System.nanoTime()
+                refreshNetworkRate()
+                val elapsedMillis = (System.nanoTime() - startedAtNanos) / 1_000_000
+                delay((state.value.refreshIntervalMillis - elapsedMillis).coerceAtLeast(0L))
+            }
+        }
     }
 
     private fun startProcessMonitoring() {
@@ -186,6 +209,44 @@ class SystemStatusViewModel(
         }
     }
 
+    private suspend fun refreshNetworkRate() = networkMutex.withLock {
+        when (val result = adbRepository.runShell(
+            SystemStatusParser.buildNetworkCommand(),
+            timeoutMillis = 10_000,
+        )) {
+            is AdbOperationResult.Success -> {
+                if (result.data.exitCode != 0 && result.data.output.isBlank()) return@withLock
+                val sampledAtNanos = System.nanoTime()
+                val elapsedMillis = previousNetworkSampleAtNanos?.let { previous ->
+                    ((sampledAtNanos - previous) / 1_000_000).coerceAtLeast(1L)
+                } ?: 0L
+                val parsed = SystemStatusParser.parse(
+                    raw = result.data.output,
+                    previous = previousNetworkSample,
+                    elapsedMillis = elapsedMillis,
+                    preferredNetworkInterface = state.value.networkInterfaceOverride,
+                )
+                previousNetworkSample = parsed.sample
+                previousNetworkSampleAtNanos = sampledAtNanos
+                state.update { current ->
+                    current.copy(
+                        metrics = current.metrics.copy(
+                            activeNetworkInterface = parsed.metrics.activeNetworkInterface,
+                            networkInterfaces = parsed.metrics.networkInterfaces,
+                            networkInterface = parsed.metrics.networkInterface,
+                            rxBytesPerSecond = parsed.metrics.rxBytesPerSecond,
+                            txBytesPerSecond = parsed.metrics.txBytesPerSecond,
+                            networkRxBytes = parsed.metrics.networkRxBytes,
+                            networkTxBytes = parsed.metrics.networkTxBytes,
+                        ),
+                        updatedAtMillis = System.currentTimeMillis(),
+                    )
+                }
+            }
+            is AdbOperationResult.Failure -> Unit
+        }
+    }
+
     private suspend fun refreshProcesses() {
         if (!state.value.processListVisible) return
         processMutex.withLock {
@@ -233,6 +294,11 @@ class SystemStatusViewModel(
     private fun resetMetricSamples() {
         previousSample = null
         previousSampleAtNanos = null
+    }
+
+    private fun resetNetworkSamples() {
+        previousNetworkSample = null
+        previousNetworkSampleAtNanos = null
     }
 
     private fun resetProcessSamples() {
