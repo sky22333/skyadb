@@ -25,7 +25,6 @@ data class SettingsUiState(
     val scanRanges: String = "",
     val themeMode: ThemeMode = ThemeMode.System,
     val mirrorQualityPreset: MirrorQualityPreset = MirrorQualityPreset.Balanced,
-    val language: AppLanguage = AppLanguage.FollowSystem,
 )
 
 class SettingsViewModel(
@@ -33,7 +32,7 @@ class SettingsViewModel(
     private val recentDeviceStore: RecentDeviceStore = AppServices.recentDeviceStore,
     private val networkInfoProvider: NetworkInfoProvider = AppServices.networkInfoProvider,
 ) : ViewModel() {
-    private val state = MutableStateFlow(SettingsUiState(language = AppLanguage.current()))
+    private val state = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = state.asStateFlow()
     private var defaultScanRangeSaved = false
 
@@ -121,7 +120,6 @@ class SettingsViewModel(
     }
 
     fun onLanguageSelected(language: AppLanguage) {
-        state.value = state.value.copy(language = language)
         AppLanguage.apply(language)
     }
 

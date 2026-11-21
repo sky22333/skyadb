@@ -34,12 +34,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -98,6 +100,8 @@ private fun SettingsContent(
     onDiagnosticsClick: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val configuration = LocalConfiguration.current
+    var language by remember(configuration) { mutableStateOf(AppLanguage.current()) }
     var editing by rememberSaveable { mutableStateOf<SettingField?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -166,8 +170,8 @@ private fun SettingsContent(
                         modifier = Modifier.clip(RoundedCornerShape(AppDimens.ControlRadius)),
                         title = stringResource(R.string.settings_language),
                         items = AppLanguage.entries.map { stringResource(it.labelRes) },
-                        selectedIndex = AppLanguage.entries.indexOf(uiState.language),
-                        onSelectedIndexChange = { onLanguageSelected(AppLanguage.entries[it]) },
+                        selectedIndex = AppLanguage.entries.indexOf(language),
+                        onSelectedIndexChange = { language = AppLanguage.entries[it]; onLanguageSelected(language) },
                         startAction = { PreferenceIcon(MiuixIcons.Translate) },
                         insideMargin = PaddingValues(0.dp),
                     )
