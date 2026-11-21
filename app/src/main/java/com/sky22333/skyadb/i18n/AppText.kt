@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import com.sky22333.skyadb.AppServices
 
 /**
@@ -37,11 +38,11 @@ private fun List<Any>.resolveNested(context: Context): Array<Any> {
     return map { arg -> if (arg is AppText) arg.resolve(context) else arg }.toTypedArray()
 }
 
-/** Resolve using the application context (respects AppCompat per-app locales). */
-fun appString(@StringRes id: Int): String = AppServices.context.getString(id)
+/** Resolve using the active per-app language even outside an Activity. */
+fun appString(@StringRes id: Int): String = ContextCompat.getContextForLanguage(AppServices.context).getString(id)
 
 fun appString(@StringRes id: Int, vararg formatArgs: Any): String =
-    AppServices.context.getString(id, *formatArgs)
+    ContextCompat.getContextForLanguage(AppServices.context).getString(id, *formatArgs)
 
 @Composable
 @ReadOnlyComposable

@@ -50,7 +50,7 @@
             android:name=".MainActivity"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTask"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|locale|layoutDirection"
             android:enableOnBackInvokedCallback="true"
             android:exported="true"
             android:theme="@style/Theme.Skyadb">
