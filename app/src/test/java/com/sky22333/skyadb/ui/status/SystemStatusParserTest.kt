@@ -7,8 +7,12 @@ import org.junit.Test
 
 class SystemStatusParserTest {
     @Test
-    fun backlightCommandUsesKernelSuFallback() {
-        assertTrue(SystemStatusParser.buildCommand(includeProcesses = false).contains("su 0 cat"))
+    fun backlightCommandTraversesBacklightDirectoriesAsRoot() {
+        val command = SystemStatusParser.buildCommand(includeProcesses = false)
+
+        assertTrue(command.contains("backlight_ok=0"))
+        assertTrue(command.contains("su 0 sh -c"))
+        assertTrue(command.contains("max_brightness"))
     }
 
     @Test

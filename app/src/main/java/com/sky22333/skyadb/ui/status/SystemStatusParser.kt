@@ -107,21 +107,20 @@ object SystemStatusParser {
         echo '$BrightnessModeMarker'
         settings get system screen_brightness_mode 2>/dev/null
         echo '$BacklightMarker'
+        backlight_ok=0
         for d in /sys/class/backlight/*; do
           [ -e "${'$'}d/brightness" ] || continue
           current=$(cat "${'$'}d/brightness" 2>/dev/null)
           maximum=$(cat "${'$'}d/max_brightness" 2>/dev/null)
           if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then
             echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"
-          elif command -v su >/dev/null 2>&1; then
-            current=$(su 0 cat "${'$'}d/brightness" 2>/dev/null)
-            maximum=$(su 0 cat "${'$'}d/max_brightness" 2>/dev/null)
-            if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then
-              echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"
-            fi
+            backlight_ok=1
+            break
           fi
-          break
         done
+        if [ "${'$'}backlight_ok" -ne 1 ] && command -v su >/dev/null 2>&1; then
+          su 0 sh -c 'for d in /sys/class/backlight/*; do [ -e "${'$'}d/brightness" ] || continue; current=$(cat "${'$'}d/brightness" 2>/dev/null); maximum=$(cat "${'$'}d/max_brightness" 2>/dev/null); if [ -n "${'$'}current" ] && [ -n "${'$'}maximum" ]; then echo "${'$'}current|${'$'}maximum|${'$'}{d##*/}"; break; fi; done' 2>/dev/null
+        fi
         echo '$FocusMarker'
         (dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'; dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity' | head -n 5)
         """.trimIndent() + if (includeProcesses) "\n${processCommand()}" else ""
