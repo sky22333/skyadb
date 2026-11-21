@@ -1,5 +1,6 @@
 package com.sky22333.skyadb.ui.status
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sky22333.skyadb.AppServices
@@ -220,6 +221,14 @@ class SystemStatusViewModel(
                             txBytesPerSecond = rate.txBytesPerSecond,
                         )
                     }
+                    Log.d(
+                        "SkyNetDebug",
+                        "raw=${result.data.output.length} uids=${parsed.sample.uidRxBytes.size} " +
+                            "currentRx=${parsed.sample.uidRxBytes.values.sum()} " +
+                            "tracker=${networkRates.size}/${networkRates.values.count { it.rxBytesPerSecond + it.txBytesPerSecond > 0.0 }} " +
+                            "nullUid=${parsed.processes.count { it.uid == null }} " +
+                            "parsedPositive=${parsed.processes.count { it.rxBytesPerSecond + it.txBytesPerSecond > 0.0 }}",
+                    )
                     if (!state.value.processListVisible) return@withLock
                     state.update { current ->
                         current.copy(metrics = current.metrics.copy(processes = processes))
